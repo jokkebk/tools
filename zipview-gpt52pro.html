@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZIP Image Viewer (fflate via esm.sh)</title>
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg: #0b0c0f;
+      --panel: #12141a;
+      --text: #e8e8e8;
+      --muted: #9aa3b2;
+      --border: rgba(255,255,255,0.14);
+      --border2: rgba(255,255,255,0.10);
+      --accent: #7aa2f7;
+      --gap: 12px;
+      --tile-min: 180px;
+      --radius: 14px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
+    body.viewer-open { overflow: hidden; }
+
+    .hidden { display: none !important; }
+
+    /* Top bar */
+    .bar{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(18,20,26,0.86);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border2);
+      user-select: none;
+    }
+    .bar-left{
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+    }
+    .bar-left strong{ letter-spacing: 0.2px; }
+    .status{
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar button{
+      appearance: none;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 7px 10px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .bar button:hover{ border-color: var(--border); background: rgba(255,255,255,0.09); }
+    .bar button:active{ transform: translateY(1px); }
+    .bar button:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Grid */
+    .grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
+      gap: var(--gap);
+      padding: 12px;
+      align-items: start;
+    }
+
+    .tile{
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--panel);
+      cursor: pointer;
+      text-align: left;
+      content-visibility: auto;
+      contain-intrinsic-size: 240px 240px;
+    }
+    .tile:hover { border-color: var(--border); }
+    .tile:active { transform: translateY(1px); }
+    .tile:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .thumb{
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #0f1116;
+      overflow: hidden;
+    }
+    .thumb img{
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Shimmer skeleton */
+    .thumb.skeleton::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(100deg,
+          rgba(255,255,255,0.00) 0%,
+          rgba(255,255,255,0.08) 40%,
+          rgba(255,255,255,0.00) 80%);
+      transform: translateX(-60%);
+      animation: shimmer 1.2s infinite;
+    }
+    @keyframes shimmer{
+      0% { transform: translateX(-60%); }
+      100% { transform: translateX(60%); }
+    }
+
+    .label{
+      padding: 8px 10px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tile.broken .thumb{
+      background: #2a1a1a;
+    }
+    .tile.broken .label{
+      color: rgba(255,255,255,0.55);
+    }
+
+    /* Drop overlay */
+    #drop{
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(122,162,247,0.18), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(158,206,106,0.12), transparent 45%),
+        var(--bg);
+      z-index: 50;
+    }
+    #drop.loading { cursor: progress; }
+    .drop-inner{
+      max-width: 680px;
+      width: min(680px, 100%);
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 34px 24px;
+      background: rgba(18,20,26,0.76);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+    }
+    .drop-title{
+      font-size: 28px;
+      font-weight: 750;
+      margin-bottom: 8px;
+      letter-spacing: 0.2px;
+    }
+    .drop-sub{
+      color: var(--muted);
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+    .drop-status{
+      min-height: 1.3em;
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .drop-foot{
+      margin-top: 16px;
+      color: rgba(255,255,255,0.52);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Show drop overlay while dragging a file even if app is "loaded" */
+    body.drag-over #drop.hidden{
+      display: flex !important;
+      background: rgba(11,12,15,0.90);
+    }
+    body.drag-over .drop-title::after{
+      content: " (drop to load)";
+      font-size: 0.55em;
+      font-weight: 650;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* Viewer */
+    .viewer{
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+    .viewer-scroll{
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      /* (wheel scroll works in .one mode; .fit is centered) */
+    }
+    .viewer-scroll.fit{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: zoom-in;
+    }
+    .viewer-scroll.fit img{
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+    .viewer-scroll.one{
+      overflow: auto;
+      padding: 24px;
+      cursor: grab;
+    }
+    .viewer-scroll.one.locked{
+      cursor: grabbing;
+    }
+    .viewer-scroll.one img{
+      max-width: none;
+      max-height: none;
+      width: auto;
+      height: auto;
+    }
+
+    .hud{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.0));
+      font-size: 12px;
+      pointer-events: none;
+    }
+    .viewer-info{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: rgba(255,255,255,0.92);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 70vw;
+    }
+    .viewer-hints{
+      color: rgba(255,255,255,0.70);
+      white-space: nowrap;
+    }
+
+    /* Small screens */
+    @media (max-width: 520px) {
+      :root { --tile-min: 140px; }
+      .drop-title { font-size: 24px; }
+      .viewer-scroll.one { padding: 12px; }
+      .viewer-hints { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Drop overlay (also doubles as “drag a new zip in” overlay when already loaded) -->
+  <div id="drop">
+    <div class="drop-inner">
+      <div class="drop-title">Drag a .zip file here</div>
+      <div class="drop-sub">
+        The ZIP is decompressed <b>entirely in your browser</b> (no uploads / no backend).
+        <br />Click anywhere to choose a file.
+      </div>
+      <div id="dropStatus" class="drop-status"></div>
+      <div class="drop-foot">
+        Controls: <b>Left-click</b> to zoom in (grid → fit → 1:1), <b>Right-click</b> to go back, <b>Esc</b> resets.
+        <br />In 1:1: mouse is captured so you can pan by moving (Esc or right-click releases).
+      </div>
+      <input id="fileInput" type="file" accept=".zip,application/zip" hidden />
+    </div>
+  </div>
+
+  <header id="bar" class="bar hidden">
+    <div class="bar-left">
+      <strong>ZIP Image Viewer</strong>
+      <span id="status" class="status"></span>
+    </div>
+    <div class="bar-right">
+      <button id="resetBtn" type="button" title="Escape">Reset (Esc)</button>
+    </div>
+  </header>
+
+  <main id="grid" class="grid hidden" aria-label="Images"></main>
+
+  <div id="viewer" class="viewer hidden" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <div id="viewerScroll" class="viewer-scroll fit">
+      <img id="viewerImg" alt="" draggable="false" />
+    </div>
+    <div class="hud">
+      <div id="viewerInfo" class="viewer-info"></div>
+      <div class="viewer-hints">L-click: 1:1 · R-click: back · Esc: reset</div>
+    </div>
+  </div>
+
+  <script type="module">
+    // This direct import typically works on file:// in modern browsers.
+    import { unzip } from "https://esm.sh/fflate@0.8.2";
+
+    const elDrop = document.getElementById("drop");
+    const elDropStatus = document.getElementById("dropStatus");
+    const elFileInput = document.getElementById("fileInput");
+
+    const elBar = document.getElementById("bar");
+    const elStatus = document.getElementById("status");
+    const elResetBtn = document.getElementById("resetBtn");
+
+    const elGrid = document.getElementById("grid");
+
+    const elViewer = document.getElementById("viewer");
+    const elViewerScroll = document.getElementById("viewerScroll");
+    const elViewerImg = document.getElementById("viewerImg");
+    const elViewerInfo = document.getElementById("viewerInfo");
+
+    const IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|avif)$/i;
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+
+    const state = {
+      images: /** @type {Array<{name: string, blob: Blob, type: string, size: number, thumbUrl: string | null}>} */ ([]),
+      io: /** @type {IntersectionObserver | null} */ (null),
+      thumbQueue: createTaskQueue(getDecodeConcurrency()),
+      abort: new AbortController(),
+      viewerIndex: /** @type {number | null} */ (null),
+      viewerMode: /** @type {"fit" | "one"} */ ("fit"),
+      viewerUrl: /** @type {string | null} */ (null),
+      loadToken: 0,
+      pointerLocked: false,
+    };
+
+    // ---------------------------
+    // Events (global)
+    // ---------------------------
+
+    elDrop.addEventListener("click", () => elFileInput.click());
+    elFileInput.addEventListener("change", () => {
+      const file = elFileInput.files && elFileInput.files[0];
+      // allow picking same file again later
+      elFileInput.value = "";
+      if (file) handleZipFile(file);
+    });
+
+    elResetBtn.addEventListener("click", () => hardReset());
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        // Esc should always release pointer lock first (if active), then reset.
+        safeExitPointerLock();
+        hardReset();
+        return;
+      }
+
+      // Arrow keys navigate images when viewer is open
+      if (state.viewerIndex != null) {
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          e.preventDefault();
+          navigateImage(-1);
+        } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          e.preventDefault();
+          navigateImage(1);
+        }
+      }
+    });
+
+    // Drag & drop anywhere
+    let dragDepth = 0;
+    window.addEventListener("dragenter", (e) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files")) {
+        dragDepth++;
+        document.body.classList.add("drag-over");
+      }
+    });
+    window.addEventListener("dragleave", () => {
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) document.body.classList.remove("drag-over");
+    });
+    window.addEventListener("dragover", (e) => {
+      e.preventDefault();
+    });
+    window.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dragDepth = 0;
+      document.body.classList.remove("drag-over");
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleZipFile(file);
+    });
+
+    // Grid click (event delegation)
+    elGrid.addEventListener("click", (e) => {
+      const tile = e.target && /** @type {HTMLElement} */ (e.target).closest(".tile");
+      if (!tile) return;
+      const idx = Number(tile.dataset.index);
+      if (!Number.isFinite(idx)) return;
+      openViewer(idx);
+    });
+
+    // Prevent context menu globally since we use right-click for navigation
+    window.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
+
+    // Viewer left click: go deeper (fit -> 1:1). Viewer right click: go back.
+    elViewer.addEventListener("click", () => {
+      if (state.viewerIndex == null) return;
+      if (state.viewerMode === "fit") {
+        setViewerMode("one");
+        capturePointerForPan(); // use the same click gesture that triggered zoom
+      }
+      // If already 1:1, do nothing (right-click is "back")
+    });
+
+    elViewer.addEventListener("contextmenu", (e) => {
+      if (state.viewerIndex == null) return;
+      e.preventDefault();
+      // Right click also releases pointer lock if active.
+      safeExitPointerLock();
+      if (state.viewerMode === "one") setViewerMode("fit");
+      else closeViewer(); // from fit -> grid
+    });
+
+    // Handle right-click even when pointer is locked (contextmenu may not fire)
+    elViewer.addEventListener("mousedown", (e) => {
+      if (state.viewerIndex == null) return;
+      if (e.button === 2) { // Right mouse button
+        e.preventDefault();
+        safeExitPointerLock();
+        if (state.viewerMode === "one") setViewerMode("fit");
+        else closeViewer();
+      }
+    });
+
+    // Prevent the browser image drag ghost
+    elViewerImg.addEventListener("dragstart", (e) => e.preventDefault());
+
+    // Mouse wheel navigates images in viewer
+    elViewer.addEventListener("wheel", (e) => {
+      if (state.viewerIndex == null) return;
+      e.preventDefault();
+      // deltaY > 0 means scrolling down, go to next image
+      // deltaY < 0 means scrolling up, go to previous image
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        navigateImage(e.deltaY > 0 ? 1 : -1);
+      }
+    }, { passive: false });
+
+    // Pointer lock movement: pan by moving mouse
+    document.addEventListener("pointerlockchange", () => {
+      state.pointerLocked = (document.pointerLockElement === elViewerScroll);
+      elViewerScroll.classList.toggle("locked", state.pointerLocked);
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!state.pointerLocked) return;
+      if (state.viewerMode !== "one") return;
+      // movementX/Y are relative deltas while locked
+      // Natural "grab and move": moving mouse right pans right => scrollLeft += movementX
+      elViewerScroll.scrollLeft += e.movementX;
+      elViewerScroll.scrollTop  += e.movementY;
+    });
+
+    // ---------------------------
+    // Core flow
+    // ---------------------------
+
+    async function handleZipFile(file) {
+      const myToken = ++state.loadToken;
+
+      // Reset everything, but keep the overlay visible for status updates.
+      hardReset({ keepOverlayVisible: true });
+
+      // Basic zip check (still attempt even if mime is missing).
+      const nameLower = (file.name || "").toLowerCase();
+      const looksLikeZip = nameLower.endsWith(".zip") ||
+        file.type === "application/zip" ||
+        file.type === "application/x-zip-compressed";
+
+      if (!looksLikeZip) {
+        setDropStatus("That doesn't look like a .zip file.");
+        elDrop.classList.remove("loading");
+        return;
+      }
+
+      elDrop.classList.add("loading");
+      setDropStatus(`Reading "${file.name}" (${formatBytes(file.size)})…`);
+
+      let buf;
+      try {
+        buf = await file.arrayBuffer();
+      } catch (err) {
+        setDropStatus(`Failed to read file: ${stringifyErr(err)}`);
+        elDrop.classList.remove("loading");
+        return;
+      }
+
+      if (myToken !== state.loadToken) return; // superseded by a new load
+
+      setDropStatus("Unzipping…");
+
+      let out;
+      try {
+        out = await unzipAsync(new Uint8Array(buf));
+      } catch (err) {
+        setDropStatus(`Unzip error: ${stringifyErr(err)}`);
+        elDrop.classList.remove("loading");
+        return;
+      }
+
+      if (myToken !== state.loadToken) return;
+
+      // Filter + sort filenames
+      const names = Object.keys(out)
+        .filter((name) => name && !name.endsWith("/") && !name.startsWith("__MACOSX/") && IMAGE_RE.test(name))
+        .sort((a, b) => collator.compare(a, b));
+
+      if (!names.length) {
+        setDropStatus("No supported images found (looking for .jpg/.jpeg/.png/.webp/.gif/.bmp/.avif).");
+        elDrop.classList.remove("loading");
+        return;
+      }
+
+      setDropStatus(`Preparing ${names.length} images…`);
+
+      const images = [];
+      for (const name of names) {
+        const u8 = out[name];
+        if (!u8 || !u8.byteLength) continue;
+        const type = mimeFromName(name);
+        const blob = new Blob([u8], { type });
+        images.push({ name, blob, type, size: blob.size, thumbUrl: null });
+      }
+
+      if (!images.length) {
+        setDropStatus("Found image filenames, but extracted data was empty.");
+        elDrop.classList.remove("loading");
+        return;
+      }
+
+      if (myToken !== state.loadToken) return;
+
+      state.images = images;
+
+      elDrop.classList.remove("loading");
+      elDrop.classList.add("hidden");
+
+      elBar.classList.remove("hidden");
+      elGrid.classList.remove("hidden");
+      setBarStatus(`${images.length} image${images.length === 1 ? "" : "s"} (drag a new ZIP any time)`);
+
+      renderGrid();
+    }
+
+    function renderGrid() {
+      state.abort.abort();
+      state.abort = new AbortController();
+      state.thumbQueue.clear();
+
+      elGrid.textContent = "";
+      const frag = document.createDocumentFragment();
+
+      for (let i = 0; i < state.images.length; i++) {
+        const info = state.images[i];
+
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "tile";
+        tile.dataset.index = String(i);
+
+        const thumb = document.createElement("div");
+        thumb.className = "thumb skeleton";
+        const img = document.createElement("img");
+        img.alt = "";
+        img.decoding = "async";
+        img.loading = "lazy";
+        thumb.appendChild(img);
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = baseName(info.name);
+
+        tile.append(thumb, label);
+        frag.appendChild(tile);
+      }
+
+      elGrid.appendChild(frag);
+
+      if (state.io) state.io.disconnect();
+      state.io = new IntersectionObserver(onGridIntersect, {
+        root: null,
+        rootMargin: "400px",
+        threshold: 0.01,
+      });
+
+      for (const tile of elGrid.querySelectorAll(".tile")) {
+        state.io.observe(tile);
+      }
+    }
+
+    function onGridIntersect(entries) {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const tile = /** @type {HTMLElement} */ (entry.target);
+        state.io && state.io.unobserve(tile);
+        const idx = Number(tile.dataset.index);
+        if (!Number.isFinite(idx)) continue;
+        scheduleThumb(idx, tile);
+      }
+    }
+
+    function scheduleThumb(idx, tile) {
+      const signal = state.abort.signal;
+
+      state.thumbQueue.enqueue(async () => {
+        if (signal.aborted) return;
+
+        const info = state.images[idx];
+        if (!info) return;
+
+        if (info.thumbUrl) {
+          applyThumb(tile, info.thumbUrl);
+          return;
+        }
+
+        try {
+          const thumbUrl = await makeThumbURL(info.blob, tile, signal);
+          if (signal.aborted) {
+            URL.revokeObjectURL(thumbUrl);
+            return;
+          }
+          info.thumbUrl = thumbUrl;
+          applyThumb(tile, thumbUrl);
+        } catch {
+          tile.classList.add("broken");
+          const thumb = tile.querySelector(".thumb");
+          if (thumb) thumb.classList.remove("skeleton");
+        }
+      });
+    }
+
+    function applyThumb(tile, url) {
+      const img = tile.querySelector("img");
+      if (!img) return;
+      if (img.src === url) return;
+      img.src = url;
+      const thumb = tile.querySelector(".thumb");
+      if (thumb) thumb.classList.remove("skeleton");
+    }
+
+    function openViewer(idx) {
+      if (!Number.isFinite(idx) || idx < 0 || idx >= state.images.length) return;
+      closeViewer();
+
+      state.viewerIndex = idx;
+      state.viewerMode = "fit";
+
+      const info = state.images[idx];
+      state.viewerUrl = URL.createObjectURL(info.blob);
+      elViewerImg.src = state.viewerUrl;
+
+      elViewer.classList.remove("hidden");
+      document.body.classList.add("viewer-open");
+
+      setViewerMode("fit");
+    }
+
+    function setViewerMode(mode) {
+      state.viewerMode = mode;
+
+      elViewerScroll.classList.toggle("fit", mode === "fit");
+      elViewerScroll.classList.toggle("one", mode === "one");
+
+      if (mode !== "one") safeExitPointerLock();
+
+      // Reset scroll whenever mode changes
+      elViewerScroll.scrollTop = 0;
+      elViewerScroll.scrollLeft = 0;
+
+      updateViewerInfo();
+
+      if (mode === "one") {
+        requestAnimationFrame(() => {
+          elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
+          elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
+        });
+      }
+    }
+
+    function capturePointerForPan() {
+      if (state.viewerMode !== "one") return;
+      if (!("requestPointerLock" in elViewerScroll)) return;
+      // The click that got us into 1:1 counts as a user gesture, so this usually succeeds.
+      try { elViewerScroll.requestPointerLock(); } catch {}
+    }
+
+    function safeExitPointerLock() {
+      if (document.pointerLockElement) {
+        try { document.exitPointerLock(); } catch {}
+      }
+    }
+
+    function updateViewerInfo() {
+      if (state.viewerIndex == null) {
+        elViewerInfo.textContent = "";
+        return;
+      }
+      const info = state.images[state.viewerIndex];
+      const mode = state.viewerMode === "fit" ? "fit" : "1:1";
+      elViewerInfo.textContent = `${state.viewerIndex + 1}/${state.images.length} — ${info.name} — ${mode}`;
+    }
+
+    function navigateImage(delta) {
+      if (state.viewerIndex == null || !state.images.length) return;
+
+      // Calculate new index with wrapping
+      let newIndex = state.viewerIndex + delta;
+      if (newIndex < 0) newIndex = state.images.length - 1;
+      if (newIndex >= state.images.length) newIndex = 0;
+
+      // Update to new image
+      if (state.viewerUrl) {
+        URL.revokeObjectURL(state.viewerUrl);
+      }
+
+      state.viewerIndex = newIndex;
+      const info = state.images[newIndex];
+      state.viewerUrl = URL.createObjectURL(info.blob);
+      elViewerImg.src = state.viewerUrl;
+
+      // Maintain current mode and reset scroll position
+      if (state.viewerMode === "one") {
+        requestAnimationFrame(() => {
+          elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
+          elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
+        });
+      }
+
+      updateViewerInfo();
+    }
+
+    function closeViewer() {
+      safeExitPointerLock();
+      if (state.viewerUrl) {
+        elViewerImg.src = "";
+        URL.revokeObjectURL(state.viewerUrl);
+        state.viewerUrl = null;
+      }
+      state.viewerIndex = null;
+      state.viewerMode = "fit";
+      elViewer.classList.add("hidden");
+      document.body.classList.remove("viewer-open");
+      updateViewerInfo();
+    }
+
+    function hardReset({ keepOverlayVisible = false } = {}) {
+      safeExitPointerLock();
+
+      state.abort.abort();
+      state.abort = new AbortController();
+      state.thumbQueue.clear();
+
+      if (state.io) {
+        state.io.disconnect();
+        state.io = null;
+      }
+
+      for (const img of state.images) {
+        if (img.thumbUrl) URL.revokeObjectURL(img.thumbUrl);
+      }
+
+      state.images = [];
+      closeViewer();
+
+      elGrid.textContent = "";
+      elGrid.classList.add("hidden");
+      elBar.classList.add("hidden");
+      setBarStatus("");
+
+      if (keepOverlayVisible) {
+        elDrop.classList.remove("hidden");
+        elDrop.classList.remove("loading");
+      } else {
+        elDrop.classList.remove("loading");
+        elDrop.classList.remove("hidden");
+      }
+
+      setDropStatus("");
+      document.body.classList.remove("viewer-open");
+    }
+
+    // ---------------------------
+    // Thumbnails
+    // ---------------------------
+
+    async function makeThumbURL(blob, tile, signal) {
+      const rect = tile.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const cssSize = clamp(Math.round(rect.width || 200), 140, 360);
+      const px = Math.round(cssSize * dpr);
+
+      const bmp = await createImageBitmapSafe(blob);
+      if (signal.aborted) { bmp.close(); throw new Error("aborted"); }
+
+      const canvas = (typeof OffscreenCanvas !== "undefined")
+        ? new OffscreenCanvas(px, px)
+        : Object.assign(document.createElement("canvas"), { width: px, height: px });
+
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) { bmp.close(); throw new Error("No 2D canvas context"); }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      const scale = Math.max(px / bmp.width, px / bmp.height);
+      const cropW = Math.min(bmp.width, px / scale);
+      const cropH = Math.min(bmp.height, px / scale);
+      const sx = Math.max(0, (bmp.width - cropW) / 2);
+      const sy = Math.max(0, (bmp.height - cropH) / 2);
+
+      ctx.drawImage(bmp, sx, sy, cropW, cropH, 0, 0, px, px);
+      bmp.close();
+
+      const out = await canvasToBlob(canvas, "image/jpeg", 0.82);
+      return URL.createObjectURL(out);
+    }
+
+    async function createImageBitmapSafe(blob) {
+      try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); }
+      catch { return await createImageBitmap(blob); }
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      if ("convertToBlob" in canvas) return canvas.convertToBlob({ type, quality });
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), type, quality);
+      });
+    }
+
+    // ---------------------------
+    // Zip helper
+    // ---------------------------
+
+    function unzipAsync(u8) {
+      return new Promise((resolve, reject) => {
+        // fflate's unzip is callback-based
+        unzip(u8, (err, data) => {
+          if (err) reject(err);
+          else resolve(data);
+        });
+      });
+    }
+
+    // ---------------------------
+    // Utilities
+    // ---------------------------
+
+    function createTaskQueue(concurrency) {
+      let active = 0;
+      /** @type {Array<{fn: Function, resolve: Function, reject: Function}>} */
+      const q = [];
+
+      const runNext = () => {
+        if (active >= concurrency || q.length === 0) return;
+        const { fn, resolve, reject } = q.shift();
+        active++;
+        Promise.resolve()
+          .then(() => fn())
+          .then(resolve, reject)
+          .finally(() => {
+            active--;
+            runNext();
+          });
+      };
+
+      return {
+        enqueue(fn) {
+          return new Promise((resolve, reject) => {
+            q.push({ fn, resolve, reject });
+            runNext();
+          });
+        },
+        clear() { q.length = 0; }
+      };
+    }
+
+    function getDecodeConcurrency() {
+      const hc = navigator.hardwareConcurrency || 8;
+      return clamp(Math.floor(hc / 2), 2, 8);
+    }
+
+    function mimeFromName(name) {
+      const ext = (name.split(".").pop() || "").toLowerCase();
+      switch (ext) {
+        case "jpg":
+        case "jpeg": return "image/jpeg";
+        case "png": return "image/png";
+        case "webp": return "image/webp";
+        case "gif": return "image/gif";
+        case "bmp": return "image/bmp";
+        case "avif": return "image/avif";
+        default: return "application/octet-stream";
+      }
+    }
+
+    function baseName(path) {
+      const parts = String(path).split("/");
+      return parts[parts.length - 1] || path;
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+      const units = ["B", "KB", "MB", "GB"];
+      let v = bytes, i = 0;
+      while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+      const digits = i === 0 ? 0 : i === 1 ? 1 : 2;
+      return `${v.toFixed(digits)} ${units[i]}`;
+    }
+
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function stringifyErr(err) {
+      if (!err) return "Unknown error";
+      if (typeof err === "string") return err;
+      if (err instanceof Error) return err.message || String(err);
+      return String(err);
+    }
+
+    function setDropStatus(msg) { elDropStatus.textContent = msg || ""; }
+    function setBarStatus(msg) { elStatus.textContent = msg || ""; }
+  </script>
+</body>
+</html>

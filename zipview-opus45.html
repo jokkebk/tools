@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZIP Image Viewer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+    }
+
+    /* Drop Zone */
+    #drop-zone {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }
+
+    #drop-zone.drag-over {
+      background: #16213e;
+    }
+
+    #drop-zone.hidden {
+      display: none;
+    }
+
+    .drop-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      opacity: 0.7;
+    }
+
+    .drop-text {
+      font-size: 24px;
+      opacity: 0.8;
+    }
+
+    .drop-hint {
+      font-size: 14px;
+      opacity: 0.5;
+      margin-top: 10px;
+    }
+
+    /* Loading */
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(26, 26, 46, 0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    #loading.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #333;
+      border-top-color: #0f4c75;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      font-size: 16px;
+      opacity: 0.8;
+    }
+
+    /* Grid View */
+    #grid-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: none;
+      padding: 16px;
+    }
+
+    #grid-container.visible {
+      display: block;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    .thumb {
+      aspect-ratio: 1;
+      background: #16213e;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      will-change: transform;
+    }
+
+    .thumb:hover {
+      transform: scale(1.03);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .thumb img.loaded {
+      opacity: 1;
+    }
+
+    .thumb-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #16213e;
+    }
+
+    .thumb-placeholder .mini-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #333;
+      border-top-color: #0f4c75;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Fullscreen View */
+    #fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: none;
+      z-index: 500;
+      cursor: pointer;
+    }
+
+    #fullscreen.visible {
+      display: block;
+    }
+
+    #fullscreen.mode-fit {
+      overflow: hidden;
+    }
+
+    #fullscreen.mode-1to1 {
+      overflow: auto;
+      cursor: none; /* Cursor is locked anyway */
+    }
+
+    #fullscreen-img {
+      display: block;
+    }
+
+    #fullscreen.mode-fit #fullscreen-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #fullscreen.mode-1to1 #fullscreen-img {
+      max-width: none;
+      max-height: none;
+    }
+
+    /* Image info overlay */
+    #image-info {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 600;
+    }
+
+    #fullscreen.visible ~ #image-info {
+      opacity: 1;
+    }
+
+    /* Help hint */
+    #help-hint {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      opacity: 0.6;
+      z-index: 600;
+      pointer-events: none;
+    }
+
+    #grid-container.visible ~ #help-hint,
+    #fullscreen.visible ~ #help-hint {
+      display: block;
+    }
+
+    #drop-zone:not(.hidden) ~ #help-hint {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="drop-zone">
+    <div class="drop-icon">📦</div>
+    <div class="drop-text">Drop a ZIP file here</div>
+    <div class="drop-hint">Supports JPEG, PNG, GIF, WebP images</div>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Extracting images...</div>
+  </div>
+
+  <div id="grid-container">
+    <div id="grid"></div>
+  </div>
+
+  <div id="fullscreen">
+    <img id="fullscreen-img" alt="">
+  </div>
+
+  <div id="image-info"></div>
+  <div id="help-hint">Click: zoom to 1:1 • Move mouse to pan • Click/Right-click: back • Esc: reset</div>
+
+  <script type="module">
+    import { unzip } from 'https://esm.sh/fflate@0.8.2';
+
+    // State
+    let state = 'idle'; // idle | grid | fullscreen-fit | fullscreen-1to1
+    let images = []; // { name, blob, url, width?, height? }
+    let currentIndex = 0;
+
+    // DOM elements
+    const dropZone = document.getElementById('drop-zone');
+    const loading = document.getElementById('loading');
+    const gridContainer = document.getElementById('grid-container');
+    const grid = document.getElementById('grid');
+    const fullscreen = document.getElementById('fullscreen');
+    const fullscreenImg = document.getElementById('fullscreen-img');
+    const imageInfo = document.getElementById('image-info');
+
+    // Image extensions
+    const IMAGE_EXTENSIONS = /\.(jpe?g|png|gif|webp|bmp|avif)$/i;
+
+    // Prevent default drag behaviors on document
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+      document.addEventListener(event, e => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+
+    // Drop zone visual feedback
+    dropZone.addEventListener('dragenter', () => dropZone.classList.add('drag-over'));
+    dropZone.addEventListener('dragleave', (e) => {
+      if (!dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drag-over');
+      }
+    });
+    dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+    dropZone.addEventListener('drop', handleDrop);
+
+    // Also allow drop anywhere when in grid view
+    document.addEventListener('drop', (e) => {
+      if (state !== 'idle') {
+        const file = e.dataTransfer?.files[0];
+        if (file && file.name.endsWith('.zip')) {
+          resetApp();
+          setTimeout(() => processZipFile(file), 50);
+        }
+      }
+    });
+
+    async function handleDrop(e) {
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer?.files[0];
+      if (file && file.name.endsWith('.zip')) {
+        await processZipFile(file);
+      }
+    }
+
+    async function processZipFile(file) {
+      showLoading(true);
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Decompress using fflate
+        const files = await new Promise((resolve, reject) => {
+          unzip(uint8Array, (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          });
+        });
+
+        // Filter and sort image files
+        const imageFiles = Object.entries(files)
+          .filter(([name]) => IMAGE_EXTENSIONS.test(name) && !name.startsWith('__MACOSX'))
+          .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+
+        if (imageFiles.length === 0) {
+          alert('No images found in ZIP file');
+          showLoading(false);
+          return;
+        }
+
+        // Create blob URLs for all images
+        images = imageFiles.map(([name, data]) => {
+          const mimeType = getMimeType(name);
+          const blob = new Blob([data], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          return { name: name.split('/').pop(), blob, url };
+        });
+
+        showGrid();
+      } catch (err) {
+        console.error('Error processing ZIP:', err);
+        alert('Error processing ZIP file: ' + err.message);
+        showLoading(false);
+      }
+    }
+
+    function getMimeType(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const types = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        bmp: 'image/bmp',
+        avif: 'image/avif'
+      };
+      return types[ext] || 'image/jpeg';
+    }
+
+    function showLoading(show) {
+      loading.classList.toggle('visible', show);
+    }
+
+    function showGrid() {
+      dropZone.classList.add('hidden');
+      showLoading(false);
+      gridContainer.classList.add('visible');
+      state = 'grid';
+
+      // Clear existing grid
+      grid.innerHTML = '';
+
+      // Create thumbnail elements with lazy loading
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const thumb = entry.target;
+            const img = thumb.querySelector('img');
+            const index = parseInt(thumb.dataset.index);
+            
+            img.src = images[index].url;
+            img.onload = () => {
+              img.classList.add('loaded');
+              thumb.querySelector('.thumb-placeholder')?.remove();
+              // Store dimensions for info display
+              images[index].width = img.naturalWidth;
+              images[index].height = img.naturalHeight;
+            };
+            
+            observer.unobserve(thumb);
+          }
+        });
+      }, { rootMargin: '200px' });
+
+      images.forEach((image, index) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        thumb.dataset.index = index;
+        thumb.innerHTML = `
+          <div class="thumb-placeholder"><div class="mini-spinner"></div></div>
+          <img alt="${image.name}" loading="lazy">
+        `;
+        grid.appendChild(thumb);
+        observer.observe(thumb);
+      });
+    }
+
+    // Event delegation for grid clicks
+    grid.addEventListener('click', (e) => {
+      const thumb = e.target.closest('.thumb');
+      if (thumb) {
+        currentIndex = parseInt(thumb.dataset.index);
+        showFullscreen('fit');
+      }
+    });
+
+    function showFullscreen(mode, clickX, clickY) {
+      const image = images[currentIndex];
+      fullscreenImg.src = image.url;
+      
+      fullscreen.className = 'visible mode-' + mode;
+      state = 'fullscreen-' + mode;
+      
+      // Update info
+      const dims = image.width && image.height 
+        ? ` • ${image.width}×${image.height}` 
+        : '';
+      imageInfo.textContent = `${currentIndex + 1}/${images.length}: ${image.name}${dims}`;
+
+      // For 1:1 mode, scroll so the clicked point is centered, then lock pointer
+      if (mode === '1to1' && clickX !== undefined && clickY !== undefined) {
+        requestAnimationFrame(() => {
+          const imgWidth = image.width || fullscreenImg.naturalWidth;
+          const imgHeight = image.height || fullscreenImg.naturalHeight;
+          const viewWidth = fullscreen.clientWidth;
+          const viewHeight = fullscreen.clientHeight;
+          
+          // Calculate where on the image the user clicked (in fit mode)
+          // First, find the displayed size of the image in fit mode
+          const fitScale = Math.min(viewWidth / imgWidth, viewHeight / imgHeight);
+          const displayedWidth = imgWidth * fitScale;
+          const displayedHeight = imgHeight * fitScale;
+          
+          // Offset of the image within the viewport (centered)
+          const offsetX = (viewWidth - displayedWidth) / 2;
+          const offsetY = (viewHeight - displayedHeight) / 2;
+          
+          // Click position relative to the image (0-1 normalized)
+          const relX = Math.max(0, Math.min(1, (clickX - offsetX) / displayedWidth));
+          const relY = Math.max(0, Math.min(1, (clickY - offsetY) / displayedHeight));
+          
+          // In 1:1 mode, scroll so that point is at center of viewport
+          const scrollX = (relX * imgWidth) - (viewWidth / 2);
+          const scrollY = (relY * imgHeight) - (viewHeight / 2);
+          
+          fullscreen.scrollTo(scrollX, scrollY);
+          
+          // Request pointer lock for mouse-movement panning
+          fullscreen.requestPointerLock();
+        });
+      }
+    }
+
+    function hideFullscreen() {
+      fullscreen.className = '';
+      imageInfo.textContent = '';
+      state = 'grid';
+    }
+
+    // Fullscreen click handler
+    fullscreen.addEventListener('click', (e) => {
+      if (e.button === 0) { // Left click
+        if (state === 'fullscreen-fit') {
+          // Switch to 1:1 and capture mouse, centering on click point
+          showFullscreen('1to1', e.clientX, e.clientY);
+        }
+        // In 1:1 mode, clicks are handled by the captured mouse logic
+      }
+    });
+
+    // Prevent context menu globally since we use right-click for navigation
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        // If pointer is locked, just exit lock and go to fit mode
+        if (document.pointerLockElement === fullscreen) {
+          exitPointerLock();
+          showFullscreen('fit');
+        } else {
+          e.preventDefault();
+          resetApp();
+        }
+      } else if (state.startsWith('fullscreen')) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+          e.preventDefault();
+          navigateImage(1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          navigateImage(-1);
+        }
+      }
+    });
+
+    // Mouse wheel navigation in fullscreen
+    fullscreen.addEventListener('wheel', (e) => {
+      if (state.startsWith('fullscreen')) {
+        e.preventDefault();
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          navigateImage(e.deltaY > 0 ? 1 : -1);
+        }
+      }
+    }, { passive: false });
+
+    // Navigate to next/previous image, maintaining current mode
+    let isNavigating = false;
+    function navigateImage(delta) {
+      isNavigating = true;
+      const wasLocked = (document.pointerLockElement === fullscreen);
+      currentIndex = (currentIndex + delta + images.length) % images.length;
+      const currentMode = state === 'fullscreen-1to1' ? '1to1' : 'fit';
+      exitPointerLock();
+      showFullscreen(currentMode);
+
+      // Re-request pointer lock if we were in 1:1 mode with lock
+      if (wasLocked && currentMode === '1to1') {
+        requestAnimationFrame(() => {
+          fullscreen.requestPointerLock();
+        });
+      }
+
+      // Reset flag after a brief delay
+      setTimeout(() => { isNavigating = false; }, 100);
+    }
+
+    // Pointer lock for 1:1 mode - mouse movement directly pans
+    function exitPointerLock() {
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+    }
+
+    // Handle pointer lock change
+    document.addEventListener('pointerlockchange', () => {
+      if (!document.pointerLockElement && state === 'fullscreen-1to1' && !isNavigating) {
+        // Pointer lock was exited (e.g., by pressing Escape handled by browser)
+        // Only go back to fit mode if we're not actively navigating between images
+        showFullscreen('fit');
+      }
+    });
+
+    // Mouse movement while locked - directly pans the image
+    document.addEventListener('mousemove', (e) => {
+      if (document.pointerLockElement === fullscreen && state === 'fullscreen-1to1') {
+        // movementX/Y give delta since last event
+        fullscreen.scrollLeft += e.movementX * 1.5; // Multiplier for comfortable speed
+        fullscreen.scrollTop += e.movementY * 1.5;
+      }
+    });
+
+    // Click while in 1:1 mode (pointer locked) exits back to fit
+    fullscreen.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && document.pointerLockElement === fullscreen) {
+        exitPointerLock();
+        // State change handled by pointerlockchange event
+      } else if (e.button === 2) { // Right-click
+        e.preventDefault();
+        if (state === 'fullscreen-1to1') {
+          exitPointerLock();
+          isNavigating = true; // Prevent pointerlockchange from interfering
+          showFullscreen('fit');
+          setTimeout(() => { isNavigating = false; }, 100);
+        } else if (state === 'fullscreen-fit') {
+          hideFullscreen();
+        }
+      }
+    });
+
+    function resetApp() {
+      // Revoke all blob URLs to free memory
+      images.forEach(img => URL.revokeObjectURL(img.url));
+      images = [];
+      currentIndex = 0;
+      state = 'idle';
+
+      // Reset UI
+      grid.innerHTML = '';
+      gridContainer.classList.remove('visible');
+      fullscreen.className = '';
+      fullscreenImg.src = '';
+      imageInfo.textContent = '';
+      dropZone.classList.remove('hidden', 'drag-over');
+      showLoading(false);
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      images.forEach(img => URL.revokeObjectURL(img.url));
+    });
+  </script>
+</body>
+</html>
