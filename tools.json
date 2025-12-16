@@ -1,0 +1,18 @@
+{
+  "pages": {
+    "zipview-gpt52pro.html": {
+      "last_commit": {
+        "hash": "18535cf925056e4946444e777e16524f2ffa7170",
+        "date": "2025-12-16T21:43:39+02:00",
+        "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
+      }
+    },
+    "zipview-opus45.html": {
+      "last_commit": {
+        "hash": "18535cf925056e4946444e777e16524f2ffa7170",
+        "date": "2025-12-16T21:43:39+02:00",
+        "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
+      }
+    }
+  }
+}
