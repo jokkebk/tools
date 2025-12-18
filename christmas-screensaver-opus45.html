@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nordic Christmas Night</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0a0a12;
+            cursor: none;
+        }
+        
+        #aurora-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #scene-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+        
+        #snow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="aurora-canvas"></canvas>
+    <canvas id="scene-canvas"></canvas>
+    <canvas id="snow-canvas"></canvas>
+
+    <script>
+        // ============================================
+        // AURORA BOREALIS - WebGL Shader
+        // ============================================
+        const auroraCanvas = document.getElementById('aurora-canvas');
+        const gl = auroraCanvas.getContext('webgl') || auroraCanvas.getContext('experimental-webgl');
+        
+        function resizeAuroraCanvas() {
+            auroraCanvas.width = window.innerWidth * window.devicePixelRatio;
+            auroraCanvas.height = window.innerHeight * window.devicePixelRatio;
+            if (gl) gl.viewport(0, 0, auroraCanvas.width, auroraCanvas.height);
+        }
+        resizeAuroraCanvas();
+        window.addEventListener('resize', resizeAuroraCanvas);
+
+        const vertexShaderSource = `
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+            }
+        `;
+
+        const fragmentShaderSource = `
+            precision highp float;
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            uniform float u_intensity;
+            
+            // Simplex noise functions
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+            
+            float snoise(vec2 v) {
+                const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                                   -0.577350269189626, 0.024390243902439);
+                vec2 i  = floor(v + dot(v, C.yy));
+                vec2 x0 = v -   i + dot(i, C.xx);
+                vec2 i1;
+                i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                vec4 x12 = x0.xyxy + C.xxzz;
+                x12.xy -= i1;
+                i = mod289(i);
+                vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0))
+                    + i.x + vec3(0.0, i1.x, 1.0));
+                vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),
+                    dot(x12.zw,x12.zw)), 0.0);
+                m = m*m;
+                m = m*m;
+                vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                vec3 h = abs(x) - 0.5;
+                vec3 ox = floor(x + 0.5);
+                vec3 a0 = x - ox;
+                m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+                vec3 g;
+                g.x  = a0.x  * x0.x  + h.x  * x0.y;
+                g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                return 130.0 * dot(m, g);
+            }
+            
+            float fbm(vec2 p) {
+                float f = 0.0;
+                float w = 0.5;
+                for (int i = 0; i < 6; i++) {
+                    f += w * snoise(p);
+                    p *= 2.0;
+                    w *= 0.5;
+                }
+                return f;
+            }
+            
+            void main() {
+                vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+                vec2 p = uv * 2.0 - 1.0;
+                p.x *= u_resolution.x / u_resolution.y;
+                
+                // Night sky gradient - slightly brighter
+                vec3 skyColor = mix(
+                    vec3(0.02, 0.03, 0.08),
+                    vec3(0.04, 0.06, 0.12),
+                    uv.y
+                );
+                
+                // Aurora parameters
+                float time = u_time * 0.12;
+                float y = uv.y;
+                
+                // Aurora height range - extends lower
+                float auroraHeight = smoothstep(0.25, 0.95, y);
+                float auroraFade = smoothstep(0.95, 0.8, y); // Fade at very top
+                auroraHeight *= auroraFade;
+                
+                // Create wavy horizontal displacement
+                float wave1 = sin(p.x * 2.0 + time * 0.8) * 0.15;
+                float wave2 = sin(p.x * 3.5 - time * 0.5) * 0.1;
+                float wave3 = sin(p.x * 1.5 + time * 1.2) * 0.2;
+                float wave4 = cos(p.x * 4.0 + time * 0.3) * 0.08;
+                float waveY = y + wave1 + wave2 + wave3 + wave4;
+                
+                // Multiple flowing aurora bands with horizontal wave motion
+                float band1 = fbm(vec2(p.x * 0.8 + time * 0.4, waveY * 1.5));
+                float band2 = fbm(vec2(p.x * 1.2 - time * 0.3, waveY * 1.2 + 0.5));
+                float band3 = fbm(vec2(p.x * 0.6 + time * 0.5, waveY * 1.8 - 0.3));
+                float band4 = fbm(vec2(p.x * 1.5 - time * 0.25, waveY * 1.0 + 1.0));
+                
+                // Create ribbon-like structures
+                float ribbon1 = smoothstep(0.0, 0.3, band1) * smoothstep(0.8, 0.5, band1);
+                float ribbon2 = smoothstep(-0.1, 0.25, band2) * smoothstep(0.7, 0.4, band2);
+                float ribbon3 = smoothstep(0.1, 0.35, band3) * smoothstep(0.75, 0.45, band3);
+                float ribbon4 = smoothstep(-0.05, 0.2, band4) * smoothstep(0.65, 0.35, band4);
+                
+                // Subtle vertical ray structure (less dominant)
+                float rays = snoise(vec2(p.x * 6.0 + time * 0.3, y * 0.3)) * 0.5 + 0.5;
+                rays = pow(rays, 1.5) * 0.4 + 0.6;
+                
+                // Combine ribbons
+                float aurora = ribbon1 * 0.35 + ribbon2 * 0.3 + ribbon3 * 0.2 + ribbon4 * 0.15;
+                aurora *= rays;
+                aurora *= auroraHeight;
+                
+                // Dynamic pulsing
+                float pulse1 = sin(u_time * 0.2) * 0.1 + 0.9;
+                float pulse2 = sin(u_time * 0.35 + 1.0) * 0.15 + 0.85;
+                aurora *= pulse1 * pulse2 * u_intensity;
+                
+                // Rich multi-color palette
+                vec3 green1 = vec3(0.3, 1.0, 0.5);       // Bright green
+                vec3 green2 = vec3(0.2, 0.85, 0.4);     // Classic aurora green
+                vec3 teal = vec3(0.2, 0.9, 0.8);        // Cyan-teal
+                vec3 blue = vec3(0.3, 0.5, 1.0);        // Electric blue
+                vec3 purple = vec3(0.6, 0.3, 0.9);      // Vivid purple
+                vec3 pink = vec3(0.9, 0.4, 0.7);        // Magenta pink
+                vec3 red = vec3(0.9, 0.3, 0.4);         // Deep red (rare)
+                
+                // Color varies by position and time
+                float colorWave = sin(p.x * 1.5 + time * 0.5) * 0.5 + 0.5;
+                float colorWave2 = cos(p.x * 2.0 - time * 0.3) * 0.5 + 0.5;
+                float heightColor = smoothstep(0.3, 0.8, y);
+                
+                // Build color from multiple layers
+                vec3 auroraColor = mix(green1, green2, colorWave);
+                auroraColor = mix(auroraColor, teal, ribbon2 * 0.6);
+                auroraColor = mix(auroraColor, blue, heightColor * colorWave2 * 0.4);
+                auroraColor = mix(auroraColor, purple, pow(ribbon3, 1.5) * 0.5);
+                auroraColor = mix(auroraColor, pink, pow(ribbon4, 2.0) * 0.6 * (1.0 - heightColor));
+                
+                // Occasional red at the top
+                float redZone = smoothstep(0.75, 0.9, y) * ribbon1 * 0.3;
+                auroraColor = mix(auroraColor, red, redZone);
+                
+                // Boost brightness and glow
+                float glow = aurora * 1.2;
+                glow = pow(glow, 1.2);
+                
+                // Add bloom/diffuse glow around bright areas
+                float bloom = aurora * 0.5;
+                bloom = pow(bloom, 0.8);
+                
+                // Final composition with boosted aurora
+                vec3 finalColor = skyColor;
+                finalColor += auroraColor * bloom * 0.4; // Diffuse underglow
+                finalColor += auroraColor * glow * 1.4;  // Main aurora (brighter)
+                
+                // Subtle horizon glow reflecting aurora
+                float horizonGlow = smoothstep(0.35, 0.15, y) * 0.15;
+                vec3 horizonColor = mix(vec3(0.1, 0.2, 0.15), auroraColor * 0.3, 0.5);
+                finalColor += horizonColor * horizonGlow;
+                
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function createProgram(gl, vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program link error:', gl.getProgramInfoLog(program));
+                return null;
+            }
+            return program;
+        }
+
+        let auroraProgram, auroraPositionBuffer, auroraUniforms;
+        
+        if (gl) {
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+            auroraProgram = createProgram(gl, vertexShader, fragmentShader);
+            
+            auroraPositionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, auroraPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                -1, -1, 1, -1, -1, 1,
+                -1, 1, 1, -1, 1, 1
+            ]), gl.STATIC_DRAW);
+            
+            auroraUniforms = {
+                resolution: gl.getUniformLocation(auroraProgram, 'u_resolution'),
+                time: gl.getUniformLocation(auroraProgram, 'u_time'),
+                intensity: gl.getUniformLocation(auroraProgram, 'u_intensity')
+            };
+        }
+
+        // Aurora intensity varies over time
+        let auroraIntensity = 0.7;
+        let targetIntensity = 0.7;
+        
+        setInterval(() => {
+            targetIntensity = 0.4 + Math.random() * 0.6;
+        }, 15000);
+
+        function renderAurora(time) {
+            if (!gl) return;
+            
+            auroraIntensity += (targetIntensity - auroraIntensity) * 0.01;
+            
+            gl.useProgram(auroraProgram);
+            
+            const positionLocation = gl.getAttribLocation(auroraProgram, 'a_position');
+            gl.bindBuffer(gl.ARRAY_BUFFER, auroraPositionBuffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+            
+            gl.uniform2f(auroraUniforms.resolution, auroraCanvas.width, auroraCanvas.height);
+            gl.uniform1f(auroraUniforms.time, time * 0.001);
+            gl.uniform1f(auroraUniforms.intensity, auroraIntensity);
+            
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        }
+
+        // ============================================
+        // SCENE CANVAS - Stars, Landscape, Buildings
+        // ============================================
+        const sceneCanvas = document.getElementById('scene-canvas');
+        const ctx = sceneCanvas.getContext('2d');
+        
+        function resizeSceneCanvas() {
+            sceneCanvas.width = window.innerWidth * window.devicePixelRatio;
+            sceneCanvas.height = window.innerHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        resizeSceneCanvas();
+        window.addEventListener('resize', () => {
+            resizeSceneCanvas();
+            initStars();
+            initLandscape();
+        });
+
+        const width = () => window.innerWidth;
+        const height = () => window.innerHeight;
+
+        // ============================================
+        // STARS
+        // ============================================
+        let stars = [];
+        
+        function initStars() {
+            stars = [];
+            const numStars = Math.floor((width() * height()) / 2500);
+            
+            for (let i = 0; i < numStars; i++) {
+                const isBright = Math.random() > 0.92; // 8% chance of bright star
+                const isFeature = Math.random() > 0.97; // 3% chance of very bright feature star
+                
+                stars.push({
+                    x: Math.random() * width(),
+                    y: Math.random() * height() * 0.65,
+                    size: isFeature ? 2 + Math.random() * 1.5 : 
+                          isBright ? 1.2 + Math.random() * 1 : 
+                          Math.random() * 1.2 + 0.3,
+                    brightness: isFeature ? 0.9 + Math.random() * 0.1 :
+                               isBright ? 0.7 + Math.random() * 0.3 :
+                               Math.random() * 0.7 + 0.3,
+                    twinkleSpeed: isFeature ? 0.8 + Math.random() * 1.5 :
+                                 Math.random() * 3 + 0.5,
+                    twinkleOffset: Math.random() * Math.PI * 2,
+                    color: isFeature ? (Math.random() > 0.5 ? '#fff8f0' : '#f0f8ff') :
+                           Math.random() > 0.85 ? 
+                           (Math.random() > 0.5 ? '#ffeedd' : '#ddeeff') : '#ffffff'
+                });
+            }
+        }
+        initStars();
+
+        function drawStars(time) {
+            stars.forEach(star => {
+                // Multi-frequency twinkling for more realistic effect
+                const twinkle1 = Math.sin(time * 0.001 * star.twinkleSpeed + star.twinkleOffset);
+                const twinkle2 = Math.sin(time * 0.0023 * star.twinkleSpeed + star.twinkleOffset * 1.7);
+                const twinkle3 = Math.sin(time * 0.0007 * star.twinkleSpeed + star.twinkleOffset * 0.5);
+                
+                // Combine for more complex twinkling pattern
+                const twinkle = (twinkle1 * 0.5 + twinkle2 * 0.3 + twinkle3 * 0.2);
+                
+                // More dramatic brightness range (0.1 to 1.0)
+                const brightness = 0.15 + (twinkle * 0.5 + 0.5) * 0.85 * star.brightness;
+                
+                // Occasional bright flash
+                const flash = Math.pow(Math.max(0, Math.sin(time * 0.0005 * star.twinkleSpeed + star.twinkleOffset * 3)), 8);
+                const finalBrightness = Math.min(1, brightness + flash * 0.5);
+                
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size * (0.8 + finalBrightness * 0.4), 0, Math.PI * 2);
+                ctx.fillStyle = star.color;
+                ctx.globalAlpha = finalBrightness;
+                ctx.fill();
+                
+                // Enhanced glow for brighter stars - more visible
+                if (star.size > 0.8 && finalBrightness > 0.5) {
+                    // Inner glow
+                    const gradient = ctx.createRadialGradient(
+                        star.x, star.y, 0,
+                        star.x, star.y, star.size * 6
+                    );
+                    gradient.addColorStop(0, star.color);
+                    gradient.addColorStop(0.3, star.color + '88');
+                    gradient.addColorStop(1, 'transparent');
+                    ctx.fillStyle = gradient;
+                    ctx.globalAlpha = finalBrightness * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.size * 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Cross-shaped twinkle rays for brightest stars
+                    if (star.size > 1.2 && finalBrightness > 0.7) {
+                        const rayLength = star.size * (8 + flash * 15);
+                        const rayAlpha = finalBrightness * 0.4;
+                        
+                        ctx.globalAlpha = rayAlpha;
+                        ctx.strokeStyle = star.color;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        // Vertical ray
+                        ctx.moveTo(star.x, star.y - rayLength);
+                        ctx.lineTo(star.x, star.y + rayLength);
+                        // Horizontal ray
+                        ctx.moveTo(star.x - rayLength, star.y);
+                        ctx.lineTo(star.x + rayLength, star.y);
+                        ctx.stroke();
+                        
+                        // Diagonal rays (smaller)
+                        const diagLength = rayLength * 0.5;
+                        ctx.globalAlpha = rayAlpha * 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(star.x - diagLength, star.y - diagLength);
+                        ctx.lineTo(star.x + diagLength, star.y + diagLength);
+                        ctx.moveTo(star.x + diagLength, star.y - diagLength);
+                        ctx.lineTo(star.x - diagLength, star.y + diagLength);
+                        ctx.stroke();
+                    }
+                }
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        // ============================================
+        // SHOOTING STARS
+        // ============================================
+        let shootingStars = [];
+        
+        function createShootingStar() {
+            const startX = Math.random() * width() * 0.7 + width() * 0.15;
+            const startY = Math.random() * height() * 0.3 + 50;
+            const angle = Math.PI * 0.15 + Math.random() * Math.PI * 0.1;
+            
+            shootingStars.push({
+                x: startX,
+                y: startY,
+                vx: Math.cos(angle) * (4 + Math.random() * 3),
+                vy: Math.sin(angle) * (4 + Math.random() * 3),
+                length: 80 + Math.random() * 60,
+                life: 1,
+                decay: 0.015 + Math.random() * 0.01
+            });
+        }
+        
+        // Random shooting stars
+        setInterval(() => {
+            if (Math.random() > 0.6 && shootingStars.length < 2) {
+                createShootingStar();
+            }
+        }, 8000);
+
+        function drawShootingStars() {
+            shootingStars = shootingStars.filter(star => {
+                star.x += star.vx;
+                star.y += star.vy;
+                star.life -= star.decay;
+                
+                if (star.life <= 0) return false;
+                
+                const gradient = ctx.createLinearGradient(
+                    star.x, star.y,
+                    star.x - star.vx * star.length / 5,
+                    star.y - star.vy * star.length / 5
+                );
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${star.life})`);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.beginPath();
+                ctx.moveTo(star.x, star.y);
+                ctx.lineTo(
+                    star.x - star.vx * star.length / 5,
+                    star.y - star.vy * star.length / 5
+                );
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+                
+                // Bright head
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.life})`;
+                ctx.fill();
+                
+                return true;
+            });
+        }
+
+        // ============================================
+        // SANTA SLEIGH
+        // ============================================
+        let santa = null;
+        
+        function createSanta() {
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            santa = {
+                x: direction === 1 ? -200 : width() + 200,
+                y: 80 + Math.random() * 100,
+                direction: direction,
+                speed: 0.8 + Math.random() * 0.4,
+                bobOffset: Math.random() * Math.PI * 2
+            };
+        }
+        
+        // Santa appears every 45-90 seconds
+        setInterval(() => {
+            if (!santa && Math.random() > 0.3) {
+                createSanta();
+            }
+        }, 45000);
+        
+        // First appearance after 20 seconds
+        setTimeout(() => {
+            if (!santa) createSanta();
+        }, 20000);
+
+        function drawSanta(time) {
+            if (!santa) return;
+            
+            santa.x += santa.speed * santa.direction;
+            const bob = Math.sin(time * 0.002 + santa.bobOffset) * 5;
+            const y = santa.y + bob;
+            
+            // Check if off screen
+            if ((santa.direction === 1 && santa.x > width() + 200) ||
+                (santa.direction === -1 && santa.x < -200)) {
+                santa = null;
+                return;
+            }
+            
+            ctx.save();
+            ctx.translate(santa.x, y);
+            if (santa.direction === -1) {
+                ctx.scale(-1, 1);
+            }
+            
+            // Draw silhouette
+            ctx.fillStyle = '#0a0a15';
+            ctx.globalAlpha = 0.9;
+            
+            // Reindeers (4 of them in pairs)
+            const reindeerPositions = [-140, -120, -90, -70];
+            reindeerPositions.forEach((rx, i) => {
+                const reindeerBob = Math.sin(time * 0.008 + i * 0.5) * 3;
+                
+                // Body
+                ctx.beginPath();
+                ctx.ellipse(rx, reindeerBob, 12, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Head
+                ctx.beginPath();
+                ctx.ellipse(rx + 10, reindeerBob - 4, 5, 4, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Antlers
+                ctx.beginPath();
+                ctx.moveTo(rx + 8, reindeerBob - 7);
+                ctx.lineTo(rx + 6, reindeerBob - 14);
+                ctx.lineTo(rx + 3, reindeerBob - 12);
+                ctx.moveTo(rx + 6, reindeerBob - 14);
+                ctx.lineTo(rx + 9, reindeerBob - 17);
+                ctx.moveTo(rx + 12, reindeerBob - 7);
+                ctx.lineTo(rx + 14, reindeerBob - 14);
+                ctx.lineTo(rx + 17, reindeerBob - 12);
+                ctx.moveTo(rx + 14, reindeerBob - 14);
+                ctx.lineTo(rx + 11, reindeerBob - 17);
+                ctx.strokeStyle = '#0a0a15';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                // Legs (animated)
+                const legPhase = time * 0.01 + i * 0.8;
+                const frontLeg = Math.sin(legPhase) * 8;
+                const backLeg = Math.sin(legPhase + Math.PI) * 8;
+                
+                ctx.beginPath();
+                ctx.moveTo(rx + 5, reindeerBob + 5);
+                ctx.lineTo(rx + 5 + frontLeg * 0.3, reindeerBob + 12 + Math.abs(frontLeg) * 0.3);
+                ctx.moveTo(rx - 5, reindeerBob + 5);
+                ctx.lineTo(rx - 5 + backLeg * 0.3, reindeerBob + 12 + Math.abs(backLeg) * 0.3);
+                ctx.stroke();
+            });
+            
+            // Reins
+            ctx.beginPath();
+            ctx.moveTo(-60, 0);
+            ctx.quadraticCurveTo(-40, 5, -30, 2);
+            ctx.strokeStyle = '#0a0a15';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Sleigh
+            ctx.beginPath();
+            ctx.moveTo(-30, -5);
+            ctx.quadraticCurveTo(0, -8, 30, -5);
+            ctx.lineTo(35, 5);
+            ctx.quadraticCurveTo(30, 15, 0, 18);
+            ctx.quadraticCurveTo(-25, 18, -35, 12);
+            ctx.quadraticCurveTo(-38, 5, -30, -5);
+            ctx.fill();
+            
+            // Sleigh runner
+            ctx.beginPath();
+            ctx.moveTo(-35, 15);
+            ctx.quadraticCurveTo(-20, 22, 30, 20);
+            ctx.quadraticCurveTo(40, 18, 45, 12);
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Santa
+            ctx.beginPath();
+            // Body
+            ctx.ellipse(0, -8, 12, 15, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Head
+            ctx.beginPath();
+            ctx.arc(0, -25, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // Hat
+            ctx.beginPath();
+            ctx.moveTo(-8, -28);
+            ctx.lineTo(0, -42);
+            ctx.lineTo(8, -28);
+            ctx.fill();
+            
+            // Bag of presents
+            ctx.beginPath();
+            ctx.ellipse(20, -5, 15, 18, 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        // ============================================
+        // LANDSCAPE & BUILDINGS
+        // ============================================
+        let cottages = [];
+        let christmasLights = [];
+        let snowmen = [];
+        let chimneySmoke = [];
+        
+        function initLandscape() {
+            cottages = [];
+            christmasLights = [];
+            snowmen = [];
+            
+            const groundY = height() * 0.72;
+            
+            // Create cottages
+            const cottageCount = Math.max(3, Math.floor(width() / 350));
+            const spacing = width() / (cottageCount + 1);
+            
+            for (let i = 0; i < cottageCount; i++) {
+                const x = spacing * (i + 0.5) + (Math.random() - 0.5) * spacing * 0.5;
+                const baseY = groundY + Math.random() * 30;
+                const cottageWidth = 70 + Math.random() * 40;
+                const cottageHeight = 50 + Math.random() * 30;
+                
+                const cottage = {
+                    x: x,
+                    y: baseY,
+                    width: cottageWidth,
+                    height: cottageHeight,
+                    roofHeight: cottageHeight * 0.6 + Math.random() * 20,
+                    windowLit: Math.random() > 0.2,
+                    windowFlicker: Math.random() * Math.PI * 2,
+                    hasChimney: Math.random() > 0.3,
+                    chimneyX: Math.random() * 0.4 + 0.3,
+                    hasLights: Math.random() > 0.4,
+                    lightColor: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff'][Math.floor(Math.random() * 4)]
+                };
+                
+                cottages.push(cottage);
+                
+                // Add Christmas lights on roof
+                if (cottage.hasLights) {
+                    const lightCount = Math.floor(cottageWidth / 8);
+                    for (let j = 0; j < lightCount; j++) {
+                        christmasLights.push({
+                            x: x - cottageWidth / 2 + (cottageWidth / lightCount) * j,
+                            y: baseY - cottageHeight - cottage.roofHeight * (j < lightCount / 2 ? 
+                                (j / (lightCount / 2)) : (1 - (j - lightCount / 2) / (lightCount / 2))) + 5,
+                            color: ['#ff4444', '#44ff44', '#4444ff', '#ffff44', '#ff44ff'][j % 5],
+                            phase: Math.random() * Math.PI * 2,
+                            blinkSpeed: 0.5 + Math.random() * 2
+                        });
+                    }
+                }
+            }
+            
+            // Create snowmen
+            const snowmanCount = Math.max(1, Math.floor(width() / 500));
+            for (let i = 0; i < snowmanCount; i++) {
+                snowmen.push({
+                    x: Math.random() * width(),
+                    y: groundY + 20 + Math.random() * 40,
+                    scale: 0.7 + Math.random() * 0.4
+                });
+            }
+        }
+        initLandscape();
+
+        function drawLandscape(time) {
+            const groundY = height() * 0.72;
+            
+            // Distant hills/forest silhouette
+            ctx.fillStyle = '#0d1020';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            for (let x = 0; x <= width(); x += 20) {
+                const hillHeight = Math.sin(x * 0.003) * 30 + Math.sin(x * 0.007) * 20 + 50;
+                ctx.lineTo(x, groundY - hillHeight);
+            }
+            ctx.lineTo(width(), groundY);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Trees silhouette
+            ctx.fillStyle = '#0a0d18';
+            for (let x = 0; x < width(); x += 40 + Math.random() * 30) {
+                const treeHeight = 40 + Math.random() * 60;
+                const baseY = groundY - 20 - Math.random() * 30;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, baseY);
+                ctx.lineTo(x - 15, baseY);
+                ctx.lineTo(x, baseY - treeHeight);
+                ctx.lineTo(x + 15, baseY);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Snow ground with subtle gradient
+            const snowGradient = ctx.createLinearGradient(0, groundY, 0, height());
+            snowGradient.addColorStop(0, '#e8eef5');
+            snowGradient.addColorStop(0.3, '#d5dde8');
+            snowGradient.addColorStop(1, '#c0c8d5');
+            
+            ctx.fillStyle = snowGradient;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            // Gentle rolling snow
+            for (let x = 0; x <= width(); x += 30) {
+                const snowHeight = Math.sin(x * 0.01 + 1) * 8 + Math.sin(x * 0.02) * 4;
+                ctx.lineTo(x, groundY + snowHeight);
+            }
+            ctx.lineTo(width(), height());
+            ctx.lineTo(0, height());
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawCottages(time) {
+            cottages.forEach(cottage => {
+                const { x, y, width: w, height: h, roofHeight, windowLit, windowFlicker, 
+                        hasChimney, chimneyX, hasLights, lightColor } = cottage;
+                
+                // House body
+                ctx.fillStyle = '#1a1a25';
+                ctx.fillRect(x - w/2, y - h, w, h);
+                
+                // Roof
+                ctx.fillStyle = '#12121a';
+                ctx.beginPath();
+                ctx.moveTo(x - w/2 - 10, y - h);
+                ctx.lineTo(x, y - h - roofHeight);
+                ctx.lineTo(x + w/2 + 10, y - h);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Snow on roof
+                ctx.fillStyle = '#d8e2ee';
+                ctx.beginPath();
+                ctx.moveTo(x - w/2 - 5, y - h);
+                ctx.lineTo(x, y - h - roofHeight + 5);
+                ctx.lineTo(x + w/2 + 5, y - h);
+                ctx.quadraticCurveTo(x + w/2 + 8, y - h + 5, x + w/2, y - h + 8);
+                ctx.lineTo(x - w/2, y - h + 8);
+                ctx.quadraticCurveTo(x - w/2 - 8, y - h + 5, x - w/2 - 5, y - h);
+                ctx.fill();
+                
+                // Chimney
+                if (hasChimney) {
+                    const chimneyXPos = x - w/2 + w * chimneyX;
+                    const chimneyBaseY = y - h - roofHeight * (0.3 + chimneyX * 0.4);
+                    
+                    ctx.fillStyle = '#15151f';
+                    ctx.fillRect(chimneyXPos - 8, chimneyBaseY - 25, 16, 30);
+                    
+                    // Snow on chimney
+                    ctx.fillStyle = '#d8e2ee';
+                    ctx.beginPath();
+                    ctx.ellipse(chimneyXPos, chimneyBaseY - 25, 10, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Smoke
+                    for (let i = 0; i < 5; i++) {
+                        const smokeTime = time * 0.001 + i * 0.5;
+                        const smokeY = chimneyBaseY - 30 - (smokeTime % 3) * 30;
+                        const smokeX = chimneyXPos + Math.sin(smokeTime * 2 + i) * 10;
+                        const smokeSize = 5 + (smokeTime % 3) * 8;
+                        const smokeAlpha = Math.max(0, 0.15 - (smokeTime % 3) * 0.05);
+                        
+                        ctx.beginPath();
+                        ctx.arc(smokeX, smokeY, smokeSize, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(200, 210, 220, ${smokeAlpha})`;
+                        ctx.fill();
+                    }
+                }
+                
+                // Windows
+                if (windowLit) {
+                    const flicker = 0.7 + Math.sin(time * 0.003 + windowFlicker) * 0.1 + 
+                                   Math.sin(time * 0.007 + windowFlicker) * 0.1;
+                    
+                    // Window glow on ground
+                    const glowGradient = ctx.createRadialGradient(x, y + 10, 0, x, y + 10, 60);
+                    glowGradient.addColorStop(0, `rgba(255, 200, 100, ${0.15 * flicker})`);
+                    glowGradient.addColorStop(1, 'transparent');
+                    ctx.fillStyle = glowGradient;
+                    ctx.fillRect(x - 60, y - 10, 120, 80);
+                    
+                    // Windows
+                    const windowGlow = ctx.createRadialGradient(x - 15, y - h/2, 0, x - 15, y - h/2, 20);
+                    windowGlow.addColorStop(0, `rgba(255, 220, 150, ${flicker})`);
+                    windowGlow.addColorStop(0.5, `rgba(255, 180, 100, ${flicker * 0.5})`);
+                    windowGlow.addColorStop(1, 'transparent');
+                    
+                    // Left window
+                    ctx.fillStyle = windowGlow;
+                    ctx.fillRect(x - 25, y - h + 15, 20, 25);
+                    ctx.fillStyle = `rgba(255, 230, 180, ${flicker})`;
+                    ctx.fillRect(x - 23, y - h + 17, 16, 21);
+                    
+                    // Right window
+                    const windowGlow2 = ctx.createRadialGradient(x + 15, y - h/2, 0, x + 15, y - h/2, 20);
+                    windowGlow2.addColorStop(0, `rgba(255, 220, 150, ${flicker})`);
+                    windowGlow2.addColorStop(0.5, `rgba(255, 180, 100, ${flicker * 0.5})`);
+                    windowGlow2.addColorStop(1, 'transparent');
+                    ctx.fillStyle = windowGlow2;
+                    ctx.fillRect(x + 5, y - h + 15, 20, 25);
+                    ctx.fillStyle = `rgba(255, 230, 180, ${flicker})`;
+                    ctx.fillRect(x + 7, y - h + 17, 16, 21);
+                    
+                    // Window frames
+                    ctx.strokeStyle = '#1a1a25';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x - 23, y - h + 17, 16, 21);
+                    ctx.beginPath();
+                    ctx.moveTo(x - 15, y - h + 17);
+                    ctx.lineTo(x - 15, y - h + 38);
+                    ctx.moveTo(x - 23, y - h + 27);
+                    ctx.lineTo(x - 7, y - h + 27);
+                    ctx.stroke();
+                    
+                    ctx.strokeRect(x + 7, y - h + 17, 16, 21);
+                    ctx.beginPath();
+                    ctx.moveTo(x + 15, y - h + 17);
+                    ctx.lineTo(x + 15, y - h + 38);
+                    ctx.moveTo(x + 7, y - h + 27);
+                    ctx.lineTo(x + 23, y - h + 27);
+                    ctx.stroke();
+                }
+                
+                // Door
+                ctx.fillStyle = '#252530';
+                ctx.fillRect(x - 8, y - 30, 16, 30);
+            });
+        }
+
+        function drawChristmasLights(time) {
+            christmasLights.forEach(light => {
+                const blink = Math.sin(time * 0.001 * light.blinkSpeed + light.phase);
+                const on = blink > -0.3;
+                
+                if (on) {
+                    // Glow
+                    const glow = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, 12);
+                    glow.addColorStop(0, light.color + 'aa');
+                    glow.addColorStop(0.5, light.color + '44');
+                    glow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(light.x, light.y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Bulb
+                ctx.beginPath();
+                ctx.arc(light.x, light.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = on ? light.color : '#333340';
+                ctx.fill();
+            });
+        }
+
+        function drawSnowmen(time) {
+            snowmen.forEach(snowman => {
+                const { x, y, scale } = snowman;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(scale, scale);
+                
+                // Shadow
+                ctx.fillStyle = 'rgba(100, 110, 130, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(5, 5, 25, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bottom ball
+                ctx.fillStyle = '#e8eef5';
+                ctx.beginPath();
+                ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#c8d4e2';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Middle ball
+                ctx.fillStyle = '#eaf0f7';
+                ctx.beginPath();
+                ctx.arc(0, -35, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Head
+                ctx.fillStyle = '#ecf2f9';
+                ctx.beginPath();
+                ctx.arc(0, -60, 13, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Hat
+                ctx.fillStyle = '#1a1a25';
+                ctx.fillRect(-12, -80, 24, 8);
+                ctx.fillRect(-8, -95, 16, 15);
+                
+                // Carrot nose
+                ctx.fillStyle = '#ff8844';
+                ctx.beginPath();
+                ctx.moveTo(0, -60);
+                ctx.lineTo(15, -58);
+                ctx.lineTo(0, -56);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Eyes (coal)
+                ctx.fillStyle = '#1a1a25';
+                ctx.beginPath();
+                ctx.arc(-5, -65, 2, 0, Math.PI * 2);
+                ctx.arc(5, -65, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Smile
+                ctx.beginPath();
+                ctx.arc(0, -55, 6, 0.2, Math.PI - 0.2);
+                ctx.strokeStyle = '#1a1a25';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Buttons
+                ctx.fillStyle = '#1a1a25';
+                ctx.beginPath();
+                ctx.arc(0, -40, 2.5, 0, Math.PI * 2);
+                ctx.arc(0, -30, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Scarf
+                ctx.fillStyle = '#cc3333';
+                ctx.beginPath();
+                ctx.ellipse(0, -47, 16, 5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(8, -47, 6, 20);
+                
+                // Arms (sticks)
+                ctx.strokeStyle = '#3a2820';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(-18, -35);
+                ctx.lineTo(-40, -45);
+                ctx.moveTo(-35, -42);
+                ctx.lineTo(-38, -50);
+                ctx.moveTo(-32, -43);
+                ctx.lineTo(-30, -52);
+                ctx.moveTo(18, -35);
+                ctx.lineTo(40, -40);
+                ctx.moveTo(35, -38);
+                ctx.lineTo(38, -48);
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+
+        // ============================================
+        // SNOW PARTICLES
+        // ============================================
+        const snowCanvas = document.getElementById('snow-canvas');
+        const snowCtx = snowCanvas.getContext('2d');
+        let snowflakes = [];
+        
+        function resizeSnowCanvas() {
+            snowCanvas.width = window.innerWidth * window.devicePixelRatio;
+            snowCanvas.height = window.innerHeight * window.devicePixelRatio;
+            snowCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        resizeSnowCanvas();
+        window.addEventListener('resize', () => {
+            resizeSnowCanvas();
+            initSnow();
+        });
+        
+        function initSnow() {
+            snowflakes = [];
+            const numFlakes = Math.floor((width() * height()) / 4000);
+            
+            for (let i = 0; i < numFlakes; i++) {
+                snowflakes.push(createSnowflake());
+            }
+        }
+        
+        function createSnowflake(startTop = false) {
+            return {
+                x: Math.random() * width(),
+                y: startTop ? -10 : Math.random() * height(),
+                size: Math.random() * 3 + 1,
+                speedY: Math.random() * 1 + 0.5,
+                speedX: Math.random() * 0.5 - 0.25,
+                wobbleSpeed: Math.random() * 0.02 + 0.01,
+                wobbleAmount: Math.random() * 30 + 10,
+                wobbleOffset: Math.random() * Math.PI * 2,
+                opacity: Math.random() * 0.6 + 0.4
+            };
+        }
+        initSnow();
+
+        function drawSnow(time) {
+            snowCtx.clearRect(0, 0, width(), height());
+            
+            snowflakes.forEach((flake, index) => {
+                // Update position
+                const wobble = Math.sin(time * flake.wobbleSpeed + flake.wobbleOffset) * flake.wobbleAmount * 0.01;
+                flake.x += flake.speedX + wobble;
+                flake.y += flake.speedY;
+                
+                // Wrap around
+                if (flake.y > height() + 10) {
+                    snowflakes[index] = createSnowflake(true);
+                    return;
+                }
+                if (flake.x < -10) flake.x = width() + 10;
+                if (flake.x > width() + 10) flake.x = -10;
+                
+                // Draw
+                snowCtx.beginPath();
+                snowCtx.arc(flake.x, flake.y, flake.size, 0, Math.PI * 2);
+                snowCtx.fillStyle = `rgba(255, 255, 255, ${flake.opacity})`;
+                snowCtx.fill();
+            });
+        }
+
+        // ============================================
+        // MAIN ANIMATION LOOP
+        // ============================================
+        let lastTime = 0;
+        
+        function animate(time) {
+            // Clear scene canvas
+            ctx.clearRect(0, 0, width(), height());
+            
+            // Render aurora (WebGL)
+            renderAurora(time);
+            
+            // Draw 2D elements
+            drawStars(time);
+            drawShootingStars();
+            drawSanta(time);
+            drawLandscape(time);
+            drawCottages(time);
+            drawChristmasLights(time);
+            drawSnowmen(time);
+            
+            // Draw snow (separate canvas for performance)
+            drawSnow(time);
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start animation
+        requestAnimationFrame(animate);
+        
+        // Prevent scrolling
+        document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+        document.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+    </script>
+</body>
+</html>
