@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Firefighter: Gingerbread Defense</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -217,9 +217,66 @@
             color: #ff0;
             margin: 20px 0;
         }
+
+        /* Mobile scaling */
+        #game-container {
+            transform-origin: top left;
+        }
+
+        /* Portrait mode warning */
+        #rotate-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #rotate-overlay .rotate-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: rotate-hint 2s ease-in-out infinite;
+        }
+
+        #rotate-overlay p {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        @keyframes rotate-hint {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+
+        @media (orientation: portrait) {
+            #rotate-overlay {
+                display: flex;
+            }
+        }
+
+        @media (orientation: landscape) {
+            #rotate-overlay {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Portrait mode warning overlay -->
+    <div id="rotate-overlay">
+        <div class="rotate-icon">📱</div>
+        <p>Please rotate your device<br>to landscape mode</p>
+    </div>
+
     <div id="game-container">
         <canvas id="scene-canvas"></canvas>
         <canvas id="effects-canvas"></canvas>
@@ -524,9 +581,46 @@
             // Draw initial scene
             drawScene();
 
+            // Scale game to fit screen
+            scaleGameToFit();
+
             console.log('Game loaded! Canvas size:', sceneCanvas.width, 'x', sceneCanvas.height);
             console.log('Cannon position:', cannonPos);
         }
+
+        function scaleGameToFit() {
+            const container = document.getElementById('game-container');
+            const gameWidth = sceneCanvas.width;
+            const gameHeight = sceneCanvas.height;
+
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            // Calculate scale to fit while maintaining aspect ratio
+            const scaleX = windowWidth / gameWidth;
+            const scaleY = windowHeight / gameHeight;
+            const scale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 1
+
+            // Apply scale and center
+            container.style.transform = `scale(${scale})`;
+            container.style.transformOrigin = 'top left';
+
+            // Center the container
+            const scaledWidth = gameWidth * scale;
+            const scaledHeight = gameHeight * scale;
+            const offsetX = (windowWidth - scaledWidth) / 2;
+            const offsetY = (windowHeight - scaledHeight) / 2;
+
+            container.style.position = 'absolute';
+            container.style.left = offsetX + 'px';
+            container.style.top = offsetY + 'px';
+        }
+
+        // Re-scale on resize/orientation change
+        window.addEventListener('resize', scaleGameToFit);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(scaleGameToFit, 100);
+        });
 
         function processScene() {
             // Create offscreen canvas for processing (same size as full canvas with sky padding)
@@ -1875,26 +1969,50 @@
             e.preventDefault();
         });
 
-        // Difficulty selection
+        // Difficulty selection - handle both click and touch for mobile compatibility
+        function handleDifficultySelect(option, e) {
+            e.stopPropagation(); // Prevent bubbling to startScreen
+            e.preventDefault();
+            document.querySelectorAll('.difficulty-option').forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            currentDifficulty = option.dataset.difficulty;
+            // Start game after selecting difficulty
+            startGame();
+        }
+
         document.querySelectorAll('.difficulty-option').forEach(option => {
-            option.addEventListener('click', (e) => {
-                document.querySelectorAll('.difficulty-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                currentDifficulty = option.dataset.difficulty;
-                // Start game after selecting difficulty
-                startGame();
-            });
+            option.addEventListener('click', (e) => handleDifficultySelect(option, e));
+            option.addEventListener('touchend', (e) => handleDifficultySelect(option, e));
         });
 
         // Start game on screen click/tap (for mobile)
+        function handleStartClick(e) {
+            // Don't start if clicking on difficulty buttons (they handle themselves)
+            if (e.target.classList.contains('difficulty-option')) return;
+            startGame();
+        }
+
         startScreen.addEventListener('click', (e) => {
             if (!startScreen.classList.contains('hidden')) {
-                startGame();
+                handleStartClick(e);
+            }
+        });
+
+        startScreen.addEventListener('touchend', (e) => {
+            if (!startScreen.classList.contains('hidden')) {
+                handleStartClick(e);
             }
         });
 
         gameOverScreen.addEventListener('click', (e) => {
             if (!gameOverScreen.classList.contains('hidden')) {
+                startGame();
+            }
+        });
+
+        gameOverScreen.addEventListener('touchend', (e) => {
+            if (!gameOverScreen.classList.contains('hidden')) {
+                e.preventDefault();
                 startGame();
             }
         });
