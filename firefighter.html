@@ -406,8 +406,8 @@
             POWER_SPEED: 60, // percent per second
 
             // Mouse/touch control arc
-            CONTROL_ARC_RADIUS: 160, // Large radius for easy touch control
-            CONTROL_ARC_MIN_RADIUS: 30, // Minimum distance for min power
+            CONTROL_ARC_RADIUS: 240, // Large radius for easy touch control
+            CONTROL_ARC_MIN_RADIUS: 45, // Minimum distance for min power
 
             // Water physics
             WATER_BASE_VELOCITY: 700,
@@ -1884,15 +1884,30 @@
             gameState.cannon.power = power;
         }
 
-        // Get mouse/touch position relative to canvas
+        // Get mouse/touch position relative to canvas (accounting for CSS scaling)
         function getCanvasPosition(e) {
             const rect = effectsCanvas.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+
+            // Get client coordinates - for touch events, check touches first, then changedTouches (for touchend)
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            // Calculate scale factor (rect is scaled, canvas is original size)
+            const scaleX = sceneCanvas.width / rect.width;
+            const scaleY = sceneCanvas.height / rect.height;
 
             return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
             };
         }
 
