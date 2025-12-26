@@ -966,51 +966,56 @@
             // Draw the semi-transparent control area around the cannon
             effectsCtx.save();
 
+            const innerRadius = CONFIG.CONTROL_ARC_MIN_RADIUS;
+            const outerRadius = CONFIG.CONTROL_ARC_RADIUS;
+
             // Quarter circle arc centered at cannon base
             const startAngle = -CONFIG.ANGLE_MAX * Math.PI / 180; // Convert to radians, negative for canvas coords
             const endAngle = -CONFIG.ANGLE_MIN * Math.PI / 180;
 
-            // Draw filled arc
+            // Draw filled sector (ring segment) - outer arc, line, inner arc (reverse), line back
             effectsCtx.beginPath();
-            effectsCtx.moveTo(cannonPos.x, cannonPos.y);
-            effectsCtx.arc(cannonPos.x, cannonPos.y, CONFIG.CONTROL_ARC_RADIUS, startAngle, endAngle);
+            effectsCtx.arc(cannonPos.x, cannonPos.y, outerRadius, startAngle, endAngle);
+            effectsCtx.arc(cannonPos.x, cannonPos.y, innerRadius, endAngle, startAngle, true); // counterclockwise
             effectsCtx.closePath();
 
-            // Gradient fill for better visual - more transparent
+            // Gradient fill for better visual
             const gradient = effectsCtx.createRadialGradient(
-                cannonPos.x, cannonPos.y, CONFIG.CONTROL_ARC_MIN_RADIUS,
-                cannonPos.x, cannonPos.y, CONFIG.CONTROL_ARC_RADIUS
+                cannonPos.x, cannonPos.y, innerRadius,
+                cannonPos.x, cannonPos.y, outerRadius
             );
-            gradient.addColorStop(0, 'rgba(100, 180, 255, 0.08)');
-            gradient.addColorStop(1, 'rgba(100, 180, 255, 0.12)');
+            gradient.addColorStop(0, 'rgba(100, 180, 255, 0.15)');
+            gradient.addColorStop(1, 'rgba(100, 180, 255, 0.08)');
             effectsCtx.fillStyle = gradient;
             effectsCtx.fill();
 
-            // Arc border for visibility
-            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.25)';
+            // Sector border for visibility
+            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.3)';
             effectsCtx.lineWidth = 2;
             effectsCtx.stroke();
 
-            // Draw range indicators (power levels)
-            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.12)';
+            // Draw range indicators (power levels) - between inner and outer
+            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.15)';
             effectsCtx.lineWidth = 1;
-            for (let i = 25; i <= 100; i += 25) {
-                const radius = CONFIG.CONTROL_ARC_MIN_RADIUS +
-                    (CONFIG.CONTROL_ARC_RADIUS - CONFIG.CONTROL_ARC_MIN_RADIUS) * (i / 100);
+            for (let i = 25; i <= 75; i += 25) {
+                const radius = innerRadius + (outerRadius - innerRadius) * (i / 100);
                 effectsCtx.beginPath();
                 effectsCtx.arc(cannonPos.x, cannonPos.y, radius, startAngle, endAngle);
                 effectsCtx.stroke();
             }
 
-            // Draw angle indicator lines
-            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.12)';
+            // Draw angle indicator lines (only within the sector)
+            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.15)';
             for (let angle = CONFIG.ANGLE_MIN; angle <= CONFIG.ANGLE_MAX; angle += 15) {
                 const rad = -angle * Math.PI / 180;
                 effectsCtx.beginPath();
-                effectsCtx.moveTo(cannonPos.x, cannonPos.y);
+                effectsCtx.moveTo(
+                    cannonPos.x + Math.cos(rad) * innerRadius,
+                    cannonPos.y + Math.sin(rad) * innerRadius
+                );
                 effectsCtx.lineTo(
-                    cannonPos.x + Math.cos(rad) * CONFIG.CONTROL_ARC_RADIUS,
-                    cannonPos.y + Math.sin(rad) * CONFIG.CONTROL_ARC_RADIUS
+                    cannonPos.x + Math.cos(rad) * outerRadius,
+                    cannonPos.y + Math.sin(rad) * outerRadius
                 );
                 effectsCtx.stroke();
             }
@@ -1018,27 +1023,31 @@
             // Draw current aim line (highlighted) - only when actively using mouse/touch
             if (gameState.mouse.isDown && gameState.mouse.inControlArea) {
                 const currentAngleRad = -gameState.cannon.angle * Math.PI / 180;
-                const currentPower = gameState.cannon.power / 100;
-                const currentRadius = CONFIG.CONTROL_ARC_MIN_RADIUS +
-                    (CONFIG.CONTROL_ARC_RADIUS - CONFIG.CONTROL_ARC_MIN_RADIUS) * currentPower;
+                // Normalize power from POWER_MIN-POWER_MAX range to 0-1 range
+                const currentPower = (gameState.cannon.power - CONFIG.POWER_MIN) / (CONFIG.POWER_MAX - CONFIG.POWER_MIN);
+                const currentRadius = innerRadius + (outerRadius - innerRadius) * currentPower;
 
-                effectsCtx.strokeStyle = 'rgba(255, 255, 100, 0.6)';
+                effectsCtx.strokeStyle = 'rgba(255, 255, 100, 0.7)';
                 effectsCtx.lineWidth = 3;
                 effectsCtx.beginPath();
-                effectsCtx.moveTo(cannonPos.x, cannonPos.y);
+                // Start from inner radius, end at touch position
+                effectsCtx.moveTo(
+                    cannonPos.x + Math.cos(currentAngleRad) * innerRadius,
+                    cannonPos.y + Math.sin(currentAngleRad) * innerRadius
+                );
                 effectsCtx.lineTo(
                     cannonPos.x + Math.cos(currentAngleRad) * currentRadius,
                     cannonPos.y + Math.sin(currentAngleRad) * currentRadius
                 );
                 effectsCtx.stroke();
 
-                // Draw target point
-                effectsCtx.fillStyle = 'rgba(255, 255, 100, 0.8)';
+                // Draw target point at touch position
+                effectsCtx.fillStyle = 'rgba(255, 255, 100, 0.9)';
                 effectsCtx.beginPath();
                 effectsCtx.arc(
                     cannonPos.x + Math.cos(currentAngleRad) * currentRadius,
                     cannonPos.y + Math.sin(currentAngleRad) * currentRadius,
-                    5, 0, Math.PI * 2
+                    6, 0, Math.PI * 2
                 );
                 effectsCtx.fill();
             }
