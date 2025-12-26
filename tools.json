@@ -20,6 +20,13 @@
         "date": "2025-12-16T21:43:39+02:00",
         "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
       }
+    },
+    "firefighter.html": {
+      "last_commit": {
+        "hash": "0b4fae22ec443ef9d50d2468104e106558eabe14",
+        "date": "2025-12-27T00:24:50+02:00",
+        "message": "Christmar firefighting game v1"
+      }
     }
   }
 }

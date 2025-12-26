@@ -3,10 +3,18 @@
 ## Alphabetical Index
 
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
+* [firefighter](firefighter.html)
 * [zipview-gpt52pro](zipview-gpt52pro.html)
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [firefighter](firefighter.html)
+
+> last updated: 2025-12-27 00:24:50
+> Christmar firefighting game v1
+>
+> [view commit](https://github.com/jokkebk/tools/commit/0b4fae22ec443ef9d50d2468104e106558eabe14)
 
 ### [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 
