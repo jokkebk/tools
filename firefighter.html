@@ -1878,10 +1878,11 @@
         // Difficulty selection
         document.querySelectorAll('.difficulty-option').forEach(option => {
             option.addEventListener('click', (e) => {
-                e.stopPropagation(); // Don't start game when clicking difficulty
                 document.querySelectorAll('.difficulty-option').forEach(o => o.classList.remove('selected'));
                 option.classList.add('selected');
                 currentDifficulty = option.dataset.difficulty;
+                // Start game after selecting difficulty
+                startGame();
             });
         });
 
