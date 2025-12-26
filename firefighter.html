@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firefighter: Gingerbread Defense</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', monospace;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        #scene-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #effects-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            font-size: 10px;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+            z-index: 100;
+        }
+
+        .bars-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .health-bar-container, .water-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .health-bar-container span, .water-bar-container span {
+            min-width: 40px;
+            text-align: left;
+        }
+
+        .health-bar, .water-bar {
+            width: 200px;
+            height: 16px;
+            background: #333;
+            border: 2px solid #fff;
+            position: relative;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            background: linear-gradient(180deg, #4f4, #282);
+            transition: width 0.3s;
+        }
+
+        .water-bar-fill {
+            height: 100%;
+            background: linear-gradient(180deg, #4cf, #248);
+            transition: width 0.3s;
+        }
+
+        .water-bar-container.hidden {
+            display: none;
+        }
+
+        #controls-overlay {
+            position: absolute;
+            bottom: 10px;
+            left: 20px;
+            color: #fff;
+            font-size: 8px;
+            text-shadow: 2px 2px 0 #000;
+            z-index: 100;
+        }
+
+        #angle-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            color: #0ff;
+            font-size: 10px;
+            text-shadow: 2px 2px 0 #000;
+            z-index: 100;
+        }
+
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 200;
+        }
+
+        #start-screen h1, #game-over-screen h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #f84;
+            text-shadow: 0 0 20px #f84, 0 0 40px #f42;
+        }
+
+        #start-screen h2 {
+            font-size: 14px;
+            margin-bottom: 40px;
+            color: #8cf;
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .controls-help {
+            font-size: 10px;
+            line-height: 2;
+            margin-top: 30px;
+            color: #aaa;
+        }
+
+        .difficulty-select {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 25px 0;
+        }
+
+        .difficulty-option {
+            padding: 10px 40px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #888;
+            border: 2px solid #444;
+            transition: all 0.2s;
+        }
+
+        .difficulty-option:hover {
+            color: #fff;
+            border-color: #888;
+        }
+
+        .difficulty-option.selected {
+            color: #0f0;
+            border-color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .difficulty-option[data-difficulty="EASY"].selected {
+            color: #4f4;
+            border-color: #4f4;
+            text-shadow: 0 0 10px #4f4;
+        }
+
+        .difficulty-option[data-difficulty="HARD"].selected {
+            color: #f44;
+            border-color: #f44;
+            text-shadow: 0 0 10px #f44;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #final-score {
+            font-size: 18px;
+            color: #ff0;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="scene-canvas"></canvas>
+        <canvas id="effects-canvas"></canvas>
+
+        <div id="ui-overlay">
+            <div>SCORE: <span id="score">0</span></div>
+            <div class="bars-container">
+                <div class="health-bar-container">
+                    <div class="health-bar">
+                        <div class="health-bar-fill" id="health-fill"></div>
+                    </div>
+                    <span id="health-text">100%</span>
+                </div>
+                <div class="water-bar-container" id="water-bar-container">
+                    <div class="water-bar">
+                        <div class="water-bar-fill" id="water-fill"></div>
+                    </div>
+                    <span id="water-text">100%</span>
+                </div>
+            </div>
+            <div>HI: <span id="high-score">0</span></div>
+        </div>
+
+        <div id="controls-overlay">
+            [ARROWS] Aim &amp; Power | [SPACE] Fire | [CLICK/TOUCH ARC] Direct Control
+        </div>
+
+        <div id="angle-indicator">
+            ANGLE: <span id="angle-value">45</span>° | POWER: <span id="power-value">50</span>%
+        </div>
+
+        <div id="start-screen">
+            <h1>FIREFIGHTER</h1>
+            <h2>Gingerbread Defense</h2>
+            <div class="controls-help">
+                LEFT/RIGHT - Adjust angle<br>
+                UP/DOWN - Adjust power<br>
+                SPACE - Fire water cannon<br>
+                <br>
+                OR Click/Touch the arc to aim & fire!
+            </div>
+            <div class="difficulty-select">
+                <div class="difficulty-option" data-difficulty="EASY">EASY</div>
+                <div class="difficulty-option selected" data-difficulty="NORMAL">NORMAL</div>
+                <div class="difficulty-option" data-difficulty="HARD">HARD</div>
+            </div>
+            <div class="blink">Press SPACE to Start</div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h1>GAME OVER</h1>
+            <div id="final-score">SCORE: 0</div>
+            <div class="blink">Press SPACE to Restart</div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== DIFFICULTY PRESETS ====================
+        const DIFFICULTY = {
+            EASY: {
+                fireHealthMult: 0.5,
+                fireDamageMult: 0.6,
+                fireGrowthTime: 5000,
+                fireSpreadChance: 0.12,
+                fireSpreadInterval: 2500,
+                starSpawnMin: 5000,
+                starSpawnMax: 8000,
+                maxDifficultyTime: 240,  // 4 minutes
+                endgameStarMin: 1500,
+                endgameStarMax: 3000,
+                healthRegen: 2,
+                waterMax: 100,
+                waterRecharge: 10,  // per second
+                waterConsumption: 10,  // per second when firing (net 0 = unlimited)
+            },
+            NORMAL: {
+                fireHealthMult: 1.0,
+                fireDamageMult: 1.0,
+                fireGrowthTime: 3500,
+                fireSpreadChance: 0.2,
+                fireSpreadInterval: 1500,
+                starSpawnMin: 4000,
+                starSpawnMax: 7000,
+                maxDifficultyTime: 120,  // 2 minutes
+                endgameStarMin: 800,
+                endgameStarMax: 1500,
+                healthRegen: 1,
+                waterMax: 100,
+                waterRecharge: 10,  // per second
+                waterConsumption: 20,  // per second when firing (net -10/s = 10s burst)
+            },
+            HARD: {
+                fireHealthMult: 1.5,
+                fireDamageMult: 1.4,
+                fireGrowthTime: 2500,
+                fireSpreadChance: 0.3,
+                fireSpreadInterval: 1000,
+                starSpawnMin: 3000,
+                starSpawnMax: 5000,
+                maxDifficultyTime: 90,   // 1.5 minutes
+                endgameStarMin: 500,
+                endgameStarMax: 1000,
+                healthRegen: 0.5,
+                waterMax: 100,
+                waterRecharge: 10,  // per second
+                waterConsumption: 30,  // per second when firing (net -20/s = 5s burst)
+            }
+        };
+
+        let currentDifficulty = 'NORMAL';
+
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            // Cannon position (percentage of canvas)
+            CANNON_X: 0.135,
+            CANNON_Y: 0.52,
+
+            // Cannon controls
+            ANGLE_MIN: 5,
+            ANGLE_MAX: 80,
+            ANGLE_DEFAULT: 45,
+            ANGLE_SPEED: 90, // degrees per second
+
+            POWER_MIN: 20,
+            POWER_MAX: 100,
+            POWER_DEFAULT: 50,
+            POWER_SPEED: 60, // percent per second
+
+            // Mouse/touch control arc
+            CONTROL_ARC_RADIUS: 160, // Large radius for easy touch control
+            CONTROL_ARC_MIN_RADIUS: 30, // Minimum distance for min power
+
+            // Water physics
+            WATER_BASE_VELOCITY: 700,
+            WATER_GRAVITY: 450,
+            WATER_SPAWN_RATE: 120, // Much higher for continuous stream
+            WATER_SPREAD: 0.06,
+            WATER_PARTICLE_SIZE: 5,
+            WATER_LIFETIME: 3000,
+
+            // Splash
+            SPLASH_COUNT: 8,
+            SPLASH_VELOCITY: 150,
+            SPLASH_SIZE: 3,
+            SPLASH_LIFETIME: 500,
+
+            // Shooting stars
+            STAR_SPAWN_MIN: 4000,  // Slower initial spawn
+            STAR_SPAWN_MAX: 7000,  // Much more time between stars at start
+            STAR_VELOCITY_MIN: 250,
+            STAR_VELOCITY_MAX: 400,
+            STAR_SIZE: 6,
+            STAR_TRAIL_LENGTH: 15,
+
+            // Target zone for stars (right side of scene)
+            TARGET_X_MIN: 0.4,
+            TARGET_X_MAX: 0.95,
+            TARGET_Y_MIN: 0.4,
+            TARGET_Y_MAX: 0.9,
+
+            // Fire
+            FIRE_GROWTH_TIME: 3500,
+            FIRE_SPREAD_RADIUS: 30,
+            FIRE_SPREAD_CHANCE: 0.2,
+            FIRE_SPREAD_INTERVAL: 1500,
+            FIRE_MAX_COUNT: 20,
+
+            // Fire states: health needed to extinguish (challenging!)
+            FIRE_STATES: [
+                { name: 'ember', size: 8, health: 15, damage: 0.3, points: 10 },
+                { name: 'small', size: 16, health: 35, damage: 0.7, points: 25 },
+                { name: 'medium', size: 28, health: 60, damage: 1.5, points: 50 },
+                { name: 'large', size: 40, health: 90, damage: 2.5, points: 100 },
+                { name: 'inferno', size: 55, health: 130, damage: 5.0, points: 200 }
+            ],
+
+            // Game
+            INITIAL_HEALTH: 100,
+            SURVIVAL_POINTS: 5, // points per second
+            HEALTH_REGEN_RATE: 1, // health per second when no fires
+            WATER_DAMAGE: 3, // damage per water particle hit
+            WATER_EFFECT_RADIUS: 20, // radius around impact to affect fires
+
+            // Visual
+            BLACK_THRESHOLD: 20,
+        };
+
+        // ==================== GAME STATE ====================
+        let gameState = {
+            running: false,
+            gameOver: false,
+            score: 0,
+            highScore: parseInt(localStorage.getItem('firefighterHighScore')) || 0,
+            health: CONFIG.INITIAL_HEALTH,
+            water: 100, // Current water amount
+
+            cannon: {
+                angle: CONFIG.ANGLE_DEFAULT,
+                power: CONFIG.POWER_DEFAULT,
+                firing: false
+            },
+
+            mouse: {
+                isDown: false,
+                inControlArea: false
+            },
+
+            waterParticles: [],
+            splashParticles: [],
+            shootingStars: [],
+            fires: [],
+
+            lastStarSpawn: 0,
+            nextStarDelay: CONFIG.STAR_SPAWN_MAX,
+            lastFireSpread: 0,
+            gameTime: 0,
+
+            keys: {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                space: false
+            }
+        };
+
+        // ==================== CANVAS SETUP ====================
+        const sceneCanvas = document.getElementById('scene-canvas');
+        const sceneCtx = sceneCanvas.getContext('2d');
+        const effectsCanvas = document.getElementById('effects-canvas');
+        const effectsCtx = effectsCanvas.getContext('2d');
+
+        let sceneImage = null;
+        let collisionMask = null;
+        let processedScene = null;
+        let charCanvas = null; // Canvas for char/burn overlay
+        let charCtx = null;
+        let burnMap = null; // Track burn intensity for hole creation
+        let cannonPos = { x: 0, y: 0 };
+        let christmasLights = []; // Colored lights on house and trees
+        let snowSparkles = []; // Glitter on snow
+
+        // Extra sky space above the scene
+        const SKY_PADDING = 180;
+
+        // ==================== UI ELEMENTS ====================
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('high-score');
+        const healthFill = document.getElementById('health-fill');
+        const healthText = document.getElementById('health-text');
+        const waterBarContainer = document.getElementById('water-bar-container');
+        const waterFill = document.getElementById('water-fill');
+        const waterText = document.getElementById('water-text');
+        const angleValue = document.getElementById('angle-value');
+        const powerValue = document.getElementById('power-value');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScore = document.getElementById('final-score');
+
+        // ==================== IMAGE LOADING ====================
+        async function loadGame() {
+            sceneImage = new Image();
+            sceneImage.src = 'firefighter.jpg';
+
+            await new Promise((resolve, reject) => {
+                sceneImage.onload = resolve;
+                sceneImage.onerror = reject;
+            });
+
+            // Set canvas sizes (add extra sky space at top)
+            sceneCanvas.width = sceneImage.width;
+            sceneCanvas.height = sceneImage.height + SKY_PADDING;
+            effectsCanvas.width = sceneImage.width;
+            effectsCanvas.height = sceneImage.height + SKY_PADDING;
+
+            document.getElementById('game-container').style.width = sceneImage.width + 'px';
+            document.getElementById('game-container').style.height = (sceneImage.height + SKY_PADDING) + 'px';
+
+            // Process scene and create collision mask
+            processScene();
+
+            // Initialize char overlay canvas
+            charCanvas = document.createElement('canvas');
+            charCanvas.width = sceneCanvas.width;
+            charCanvas.height = sceneCanvas.height;
+            charCtx = charCanvas.getContext('2d');
+
+            // Initialize burn intensity map
+            burnMap = new Float32Array(sceneCanvas.width * sceneCanvas.height);
+
+            // Detect Christmas lights and snow
+            detectChristmasLights();
+            initSnowSparkles();
+
+            // Set cannon position (account for sky padding)
+            cannonPos.x = Math.floor(sceneCanvas.width * CONFIG.CANNON_X);
+            cannonPos.y = SKY_PADDING + Math.floor(sceneImage.height * CONFIG.CANNON_Y);
+
+            // Update high score display
+            highScoreEl.textContent = gameState.highScore;
+
+            // Draw initial scene
+            drawScene();
+
+            console.log('Game loaded! Canvas size:', sceneCanvas.width, 'x', sceneCanvas.height);
+            console.log('Cannon position:', cannonPos);
+        }
+
+        function processScene() {
+            // Create offscreen canvas for processing (same size as full canvas with sky padding)
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = sceneImage.width;
+            tempCanvas.height = sceneImage.height + SKY_PADDING;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            // Draw image with sky padding offset
+            tempCtx.drawImage(sceneImage, 0, SKY_PADDING);
+
+            // Get image data for just the scene part
+            const imageData = tempCtx.getImageData(0, SKY_PADDING, sceneImage.width, sceneImage.height);
+            const data = imageData.data;
+
+            // Create collision mask for full canvas (1 = solid, 0 = transparent/sky)
+            collisionMask = new Uint8Array(tempCanvas.width * tempCanvas.height);
+
+            // Process pixels: black -> transparent (only for scene part)
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const localPixelIndex = i / 4;
+                const x = localPixelIndex % sceneImage.width;
+                const y = Math.floor(localPixelIndex / sceneImage.width);
+                const fullPixelIndex = (y + SKY_PADDING) * tempCanvas.width + x;
+
+                // Check if pixel is black (sky)
+                if (r < CONFIG.BLACK_THRESHOLD &&
+                    g < CONFIG.BLACK_THRESHOLD &&
+                    b < CONFIG.BLACK_THRESHOLD) {
+                    data[i + 3] = 0; // Make transparent
+                    collisionMask[fullPixelIndex] = 0;
+                } else {
+                    collisionMask[fullPixelIndex] = 1;
+                }
+            }
+
+            tempCtx.putImageData(imageData, 0, SKY_PADDING);
+
+            // Store processed scene
+            processedScene = tempCanvas;
+        }
+
+        function isCollision(x, y) {
+            x = Math.floor(x);
+            y = Math.floor(y);
+            if (x < 0 || x >= sceneCanvas.width || y < 0 || y >= sceneCanvas.height) {
+                return false;
+            }
+            return collisionMask[y * sceneCanvas.width + x] === 1;
+        }
+
+        function detectChristmasLights() {
+            christmasLights = [];
+            if (!sceneImage) return;
+
+            // Create temp canvas to read pixels
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = sceneImage.width;
+            tempCanvas.height = sceneImage.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(sceneImage, 0, 0);
+            const imageData = tempCtx.getImageData(0, 0, sceneImage.width, sceneImage.height);
+            const data = imageData.data;
+
+            const MIN_LIGHT_DISTANCE = 15; // Minimum pixels between lights (prevents clustering)
+
+            // Helper function to check if a position is too close to existing lights
+            function tooCloseToExistingLight(x, y) {
+                for (const light of christmasLights) {
+                    const dx = light.x - x;
+                    const dy = light.y - (y + SKY_PADDING);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < MIN_LIGHT_DISTANCE) return true;
+                }
+                return false;
+            }
+
+            // Scan for bright colored orbs (lights) - selective with clustering!
+            for (let y = 0; y < sceneImage.height; y += 5) { // Sample fairly dense
+                for (let x = 0; x < sceneImage.width; x += 5) {
+                    const i = (y * sceneImage.width + x) * 4;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const a = data[i + 3];
+
+                    if (a < 200) continue; // Skip transparent/semi-transparent
+
+                    // Detect bright, saturated colors (ornaments)
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    const saturation = max > 0 ? (max - min) / max : 0;
+                    const brightness = max / 255;
+                    const avgBrightness = (r + g + b) / 3 / 255;
+
+                    // Relaxed thresholds to catch more ornaments
+                    if (saturation > 0.65 && brightness > 0.55 && avgBrightness > 0.45 && avgBrightness < 0.95) {
+                        // Exclude fire truck red (darker red with low green/blue)
+                        if (r > 180 && g < 90 && b < 90 && avgBrightness < 0.6) continue;
+
+                        // Exclude gingerbread brown/orange (brown has similar RGB, slightly warm)
+                        const colorDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+                        const isWarm = r >= g && g >= b; // Red > Green > Blue = warm colors
+                        if (colorDiff < 80 && isWarm && avgBrightness < 0.7) continue;
+
+                        // Exclude very dark colors
+                        if (max < 130) continue;
+
+                        // Skip if too close to an existing light (prevents multiple detections per ornament)
+                        if (tooCloseToExistingLight(x, y)) continue;
+
+                        // Found a light orb!
+                        christmasLights.push({
+                            x: x,
+                            y: y + SKY_PADDING,
+                            r: r,
+                            g: g,
+                            b: b,
+                            phase: Math.random() * Math.PI * 2
+                        });
+                    }
+                }
+            }
+            console.log('Found', christmasLights.length, 'Christmas lights');
+        }
+
+        function initSnowSparkles() {
+            snowSparkles = [];
+            if (!sceneImage) return;
+
+            // Create temp canvas to read pixels
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = sceneImage.width;
+            tempCanvas.height = sceneImage.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(sceneImage, 0, 0);
+            const imageData = tempCtx.getImageData(0, 0, sceneImage.width, sceneImage.height);
+            const data = imageData.data;
+
+            // Find pure white snow pixels (foreground snow on ground)
+            for (let y = 0; y < sceneImage.height; y += 4) {
+                for (let x = 0; x < sceneImage.width; x += 4) {
+                    const i = (y * sceneImage.width + x) * 4;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const a = data[i + 3];
+
+                    if (a < 200) continue;
+
+                    // Detect pure white snow (very bright, very neutral color)
+                    const min = Math.min(r, g, b);
+                    const max = Math.max(r, g, b);
+                    const avg = (r + g + b) / 3;
+
+                    // Pure white: high brightness, low color variation
+                    if (avg > 230 && (max - min) < 20) {
+                        if (Math.random() < 0.08) { // 8% become sparkles
+                            snowSparkles.push({
+                                x: x,
+                                y: y + SKY_PADDING,
+                                phase: Math.random() * Math.PI * 2,
+                                speed: 0.8 + Math.random() * 1.2
+                            });
+                        }
+                    }
+                }
+            }
+            console.log('Created', snowSparkles.length, 'snow sparkles');
+        }
+
+        // Check if pixel is on surface (has at least one transparent neighbor)
+        function isOnSurface(x, y) {
+            x = Math.floor(x);
+            y = Math.floor(y);
+            if (!isCollision(x, y)) return false;
+
+            // Check 8 neighbors
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < sceneCanvas.width && ny >= 0 && ny < sceneCanvas.height) {
+                        if (collisionMask[ny * sceneCanvas.width + nx] === 0) {
+                            return true; // Has transparent neighbor = on surface
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // ==================== DRAWING ====================
+        function drawScene() {
+            sceneCtx.clearRect(0, 0, sceneCanvas.width, sceneCanvas.height);
+
+            // Draw dark blue gradient sky (covering full canvas including extra sky)
+            const gradient = sceneCtx.createLinearGradient(0, 0, 0, SKY_PADDING + sceneImage.height * 0.4);
+            gradient.addColorStop(0, '#050515');
+            gradient.addColorStop(0.5, '#0a0a25');
+            gradient.addColorStop(1, '#151535');
+            sceneCtx.fillStyle = gradient;
+            sceneCtx.fillRect(0, 0, sceneCanvas.width, sceneCanvas.height);
+
+            // Draw twinkling stars in background
+            drawBackgroundStars();
+
+            // Draw processed scene
+            if (processedScene) {
+                sceneCtx.drawImage(processedScene, 0, 0);
+            }
+
+            // Draw char overlay (burned areas)
+            if (charCanvas) {
+                sceneCtx.drawImage(charCanvas, 0, 0);
+            }
+        }
+
+        let starField = [];
+        function initStarField() {
+            starField = [];
+            // Stars cover the sky area (above the scene's ground level)
+            const skyHeight = SKY_PADDING + sceneImage.height * 0.45;
+            for (let i = 0; i < 150; i++) {
+                starField.push({
+                    x: Math.random() * sceneCanvas.width,
+                    y: Math.random() * skyHeight,
+                    size: Math.random() * 2.5 + 0.5,
+                    twinkle: Math.random() * Math.PI * 2,
+                    speed: Math.random() * 2 + 1
+                });
+            }
+        }
+
+        function drawBackgroundStars() {
+            const time = Date.now() / 1000;
+            sceneCtx.fillStyle = '#fff';
+
+            for (const star of starField) {
+                const brightness = 0.3 + 0.7 * Math.abs(Math.sin(time * star.speed + star.twinkle));
+                sceneCtx.globalAlpha = brightness;
+                sceneCtx.beginPath();
+                sceneCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                sceneCtx.fill();
+            }
+            sceneCtx.globalAlpha = 1;
+        }
+
+        function drawEffects() {
+            effectsCtx.clearRect(0, 0, effectsCanvas.width, effectsCanvas.height);
+
+            // Draw fires
+            drawFires();
+
+            // Draw shooting stars
+            drawShootingStars();
+
+            // Draw water
+            drawWater();
+
+            // Draw Christmas lights and snow sparkles
+            drawChristmasEffects();
+
+            // Draw control arc (before cannon so it's behind)
+            drawControlArc();
+
+            // Draw cannon
+            drawCannon();
+        }
+
+        function drawChristmasEffects() {
+            const time = Date.now() / 1000;
+
+            // Draw glowing Christmas lights
+            for (const light of christmasLights) {
+                // Skip if pixel is burned through
+                const x = Math.floor(light.x);
+                const y = Math.floor(light.y);
+                if (y >= 0 && y < sceneCanvas.height && x >= 0 && x < sceneCanvas.width) {
+                    if (collisionMask[y * sceneCanvas.width + x] === 0) continue;
+                }
+
+                // Slow pulsing glow (2 second cycle, more visible)
+                const intensity = 0.7 + 0.3 * Math.sin(time * Math.PI + light.phase);
+
+                // Draw glow (larger and brighter for visibility)
+                const glowSize = 6 + intensity * 6;
+                const gradient = effectsCtx.createRadialGradient(light.x, light.y, 0, light.x, light.y, glowSize);
+                gradient.addColorStop(0, `rgba(${light.r}, ${light.g}, ${light.b}, ${intensity * 0.9})`);
+                gradient.addColorStop(0.4, `rgba(${light.r}, ${light.g}, ${light.b}, ${intensity * 0.6})`);
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                effectsCtx.fillStyle = gradient;
+                effectsCtx.beginPath();
+                effectsCtx.arc(light.x, light.y, glowSize, 0, Math.PI * 2);
+                effectsCtx.fill();
+            }
+
+            // Draw subtle snow sparkles (light blue/yellow glitter)
+            for (const sparkle of snowSparkles) {
+                // Skip if pixel is burned through
+                const x = Math.floor(sparkle.x);
+                const y = Math.floor(sparkle.y);
+                if (y >= 0 && y < sceneCanvas.height && x >= 0 && x < sceneCanvas.width) {
+                    if (collisionMask[y * sceneCanvas.width + x] === 0) continue;
+                }
+
+                // Each sparkle pulses independently with its own phase (faster)
+                const twinkle = Math.sin(time * 0.6 * sparkle.speed + sparkle.phase) * 0.5 + 0.5;
+
+                // Show sparkles more often, with varying intensity
+                if (twinkle > 0.25) {
+                    const intensity = (twinkle - 0.25) / 0.75; // Map 0.25-1.0 to 0-1
+
+                    // Alternate between cool (light blue) and warm (pale yellow) sparkles
+                    const isCool = (sparkle.phase % (Math.PI * 2)) < Math.PI;
+
+                    if (isCool) {
+                        // Light blue sparkle - brighter with more opacity
+                        effectsCtx.fillStyle = `rgba(170, 215, 255, ${intensity * 0.9})`;
+                    } else {
+                        // Pale yellow sparkle - brighter with more opacity
+                        effectsCtx.fillStyle = `rgba(255, 255, 190, ${intensity * 0.85})`;
+                    }
+
+                    // Small cross/star shape for sparkle
+                    const size = 1.5 + intensity * 2.5;
+                    effectsCtx.fillRect(sparkle.x - size, sparkle.y, size * 2, 1);
+                    effectsCtx.fillRect(sparkle.x, sparkle.y - size, 1, size * 2);
+
+                    // Brighter center
+                    effectsCtx.fillStyle = `rgba(255, 255, 255, ${intensity})`;
+                    effectsCtx.fillRect(sparkle.x - 0.5, sparkle.y - 0.5, 2, 2);
+                }
+            }
+        }
+
+        function drawControlArc() {
+            // Draw the semi-transparent control area around the cannon
+            effectsCtx.save();
+
+            // Quarter circle arc centered at cannon base
+            const startAngle = -CONFIG.ANGLE_MAX * Math.PI / 180; // Convert to radians, negative for canvas coords
+            const endAngle = -CONFIG.ANGLE_MIN * Math.PI / 180;
+
+            // Draw filled arc
+            effectsCtx.beginPath();
+            effectsCtx.moveTo(cannonPos.x, cannonPos.y);
+            effectsCtx.arc(cannonPos.x, cannonPos.y, CONFIG.CONTROL_ARC_RADIUS, startAngle, endAngle);
+            effectsCtx.closePath();
+
+            // Gradient fill for better visual - more transparent
+            const gradient = effectsCtx.createRadialGradient(
+                cannonPos.x, cannonPos.y, CONFIG.CONTROL_ARC_MIN_RADIUS,
+                cannonPos.x, cannonPos.y, CONFIG.CONTROL_ARC_RADIUS
+            );
+            gradient.addColorStop(0, 'rgba(100, 180, 255, 0.08)');
+            gradient.addColorStop(1, 'rgba(100, 180, 255, 0.12)');
+            effectsCtx.fillStyle = gradient;
+            effectsCtx.fill();
+
+            // Arc border for visibility
+            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.25)';
+            effectsCtx.lineWidth = 2;
+            effectsCtx.stroke();
+
+            // Draw range indicators (power levels)
+            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.12)';
+            effectsCtx.lineWidth = 1;
+            for (let i = 25; i <= 100; i += 25) {
+                const radius = CONFIG.CONTROL_ARC_MIN_RADIUS +
+                    (CONFIG.CONTROL_ARC_RADIUS - CONFIG.CONTROL_ARC_MIN_RADIUS) * (i / 100);
+                effectsCtx.beginPath();
+                effectsCtx.arc(cannonPos.x, cannonPos.y, radius, startAngle, endAngle);
+                effectsCtx.stroke();
+            }
+
+            // Draw angle indicator lines
+            effectsCtx.strokeStyle = 'rgba(100, 180, 255, 0.12)';
+            for (let angle = CONFIG.ANGLE_MIN; angle <= CONFIG.ANGLE_MAX; angle += 15) {
+                const rad = -angle * Math.PI / 180;
+                effectsCtx.beginPath();
+                effectsCtx.moveTo(cannonPos.x, cannonPos.y);
+                effectsCtx.lineTo(
+                    cannonPos.x + Math.cos(rad) * CONFIG.CONTROL_ARC_RADIUS,
+                    cannonPos.y + Math.sin(rad) * CONFIG.CONTROL_ARC_RADIUS
+                );
+                effectsCtx.stroke();
+            }
+
+            // Draw current aim line (highlighted) - only when actively using mouse/touch
+            if (gameState.mouse.isDown && gameState.mouse.inControlArea) {
+                const currentAngleRad = -gameState.cannon.angle * Math.PI / 180;
+                const currentPower = gameState.cannon.power / 100;
+                const currentRadius = CONFIG.CONTROL_ARC_MIN_RADIUS +
+                    (CONFIG.CONTROL_ARC_RADIUS - CONFIG.CONTROL_ARC_MIN_RADIUS) * currentPower;
+
+                effectsCtx.strokeStyle = 'rgba(255, 255, 100, 0.6)';
+                effectsCtx.lineWidth = 3;
+                effectsCtx.beginPath();
+                effectsCtx.moveTo(cannonPos.x, cannonPos.y);
+                effectsCtx.lineTo(
+                    cannonPos.x + Math.cos(currentAngleRad) * currentRadius,
+                    cannonPos.y + Math.sin(currentAngleRad) * currentRadius
+                );
+                effectsCtx.stroke();
+
+                // Draw target point
+                effectsCtx.fillStyle = 'rgba(255, 255, 100, 0.8)';
+                effectsCtx.beginPath();
+                effectsCtx.arc(
+                    cannonPos.x + Math.cos(currentAngleRad) * currentRadius,
+                    cannonPos.y + Math.sin(currentAngleRad) * currentRadius,
+                    5, 0, Math.PI * 2
+                );
+                effectsCtx.fill();
+            }
+
+            effectsCtx.restore();
+        }
+
+        function drawCannon() {
+            const angle = gameState.cannon.angle * Math.PI / 180;
+
+            effectsCtx.save();
+            effectsCtx.translate(cannonPos.x, cannonPos.y);
+            effectsCtx.rotate(-angle);
+
+            // Fire monitor / deck gun style nozzle
+            // Main housing (boxy shape)
+            effectsCtx.fillStyle = '#c41e3a'; // Fire engine red
+            effectsCtx.fillRect(-5, -7, 25, 14);
+
+            // Nozzle barrel (tapered rectangular)
+            effectsCtx.fillStyle = '#a0a0a0'; // Silver/metal
+            effectsCtx.beginPath();
+            effectsCtx.moveTo(20, -5);
+            effectsCtx.lineTo(38, -3);
+            effectsCtx.lineTo(38, 3);
+            effectsCtx.lineTo(20, 5);
+            effectsCtx.closePath();
+            effectsCtx.fill();
+
+            // Nozzle tip (flared)
+            effectsCtx.fillStyle = '#888';
+            effectsCtx.beginPath();
+            effectsCtx.moveTo(36, -3);
+            effectsCtx.lineTo(42, -5);
+            effectsCtx.lineTo(42, 5);
+            effectsCtx.lineTo(36, 3);
+            effectsCtx.closePath();
+            effectsCtx.fill();
+
+            // Handle/grip detail
+            effectsCtx.fillStyle = '#222';
+            effectsCtx.fillRect(5, -9, 8, 3);
+            effectsCtx.fillRect(5, 6, 8, 3);
+
+            // Rivets/details
+            effectsCtx.fillStyle = '#ffd700';
+            effectsCtx.beginPath();
+            effectsCtx.arc(0, 0, 3, 0, Math.PI * 2);
+            effectsCtx.fill();
+
+            effectsCtx.restore();
+
+            // Turret base (square/industrial)
+            effectsCtx.fillStyle = '#8b0000';
+            effectsCtx.fillRect(cannonPos.x - 10, cannonPos.y - 5, 20, 15);
+
+            // Base plate
+            effectsCtx.fillStyle = '#444';
+            effectsCtx.fillRect(cannonPos.x - 14, cannonPos.y + 8, 28, 5);
+
+            // Power indicator bar (horizontal, below cannon)
+            const powerWidth = (gameState.cannon.power / 100) * 40;
+            effectsCtx.fillStyle = '#333';
+            effectsCtx.fillRect(cannonPos.x - 20, cannonPos.y + 18, 40, 6);
+            effectsCtx.fillStyle = `hsl(${200 - gameState.cannon.power * 1.2}, 100%, 50%)`;
+            effectsCtx.fillRect(cannonPos.x - 20, cannonPos.y + 18, powerWidth, 6);
+        }
+
+        // ==================== WATER SYSTEM ====================
+        function spawnWater() {
+            const angle = gameState.cannon.angle * Math.PI / 180;
+            const power = gameState.cannon.power / 100;
+            const velocity = CONFIG.WATER_BASE_VELOCITY * power;
+
+            // Add some spread
+            const spread = (Math.random() - 0.5) * CONFIG.WATER_SPREAD;
+            const finalAngle = angle + spread;
+
+            const cannonLength = 45; // Match new nozzle tip position
+            const startX = cannonPos.x + Math.cos(angle) * cannonLength;
+            const startY = cannonPos.y - Math.sin(angle) * cannonLength;
+
+            gameState.waterParticles.push({
+                x: startX,
+                y: startY,
+                vx: Math.cos(finalAngle) * velocity,
+                vy: -Math.sin(finalAngle) * velocity,
+                size: CONFIG.WATER_PARTICLE_SIZE * (0.8 + Math.random() * 0.4),
+                life: CONFIG.WATER_LIFETIME,
+                maxLife: CONFIG.WATER_LIFETIME
+            });
+        }
+
+        function updateWater(dt) {
+            const diff = DIFFICULTY[currentDifficulty];
+
+            // Water consumption and recharge
+            if (gameState.running) {
+                // Always recharge water
+                gameState.water += diff.waterRecharge * dt;
+
+                // Consume water while firing
+                if (gameState.cannon.firing && gameState.water > 0) {
+                    gameState.water -= diff.waterConsumption * dt;
+                }
+
+                // Clamp to 0-100
+                gameState.water = Math.max(0, Math.min(100, gameState.water));
+            }
+
+            // Can only fire if water is available
+            const canFire = gameState.water > 0;
+
+            // Spawn new water if firing and water available
+            if (gameState.cannon.firing && gameState.running && canFire) {
+                const spawnCount = Math.floor(CONFIG.WATER_SPAWN_RATE * dt);
+                for (let i = 0; i < spawnCount; i++) {
+                    spawnWater();
+                }
+            }
+
+            // Update particles
+            for (let i = gameState.waterParticles.length - 1; i >= 0; i--) {
+                const p = gameState.waterParticles[i];
+
+                if (p.isDrip) {
+                    // Drip physics - slower, flows along surfaces
+                    p.vy += CONFIG.WATER_GRAVITY * 0.3 * dt;
+                    p.vy = Math.min(p.vy, 80); // Terminal velocity for drips
+
+                    // Try to flow down, if blocked try sideways
+                    const nextY = p.y + p.vy * dt;
+                    const nextX = p.x + p.vx * dt;
+
+                    if (isCollision(p.x, nextY)) {
+                        // Blocked below, try to slide sideways
+                        if (!isCollision(p.x + 2, p.y)) {
+                            p.vx = 15 + Math.random() * 10;
+                        } else if (!isCollision(p.x - 2, p.y)) {
+                            p.vx = -15 - Math.random() * 10;
+                        } else {
+                            // Stuck, extinguish fires nearby and die
+                            extinguishFireAt(p.x, p.y);
+                            gameState.waterParticles.splice(i, 1);
+                            continue;
+                        }
+                    } else {
+                        p.y = nextY;
+                    }
+                    p.x = nextX;
+                    p.life -= dt * 1000;
+
+                    // Also extinguish fires as drips flow
+                    extinguishFireAt(p.x, p.y);
+                } else {
+                    // Regular water physics
+                    p.vy += CONFIG.WATER_GRAVITY * dt;
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt * 1000;
+
+                    // Check collision with scene
+                    if (isCollision(p.x, p.y)) {
+                        // Create splash
+                        createSplash(p.x, p.y);
+
+                        // Check for fire at this location
+                        extinguishFireAt(p.x, p.y);
+
+                        gameState.waterParticles.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Remove if dead or off screen
+                if (p.life <= 0 || p.y > sceneCanvas.height || p.x > sceneCanvas.width || p.x < 0) {
+                    gameState.waterParticles.splice(i, 1);
+                }
+            }
+
+            // Update splash particles
+            for (let i = gameState.splashParticles.length - 1; i >= 0; i--) {
+                const p = gameState.splashParticles[i];
+
+                p.vy += CONFIG.WATER_GRAVITY * 0.5 * dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt * 1000;
+
+                if (p.life <= 0) {
+                    gameState.splashParticles.splice(i, 1);
+                }
+            }
+        }
+
+        function createSplash(x, y) {
+            // Splash particles (bounce up)
+            for (let i = 0; i < CONFIG.SPLASH_COUNT; i++) {
+                const angle = Math.random() * Math.PI; // Upward hemisphere
+                const speed = Math.random() * CONFIG.SPLASH_VELOCITY;
+
+                gameState.splashParticles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed * (Math.random() > 0.5 ? 1 : -1),
+                    vy: -Math.sin(angle) * speed - 50,
+                    size: CONFIG.SPLASH_SIZE * (0.5 + Math.random() * 0.5),
+                    life: CONFIG.SPLASH_LIFETIME,
+                    maxLife: CONFIG.SPLASH_LIFETIME
+                });
+            }
+
+            // Drip particles (flow down) - for fluid dynamics effect
+            for (let i = 0; i < 3; i++) {
+                gameState.waterParticles.push({
+                    x: x + (Math.random() - 0.5) * 15,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: 20 + Math.random() * 30, // Slow downward
+                    size: 3,
+                    life: 1500,
+                    maxLife: 1500,
+                    isDrip: true // Mark as drip for different physics
+                });
+            }
+        }
+
+        function drawWater() {
+            // Draw water stream particles
+            for (const p of gameState.waterParticles) {
+                const alpha = p.life / p.maxLife;
+                effectsCtx.fillStyle = `rgba(100, 180, 255, ${alpha})`;
+                effectsCtx.beginPath();
+                effectsCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                effectsCtx.fill();
+
+                // Glow effect
+                effectsCtx.fillStyle = `rgba(150, 200, 255, ${alpha * 0.3})`;
+                effectsCtx.beginPath();
+                effectsCtx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+                effectsCtx.fill();
+            }
+
+            // Draw splash particles
+            for (const p of gameState.splashParticles) {
+                const alpha = p.life / p.maxLife;
+                effectsCtx.fillStyle = `rgba(150, 200, 255, ${alpha})`;
+                effectsCtx.beginPath();
+                effectsCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                effectsCtx.fill();
+            }
+        }
+
+        // ==================== SHOOTING STARS ====================
+        function spawnShootingStar() {
+            // Spawn from top of screen
+            const startX = Math.random() * sceneCanvas.width;
+            const startY = -20;
+
+            // Target somewhere in the house area (account for sky padding)
+            const targetX = sceneCanvas.width * (CONFIG.TARGET_X_MIN + Math.random() * (CONFIG.TARGET_X_MAX - CONFIG.TARGET_X_MIN));
+            // Target Y is relative to the scene part (after sky padding)
+            const sceneTargetY = SKY_PADDING + sceneImage.height * (CONFIG.TARGET_Y_MIN + Math.random() * (CONFIG.TARGET_Y_MAX - CONFIG.TARGET_Y_MIN));
+            const targetY = sceneTargetY;
+
+            // Calculate direction
+            const dx = targetX - startX;
+            const dy = targetY - startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            const speed = CONFIG.STAR_VELOCITY_MIN + Math.random() * (CONFIG.STAR_VELOCITY_MAX - CONFIG.STAR_VELOCITY_MIN);
+
+            // Vary star colors - blue, white, yellow, orange
+            const colorTypes = [
+                { r: 200, g: 230, b: 255 }, // Ice blue
+                { r: 255, g: 255, b: 255 }, // White
+                { r: 255, g: 240, b: 180 }, // Pale yellow
+                { r: 255, g: 200, b: 150 }  // Warm orange
+            ];
+            const color = colorTypes[Math.floor(Math.random() * colorTypes.length)];
+
+            gameState.shootingStars.push({
+                x: startX,
+                y: startY,
+                vx: (dx / dist) * speed,
+                vy: (dy / dist) * speed * 0.8, // Slightly slower vertical for arc effect
+                trail: [],
+                active: true,
+                color: color
+            });
+        }
+
+        function updateShootingStars(dt) {
+            const now = Date.now();
+
+            // Spawn new stars
+            if (gameState.running && now - gameState.lastStarSpawn > gameState.nextStarDelay) {
+                spawnShootingStar();
+                gameState.lastStarSpawn = now;
+
+                // Increase difficulty over time based on selected difficulty
+                const diff = DIFFICULTY[currentDifficulty];
+                const difficultyFactor = Math.min(1, gameState.gameTime / diff.maxDifficultyTime);
+                const minDelay = diff.starSpawnMin - difficultyFactor * (diff.starSpawnMin - diff.endgameStarMin);
+                const maxDelay = diff.starSpawnMax - difficultyFactor * (diff.starSpawnMax - diff.endgameStarMax);
+                gameState.nextStarDelay = minDelay + Math.random() * (maxDelay - minDelay);
+            }
+
+            // Update stars
+            for (let i = gameState.shootingStars.length - 1; i >= 0; i--) {
+                const star = gameState.shootingStars[i];
+
+                if (!star.active) {
+                    // Fade out impact
+                    star.impactLife -= dt * 1000;
+                    if (star.impactLife <= 0) {
+                        gameState.shootingStars.splice(i, 1);
+                    }
+                    continue;
+                }
+
+                // Add gravity effect
+                star.vy += 100 * dt;
+
+                // Store trail position
+                star.trail.unshift({ x: star.x, y: star.y });
+                if (star.trail.length > CONFIG.STAR_TRAIL_LENGTH) {
+                    star.trail.pop();
+                }
+
+                // Move
+                star.x += star.vx * dt;
+                star.y += star.vy * dt;
+
+                // Check collision
+                if (isCollision(star.x, star.y)) {
+                    // Impact! Start fire
+                    createFire(star.x, star.y);
+                    star.active = false;
+                    star.impactLife = 300;
+                    star.impactX = star.x;
+                    star.impactY = star.y;
+                    continue;
+                }
+
+                // Remove if off screen
+                if (star.y > sceneCanvas.height + 50 || star.x < -50 || star.x > sceneCanvas.width + 50) {
+                    gameState.shootingStars.splice(i, 1);
+                }
+            }
+        }
+
+        function drawShootingStars() {
+            for (const star of gameState.shootingStars) {
+                if (star.active) {
+                    const c = star.color || { r: 255, g: 255, b: 255 };
+
+                    // Draw trail with star's color
+                    for (let i = 0; i < star.trail.length; i++) {
+                        const t = star.trail[i];
+                        const alpha = 1 - (i / star.trail.length);
+                        const size = CONFIG.STAR_SIZE * (1 - i / star.trail.length * 0.7);
+
+                        // Gradient from core color to orange
+                        const fade = i / star.trail.length;
+                        const r = Math.floor(c.r + (255 - c.r) * fade * 0.3);
+                        const g = Math.floor(c.g + (150 - c.g) * fade * 0.5);
+                        const b = Math.floor(c.b + (100 - c.b) * fade * 0.7);
+
+                        effectsCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                        effectsCtx.beginPath();
+                        effectsCtx.arc(t.x, t.y, size, 0, Math.PI * 2);
+                        effectsCtx.fill();
+                    }
+
+                    // Draw star head (bright core)
+                    effectsCtx.fillStyle = `rgb(${Math.min(255, c.r + 50)}, ${Math.min(255, c.g + 50)}, ${Math.min(255, c.b + 50)})`;
+                    effectsCtx.beginPath();
+                    effectsCtx.arc(star.x, star.y, CONFIG.STAR_SIZE, 0, Math.PI * 2);
+                    effectsCtx.fill();
+
+                    // Glow (star color tinted)
+                    effectsCtx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.3)`;
+                    effectsCtx.beginPath();
+                    effectsCtx.arc(star.x, star.y, CONFIG.STAR_SIZE * 3, 0, Math.PI * 2);
+                    effectsCtx.fill();
+                } else if (star.impactLife > 0) {
+                    // Draw impact flash
+                    const alpha = star.impactLife / 300;
+                    const size = (1 - alpha) * 40 + 10;
+
+                    effectsCtx.fillStyle = `rgba(255, 200, 100, ${alpha * 0.5})`;
+                    effectsCtx.beginPath();
+                    effectsCtx.arc(star.impactX, star.impactY, size, 0, Math.PI * 2);
+                    effectsCtx.fill();
+                }
+            }
+        }
+
+        // ==================== FIRE SYSTEM ====================
+        function createFire(x, y) {
+            // Don't create if max fires reached
+            if (gameState.fires.length >= CONFIG.FIRE_MAX_COUNT) return;
+
+            // Don't create too close to existing fire
+            for (const fire of gameState.fires) {
+                const dx = fire.x - x;
+                const dy = fire.y - y;
+                if (Math.sqrt(dx * dx + dy * dy) < 20) return;
+            }
+
+            const healthMult = DIFFICULTY[currentDifficulty].fireHealthMult;
+            gameState.fires.push({
+                x: x,
+                y: y,
+                state: 0, // ember
+                health: CONFIG.FIRE_STATES[0].health * healthMult,
+                growthTimer: 0,
+                particles: generateFireParticles(x, y, 0),
+                timeOffset: Math.random() * 1000
+            });
+        }
+
+        function generateFireParticles(x, y, state) {
+            const stateConfig = CONFIG.FIRE_STATES[state];
+            const particles = [];
+            const count = 5 + state * 3;
+
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    offsetX: (Math.random() - 0.5) * stateConfig.size,
+                    offsetY: (Math.random() - 0.5) * stateConfig.size * 0.5,
+                    size: Math.random() * stateConfig.size * 0.4 + 2,
+                    speed: Math.random() * 30 + 20,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+            return particles;
+        }
+
+        function updateFires(dt) {
+            const now = Date.now();
+
+            for (let i = gameState.fires.length - 1; i >= 0; i--) {
+                const fire = gameState.fires[i];
+
+                // Growth timer (uses difficulty setting)
+                const diff = DIFFICULTY[currentDifficulty];
+                fire.growthTimer += dt * 1000;
+
+                if (fire.growthTimer >= diff.fireGrowthTime && fire.state < CONFIG.FIRE_STATES.length - 1) {
+                    fire.state++;
+                    fire.health = CONFIG.FIRE_STATES[fire.state].health * diff.fireHealthMult;
+                    fire.growthTimer = 0;
+                    fire.particles = generateFireParticles(fire.x, fire.y, fire.state);
+                }
+
+                // Damage to house (uses difficulty multiplier)
+                if (gameState.running) {
+                    gameState.health -= CONFIG.FIRE_STATES[fire.state].damage * diff.fireDamageMult * dt;
+
+                    // Apply char effect while burning (gradual)
+                    if (Math.random() < 0.1) { // 10% chance per frame
+                        applyChar(fire.x, fire.y, CONFIG.FIRE_STATES[fire.state].size * 0.6);
+                    }
+                }
+            }
+
+            // Health regeneration when no fires
+            if (gameState.running && gameState.fires.length === 0) {
+                const regenRate = DIFFICULTY[currentDifficulty].healthRegen;
+                gameState.health = Math.min(CONFIG.INITIAL_HEALTH, gameState.health + regenRate * dt);
+            }
+
+            // Fire spreading (uses difficulty interval)
+            const spreadInterval = DIFFICULTY[currentDifficulty].fireSpreadInterval;
+            if (gameState.running && now - gameState.lastFireSpread > spreadInterval) {
+                gameState.lastFireSpread = now;
+                spreadFires();
+            }
+
+            // Check game over
+            if (gameState.health <= 0 && gameState.running) {
+                gameOver();
+            }
+        }
+
+        function spreadFires() {
+            if (gameState.fires.length >= CONFIG.FIRE_MAX_COUNT) return;
+
+            const newFires = [];
+            const spreadChance = DIFFICULTY[currentDifficulty].fireSpreadChance;
+
+            for (const fire of gameState.fires) {
+                if (fire.state < 2) continue; // Only medium+ fires spread
+                if (Math.random() > spreadChance * (fire.state + 1)) continue;
+
+                // Try multiple times to find a surface location
+                let attempts = 0;
+                let foundSurface = false;
+
+                while (attempts < 5 && !foundSurface) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = CONFIG.FIRE_SPREAD_RADIUS * (0.5 + Math.random() * 0.5);
+                    const newX = fire.x + Math.cos(angle) * dist;
+                    const newY = fire.y + Math.sin(angle) * dist;
+
+                    if (isCollision(newX, newY)) {
+                        // Strongly prefer surface locations (80% chance to reject interior)
+                        if (isOnSurface(newX, newY) || Math.random() > 0.8) {
+                            newFires.push({ x: newX, y: newY });
+                            foundSurface = true;
+                        }
+                    }
+                    attempts++;
+                }
+            }
+
+            for (const pos of newFires) {
+                if (gameState.fires.length < CONFIG.FIRE_MAX_COUNT) {
+                    createFire(pos.x, pos.y);
+                }
+            }
+        }
+
+        function extinguishFireAt(x, y) {
+            // Use larger effect radius to reach fires in nooks
+            const effectRadius = CONFIG.WATER_EFFECT_RADIUS;
+
+            for (let i = gameState.fires.length - 1; i >= 0; i--) {
+                const fire = gameState.fires[i];
+                const dx = fire.x - x;
+                const dy = fire.y - y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Combine water effect radius with fire size for total reach
+                const totalRadius = effectRadius + CONFIG.FIRE_STATES[fire.state].size * 0.5;
+
+                if (dist < totalRadius) {
+                    // More damage when closer
+                    const damageMult = 1 - (dist / totalRadius) * 0.5;
+                    fire.health -= CONFIG.WATER_DAMAGE * damageMult;
+
+                    // Create steam
+                    createSteam(x, y);
+
+                    // Apply char effect at fire location
+                    applyChar(fire.x, fire.y, CONFIG.FIRE_STATES[fire.state].size);
+
+                    if (fire.health <= 0) {
+                        // Fire extinguished!
+                        const points = CONFIG.FIRE_STATES[fire.state].points;
+                        gameState.score += points;
+                        gameState.fires.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        function createSteam(x, y) {
+            for (let i = 0; i < 3; i++) {
+                gameState.splashParticles.push({
+                    x: x + (Math.random() - 0.5) * 10,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 30,
+                    vy: -50 - Math.random() * 50,
+                    size: 4 + Math.random() * 4,
+                    life: 800,
+                    maxLife: 800,
+                    isSteam: true
+                });
+            }
+        }
+
+        function applyChar(x, y, radius) {
+            if (!charCtx || !collisionMask || !burnMap) return;
+
+            // Only char solid pixels (not sky)
+            const startX = Math.max(0, Math.floor(x - radius));
+            const endX = Math.min(sceneCanvas.width, Math.ceil(x + radius));
+            const startY = Math.max(0, Math.floor(y - radius));
+            const endY = Math.min(sceneCanvas.height, Math.ceil(y + radius));
+
+            for (let py = startY; py < endY; py++) {
+                for (let px = startX; px < endX; px++) {
+                    const idx = py * sceneCanvas.width + px;
+
+                    // Check if this pixel is solid (not sky)
+                    if (collisionMask[idx] !== 1) continue;
+
+                    const dx = px - x;
+                    const dy = py - y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < radius) {
+                        // Intensity based on distance from center
+                        const intensity = (1 - dist / radius) * 0.08;
+
+                        // Track burn intensity
+                        burnMap[idx] += intensity;
+
+                        // If burned enough, burn through (create hole)
+                        if (burnMap[idx] > 1.5) {
+                            // Create hole - make pixel transparent
+                            collisionMask[idx] = 0;
+
+                            // Clear from char canvas (remove the black char mark)
+                            charCtx.clearRect(px, py, 1, 1);
+
+                            // Update the processed scene canvas
+                            const imageData = sceneCtx.getImageData(px, py, 1, 1);
+                            imageData.data[3] = 0; // Make transparent
+                            sceneCtx.putImageData(imageData, px, py);
+
+                            // Also update processed scene
+                            if (processedScene) {
+                                const tempCtx = processedScene.getContext('2d');
+                                const tempData = tempCtx.getImageData(px, py, 1, 1);
+                                tempData.data[3] = 0;
+                                tempCtx.putImageData(tempData, px, py);
+                            }
+                        } else {
+                            // Regular char effect
+                            charCtx.fillStyle = `rgba(20, 10, 5, ${intensity})`;
+                            charCtx.fillRect(px, py, 1, 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        function clearCharCanvas() {
+            if (charCtx) {
+                charCtx.clearRect(0, 0, charCanvas.width, charCanvas.height);
+            }
+            if (burnMap) {
+                burnMap.fill(0);
+            }
+        }
+
+        function drawFires() {
+            const time = Date.now();
+
+            for (const fire of gameState.fires) {
+                const stateConfig = CONFIG.FIRE_STATES[fire.state];
+                const t = (time + fire.timeOffset) / 1000;
+
+                // Draw fire particles
+                for (const p of fire.particles) {
+                    const flicker = Math.sin(t * p.speed + p.phase) * 0.3 + 0.7;
+                    const riseOffset = ((t * p.speed) % 1) * stateConfig.size * 0.5;
+
+                    const px = fire.x + p.offsetX + Math.sin(t * 5 + p.phase) * 3;
+                    const py = fire.y + p.offsetY - riseOffset;
+                    const size = p.size * flicker;
+
+                    // Fire gradient
+                    const gradient = effectsCtx.createRadialGradient(px, py, 0, px, py, size);
+                    gradient.addColorStop(0, `rgba(255, 255, 100, ${flicker})`);
+                    gradient.addColorStop(0.3, `rgba(255, 150, 50, ${flicker * 0.8})`);
+                    gradient.addColorStop(0.7, `rgba(255, 50, 0, ${flicker * 0.5})`);
+                    gradient.addColorStop(1, 'rgba(100, 0, 0, 0)');
+
+                    effectsCtx.fillStyle = gradient;
+                    effectsCtx.beginPath();
+                    effectsCtx.arc(px, py, size, 0, Math.PI * 2);
+                    effectsCtx.fill();
+                }
+
+                // Glow effect
+                const glowSize = stateConfig.size * 1.5;
+                const gradient = effectsCtx.createRadialGradient(fire.x, fire.y, 0, fire.x, fire.y, glowSize);
+                gradient.addColorStop(0, 'rgba(255, 100, 0, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                effectsCtx.fillStyle = gradient;
+                effectsCtx.beginPath();
+                effectsCtx.arc(fire.x, fire.y, glowSize, 0, Math.PI * 2);
+                effectsCtx.fill();
+            }
+
+            // Draw steam (in splash particles with isSteam flag)
+            for (const p of gameState.splashParticles) {
+                if (p.isSteam) {
+                    const alpha = (p.life / p.maxLife) * 0.5;
+                    effectsCtx.fillStyle = `rgba(200, 200, 200, ${alpha})`;
+                    effectsCtx.beginPath();
+                    effectsCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    effectsCtx.fill();
+                }
+            }
+        }
+
+        // ==================== GAME LOGIC ====================
+        function updateUI() {
+            const diff = DIFFICULTY[currentDifficulty];
+
+            scoreEl.textContent = Math.floor(gameState.score);
+            healthFill.style.width = Math.max(0, gameState.health) + '%';
+            healthText.textContent = Math.max(0, Math.floor(gameState.health)) + '%';
+            angleValue.textContent = Math.floor(gameState.cannon.angle);
+            powerValue.textContent = Math.floor(gameState.cannon.power);
+
+            // Health bar color
+            if (gameState.health > 60) {
+                healthFill.style.background = 'linear-gradient(180deg, #4f4, #282)';
+            } else if (gameState.health > 30) {
+                healthFill.style.background = 'linear-gradient(180deg, #ff4, #882)';
+            } else {
+                healthFill.style.background = 'linear-gradient(180deg, #f44, #822)';
+            }
+
+            // Water bar (always shown, max is always 100)
+            waterFill.style.width = Math.max(0, gameState.water) + '%';
+            waterText.textContent = Math.max(0, Math.floor(gameState.water)) + '%';
+
+            // Water bar color
+            if (gameState.water > 60) {
+                waterFill.style.background = 'linear-gradient(180deg, #4cf, #248)';
+            } else if (gameState.water > 30) {
+                waterFill.style.background = 'linear-gradient(180deg, #fc4, #842)';
+            } else {
+                waterFill.style.background = 'linear-gradient(180deg, #f44, #822)';
+            }
+        }
+
+        function updateControls(dt) {
+            // Only use keyboard controls if not using mouse/touch
+            if (!gameState.mouse.isDown) {
+                // LEFT/RIGHT controls angle (sideways aiming)
+                if (gameState.keys.right) {
+                    gameState.cannon.angle = Math.max(CONFIG.ANGLE_MIN, gameState.cannon.angle - CONFIG.ANGLE_SPEED * dt);
+                }
+                if (gameState.keys.left) {
+                    gameState.cannon.angle = Math.min(CONFIG.ANGLE_MAX, gameState.cannon.angle + CONFIG.ANGLE_SPEED * dt);
+                }
+                // UP/DOWN controls power (vertical = strength)
+                if (gameState.keys.up) {
+                    gameState.cannon.power = Math.min(CONFIG.POWER_MAX, gameState.cannon.power + CONFIG.POWER_SPEED * dt);
+                }
+                if (gameState.keys.down) {
+                    gameState.cannon.power = Math.max(CONFIG.POWER_MIN, gameState.cannon.power - CONFIG.POWER_SPEED * dt);
+                }
+
+                // Only fire with space if not using mouse
+                if (gameState.keys.space) {
+                    gameState.cannon.firing = true;
+                } else if (!gameState.mouse.isDown) {
+                    gameState.cannon.firing = false;
+                }
+            }
+        }
+
+        function startGame() {
+            gameState.running = true;
+            gameState.gameOver = false;
+            gameState.score = 0;
+            gameState.health = CONFIG.INITIAL_HEALTH;
+            gameState.water = 100; // Start with full water
+            gameState.waterParticles = [];
+            gameState.splashParticles = [];
+            gameState.shootingStars = [];
+            gameState.fires = [];
+            gameState.lastStarSpawn = Date.now();
+            gameState.nextStarDelay = CONFIG.STAR_SPAWN_MAX;
+            gameState.lastFireSpread = Date.now();
+            gameState.gameTime = 0;
+            gameState.cannon.angle = CONFIG.ANGLE_DEFAULT;
+            gameState.cannon.power = CONFIG.POWER_DEFAULT;
+            gameState.cannon.firing = false;
+
+            // Reset mouse state
+            gameState.mouse.isDown = false;
+            gameState.mouse.inControlArea = false;
+
+            // Clear char marks for new game
+            clearCharCanvas();
+
+            // Restore scene (in case holes were burned through)
+            processScene();
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            initStarField();
+        }
+
+        function gameOver() {
+            gameState.running = false;
+            gameState.gameOver = true;
+
+            // Update high score
+            if (gameState.score > gameState.highScore) {
+                gameState.highScore = Math.floor(gameState.score);
+                localStorage.setItem('firefighterHighScore', gameState.highScore);
+                highScoreEl.textContent = gameState.highScore;
+            }
+
+            finalScore.textContent = 'SCORE: ' + Math.floor(gameState.score);
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // ==================== INPUT ====================
+
+        // Helper function to check if point is in control arc
+        function isInControlArc(x, y) {
+            const dx = x - cannonPos.x;
+            const dy = y - cannonPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Check if within radius range
+            if (dist < CONFIG.CONTROL_ARC_MIN_RADIUS || dist > CONFIG.CONTROL_ARC_RADIUS) {
+                return false;
+            }
+
+            // Calculate angle (canvas Y is inverted)
+            let angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+
+            // Normalize angle to 0-360
+            if (angle < 0) angle += 360;
+
+            // Check if within angle range (0 to 90 degrees in our coordinate system)
+            return angle >= CONFIG.ANGLE_MIN && angle <= CONFIG.ANGLE_MAX;
+        }
+
+        // Helper function to update cannon from mouse position
+        function updateCannonFromMouse(x, y) {
+            const dx = x - cannonPos.x;
+            const dy = y - cannonPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            // Calculate angle (canvas Y is inverted, so negate dy)
+            let angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+
+            // Clamp angle
+            angle = Math.max(CONFIG.ANGLE_MIN, Math.min(CONFIG.ANGLE_MAX, angle));
+
+            // Calculate power based on distance
+            const powerRange = CONFIG.CONTROL_ARC_RADIUS - CONFIG.CONTROL_ARC_MIN_RADIUS;
+            const powerDist = Math.max(0, Math.min(powerRange, dist - CONFIG.CONTROL_ARC_MIN_RADIUS));
+            const power = CONFIG.POWER_MIN + (powerDist / powerRange) * (CONFIG.POWER_MAX - CONFIG.POWER_MIN);
+
+            gameState.cannon.angle = angle;
+            gameState.cannon.power = power;
+        }
+
+        // Get mouse/touch position relative to canvas
+        function getCanvasPosition(e) {
+            const rect = effectsCanvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+            const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        // Mouse event handlers
+        effectsCanvas.addEventListener('mousedown', (e) => {
+            const pos = getCanvasPosition(e);
+            if (isInControlArc(pos.x, pos.y)) {
+                gameState.mouse.isDown = true;
+                gameState.mouse.inControlArea = true;
+                updateCannonFromMouse(pos.x, pos.y);
+                gameState.cannon.firing = true;
+                e.preventDefault();
+            }
+        });
+
+        effectsCanvas.addEventListener('mousemove', (e) => {
+            const pos = getCanvasPosition(e);
+
+            if (gameState.mouse.isDown && gameState.mouse.inControlArea) {
+                // Continue firing while dragging in control area
+                if (isInControlArc(pos.x, pos.y)) {
+                    updateCannonFromMouse(pos.x, pos.y);
+                }
+            } else {
+                // Just update visual state for hover
+                gameState.mouse.inControlArea = isInControlArc(pos.x, pos.y);
+            }
+        });
+
+        effectsCanvas.addEventListener('mouseup', (e) => {
+            gameState.mouse.isDown = false;
+            gameState.cannon.firing = false;
+        });
+
+        effectsCanvas.addEventListener('mouseleave', (e) => {
+            gameState.mouse.isDown = false;
+            gameState.mouse.inControlArea = false;
+            gameState.cannon.firing = false;
+        });
+
+        // Touch event handlers
+        effectsCanvas.addEventListener('touchstart', (e) => {
+            const pos = getCanvasPosition(e);
+            if (isInControlArc(pos.x, pos.y)) {
+                gameState.mouse.isDown = true;
+                gameState.mouse.inControlArea = true;
+                updateCannonFromMouse(pos.x, pos.y);
+                gameState.cannon.firing = true;
+                e.preventDefault();
+            }
+        });
+
+        effectsCanvas.addEventListener('touchmove', (e) => {
+            if (gameState.mouse.isDown && gameState.mouse.inControlArea) {
+                const pos = getCanvasPosition(e);
+                if (isInControlArc(pos.x, pos.y)) {
+                    updateCannonFromMouse(pos.x, pos.y);
+                }
+                e.preventDefault();
+            }
+        });
+
+        effectsCanvas.addEventListener('touchend', (e) => {
+            gameState.mouse.isDown = false;
+            gameState.mouse.inControlArea = false;
+            gameState.cannon.firing = false;
+            e.preventDefault();
+        });
+
+        effectsCanvas.addEventListener('touchcancel', (e) => {
+            gameState.mouse.isDown = false;
+            gameState.mouse.inControlArea = false;
+            gameState.cannon.firing = false;
+            e.preventDefault();
+        });
+
+        // Difficulty selection
+        document.querySelectorAll('.difficulty-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.difficulty-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                currentDifficulty = option.dataset.difficulty;
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowUp') gameState.keys.up = true;
+            if (e.code === 'ArrowDown') gameState.keys.down = true;
+            if (e.code === 'ArrowLeft') gameState.keys.left = true;
+            if (e.code === 'ArrowRight') gameState.keys.right = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                gameState.keys.space = true;
+
+                if (!gameState.running && (startScreen.classList.contains('hidden') === false || gameState.gameOver)) {
+                    startGame();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowUp') gameState.keys.up = false;
+            if (e.code === 'ArrowDown') gameState.keys.down = false;
+            if (e.code === 'ArrowLeft') gameState.keys.left = false;
+            if (e.code === 'ArrowRight') gameState.keys.right = false;
+            if (e.code === 'Space') gameState.keys.space = false;
+        });
+
+        // ==================== GAME LOOP ====================
+        let lastTime = 0;
+
+        function gameLoop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1); // Cap dt to prevent spiral of death
+            lastTime = timestamp;
+
+            if (gameState.running) {
+                gameState.gameTime += dt;
+                gameState.score += CONFIG.SURVIVAL_POINTS * dt;
+            }
+
+            // Update
+            updateControls(dt);
+            updateWater(dt);
+            updateShootingStars(dt);
+            updateFires(dt);
+            updateUI();
+
+            // Draw
+            drawScene();
+            drawEffects();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==================== INIT ====================
+        loadGame().then(() => {
+            initStarField();
+            requestAnimationFrame(gameLoop);
+        }).catch(err => {
+            console.error('Failed to load game:', err);
+        });
+    </script>
+</body>
+</html>
