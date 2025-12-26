@@ -135,6 +135,7 @@
             align-items: center;
             color: #fff;
             z-index: 200;
+            cursor: pointer;
         }
 
         #start-screen h1, #game-over-screen h1 {
@@ -1876,11 +1877,25 @@
 
         // Difficulty selection
         document.querySelectorAll('.difficulty-option').forEach(option => {
-            option.addEventListener('click', () => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation(); // Don't start game when clicking difficulty
                 document.querySelectorAll('.difficulty-option').forEach(o => o.classList.remove('selected'));
                 option.classList.add('selected');
                 currentDifficulty = option.dataset.difficulty;
             });
+        });
+
+        // Start game on screen click/tap (for mobile)
+        startScreen.addEventListener('click', (e) => {
+            if (!startScreen.classList.contains('hidden')) {
+                startGame();
+            }
+        });
+
+        gameOverScreen.addEventListener('click', (e) => {
+            if (!gameOverScreen.classList.contains('hidden')) {
+                startGame();
+            }
         });
 
         document.addEventListener('keydown', (e) => {
@@ -1933,6 +1948,13 @@
         }
 
         // ==================== INIT ====================
+        // Lock screen to landscape on mobile
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(err => {
+                console.log('Could not lock orientation:', err);
+            });
+        }
+
         loadGame().then(() => {
             initStarField();
             requestAnimationFrame(gameLoop);
