@@ -11,19 +11,20 @@
 
 ### [firefighter](firefighter.html)
 
-> last updated: 2025-12-27 00:54:34
-> Improve mobile touch controls for firefighter game
+> last updated: 2025-12-27 00:58:37
+> Add PWA support for fullscreen mobile experience
 > 
-> - Fix touch coordinate scaling to account for CSS transform
-> - Change control arc from pie shape to ring sector for clearer UX
-> - Aim line now starts from inner radius and tracks touch position accurately
-> - Expand arc radius by 50% for easier mobile control
+> - Add web app manifest for "Add to Home Screen" functionality
+> - Add PWA meta tags for iOS and Android
+> - Use dynamic viewport height (dvh) to account for browser UI
+> - Add safe area insets for notched devices
+> - Request fullscreen when game starts
 > 
 > 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 > 
 > Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 >
-> [view commit](https://github.com/jokkebk/tools/commit/c2b72bd42070383af91288f5d615eb21b46d5f1f)
+> [view commit](https://github.com/jokkebk/tools/commit/14bccc1cf23eba2bef3a41e92d23e1031a87507a)
 
 ### [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 

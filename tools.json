@@ -23,9 +23,9 @@
     },
     "firefighter.html": {
       "last_commit": {
-        "hash": "c2b72bd42070383af91288f5d615eb21b46d5f1f",
-        "date": "2025-12-27T00:54:34+02:00",
-        "message": "Improve mobile touch controls for firefighter game\n\n- Fix touch coordinate scaling to account for CSS transform\n- Change control arc from pie shape to ring sector for clearer UX\n- Aim line now starts from inner radius and tracks touch position accurately\n- Expand arc radius by 50% for easier mobile control\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+        "hash": "14bccc1cf23eba2bef3a41e92d23e1031a87507a",
+        "date": "2025-12-27T00:58:37+02:00",
+        "message": "Add PWA support for fullscreen mobile experience\n\n- Add web app manifest for \"Add to Home Screen\" functionality\n- Add PWA meta tags for iOS and Android\n- Use dynamic viewport height (dvh) to account for browser UI\n- Add safe area insets for notched devices\n- Request fullscreen when game starts\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
       }
     }
   }
