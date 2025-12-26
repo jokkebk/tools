@@ -23,9 +23,9 @@
     },
     "firefighter.html": {
       "last_commit": {
-        "hash": "d919b1ed01288ae30e524b63e7bdbfd32a3813ed",
-        "date": "2025-12-27T00:38:25+02:00",
-        "message": "Mobile fixes to firefighter game"
+        "hash": "4c378fdc0c883eacf40ad01731f95a8b3be33a98",
+        "date": "2025-12-27T00:43:20+02:00",
+        "message": "Hopefully better mobile UX on firefighting game"
       }
     }
   }
