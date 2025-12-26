@@ -11,10 +11,10 @@
 
 ### [firefighter](firefighter.html)
 
-> last updated: 2025-12-27 00:24:50
-> Christmar firefighting game v1
+> last updated: 2025-12-27 00:34:43
+> Mobile fixes to firefighter game
 >
-> [view commit](https://github.com/jokkebk/tools/commit/0b4fae22ec443ef9d50d2468104e106558eabe14)
+> [view commit](https://github.com/jokkebk/tools/commit/951563d4b1523e0552948ec4eb42a1ef0d9e6b06)
 
 ### [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 
