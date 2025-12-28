@@ -4,6 +4,7 @@
 
 * [blackjack_trainer](blackjack_trainer.html)
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
+* [find_fraction](find_fraction.html)
 * [firefighter](firefighter.html)
 * [pianotrainer](pianotrainer.html)
 * [wordle](wordle.html)
@@ -11,6 +12,13 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [find_fraction](find_fraction.html)
+
+> last updated: 2025-12-28 20:09:07
+> Find the fraction corresponding to a decimal number
+>
+> [view commit](https://github.com/jokkebk/tools/commit/a7af8d2895c54886b5efa5ebfd0cf9a6ca8dcadf)
 
 ### [wordle](wordle.html)
 

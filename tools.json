@@ -48,6 +48,13 @@
         "date": "2025-12-27T00:58:37+02:00",
         "message": "Add PWA support for fullscreen mobile experience\n\n- Add web app manifest for \"Add to Home Screen\" functionality\n- Add PWA meta tags for iOS and Android\n- Use dynamic viewport height (dvh) to account for browser UI\n- Add safe area insets for notched devices\n- Request fullscreen when game starts\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
       }
+    },
+    "find_fraction.html": {
+      "last_commit": {
+        "hash": "a7af8d2895c54886b5efa5ebfd0cf9a6ca8dcadf",
+        "date": "2025-12-28T20:09:07+02:00",
+        "message": "Find the fraction corresponding to a decimal number"
+      }
     }
   }
 }
