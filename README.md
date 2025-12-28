@@ -7,11 +7,19 @@
 * [find_fraction](find_fraction.html)
 * [firefighter](firefighter.html)
 * [pianotrainer](pianotrainer.html)
+* [rushhour](rushhour.html)
 * [wordle](wordle.html)
 * [zipview-gpt52pro](zipview-gpt52pro.html)
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [rushhour](rushhour.html)
+
+> last updated: 2025-12-28 20:46:40
+> Rush Hour solver, UI pimped with Claude Opus 4.5
+>
+> [view commit](https://github.com/jokkebk/tools/commit/4f8ad3d61ed235494353d2456270ac57da68e0b3)
 
 ### [find_fraction](find_fraction.html)
 

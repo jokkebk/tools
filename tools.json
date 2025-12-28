@@ -21,6 +21,13 @@
         "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
       }
     },
+    "rushhour.html": {
+      "last_commit": {
+        "hash": "4f8ad3d61ed235494353d2456270ac57da68e0b3",
+        "date": "2025-12-28T20:46:40+02:00",
+        "message": "Rush Hour solver, UI pimped with Claude Opus 4.5"
+      }
+    },
     "christmas-screensaver-opus45.html": {
       "last_commit": {
         "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",
