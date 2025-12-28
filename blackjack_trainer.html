@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Blackjack Basic Strategy Trainer</title>
+<meta name="description" content="Blackjack basic strategy trainer">
+<meta name="author" content="Joonas Pihlajamaa">
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: linear-gradient(135deg, #1a5f2a 0%, #0d3d16 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+  color: #fff;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2.5rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  margin-bottom: 30px;
+  letter-spacing: 1px;
+}
+
+h2 {
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 0 0 15px 0;
+  opacity: 0.9;
+}
+
+.game-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  justify-content: center;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
+.hand-section {
+  background: rgba(0,0,0,0.2);
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 180px;
+}
+
+.cards-container {
+  display: flex;
+  gap: 10px;
+  min-height: 130px;
+}
+
+.card {
+  width: 90px;
+  height: 126px;
+  background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+  border-radius: 10px;
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: bold;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card .rank {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.card .suit {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.card.spades, .card.clubs { color: #1a1a2e; }
+.card.hearts, .card.diams { color: #c41e3a; }
+
+.stats-section {
+  background: rgba(0,0,0,0.2);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.stats-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.stats-table th {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.stats-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-table tr:last-child td,
+.stats-table tr:last-child th {
+  border-bottom: none;
+  font-weight: bold;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.buttons button {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 28px;
+  min-width: 130px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.buttons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.buttons button:active {
+  transform: translateY(0);
+}
+
+.actionH {
+  background: linear-gradient(145deg, #4ade80 0%, #22c55e 100%);
+  color: #052e16;
+}
+.actionS {
+  background: linear-gradient(145deg, #f87171 0%, #ef4444 100%);
+  color: #450a0a;
+}
+.actionD {
+  background: linear-gradient(145deg, #fde047 0%, #eab308 100%);
+  color: #422006;
+}
+.action2 {
+  background: linear-gradient(145deg, #93c5fd 0%, #3b82f6 100%);
+  color: #1e3a5f;
+}
+
+#message {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 0 auto 20px;
+  max-width: 600px;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#message.correct {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 2px solid #22c55e;
+}
+
+#message.wrong {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 2px solid #ef4444;
+}
+
+.options {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 10px 16px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.options label:hover {
+  background: rgba(0,0,0,0.3);
+}
+
+.options input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.strategy-section {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.strategy-section h2 {
+  text-align: center;
+}
+
+#toggleStrategy {
+  display: block;
+  margin: 0 auto 20px;
+  padding: 10px 24px;
+  font-size: 0.9rem;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#toggleStrategy:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+#strategy {
+  border-collapse: collapse;
+  margin: 0 auto;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+#strategy th {
+  background: rgba(0,0,0,0.4);
+  padding: 8px 10px;
+  font-weight: 600;
+}
+
+#strategy td {
+  padding: 6px 10px;
+  text-align: center;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+#strategy .actionH { background: #4ade80; }
+#strategy .actionS { background: #f87171; }
+#strategy .actionD { background: #fde047; }
+#strategy .action2 { background: #93c5fd; }
+
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  h1 { font-size: 1.8rem; }
+  .game-area { gap: 15px; }
+  .hand-section { padding: 15px; min-width: 150px; }
+  .card { width: 70px; height: 98px; font-size: 1.5rem; }
+  .card .rank { font-size: 1.4rem; }
+  .card .suit { font-size: 1.5rem; }
+  .buttons button { min-width: 100px; padding: 12px 20px; }
+  #message { font-size: 1.1rem; padding: 15px; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>Blackjack Trainer</h1>
+
+<div class="game-area">
+  <div class="hand-section">
+    <h2>Dealer</h2>
+    <div class="cards-container" id="dealer"></div>
+  </div>
+
+  <div class="hand-section">
+    <h2>Your Hand</h2>
+    <div class="cards-container" id="you"></div>
+  </div>
+
+  <div class="stats-section">
+    <h2>Statistics</h2>
+    <table class="stats-table">
+      <tr><th>Action</th><th>Accuracy</th></tr>
+      <tr><th>Hit</th><td id="statH">0% (0/0)</td></tr>
+      <tr><th>Stay</th><td id="statS">0% (0/0)</td></tr>
+      <tr><th>Double</th><td id="statD">0% (0/0)</td></tr>
+      <tr><th>Split</th><td id="stat2">0% (0/0)</td></tr>
+      <tr><th>Total</th><td id="statT">0% (0/0)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="buttons">
+  <button class="actionH" id="bHit">H - Hit</button>
+  <button class="actionS" id="bStay">S - Stay</button>
+  <button class="actionD" id="bDouble">D - Double</button>
+  <button class="action2" id="bSplit">2 - Split</button>
+</div>
+
+<div id="message"></div>
+
+<div class="options">
+  <label>
+    <input id="evenout" type="checkbox" checked>
+    Even out action odds
+  </label>
+</div>
+
+<div class="strategy-section">
+  <h2>Strategy Reference</h2>
+  <button id="toggleStrategy">Show Strategy Chart</button>
+  <table id="strategy" style="display: none;"></table>
+</div>
+
+<script>
+const hands = '17 16 15 14 13 12 11 10 9 8 A8 A7 A6 A-A 10-10 9-9 8-8 7-7 6-6 5-5 4-4 3-3 2-2'.split(' ');
+const rows = '2 3 4 5 6 7 8 9 10 A'.split(' ');
+const cards = 'A 2 3 4 5 6 7 8 9 10 J Q K'.split(' ');
+const strategy = [
+  'SSSSSSSSSS', 'SSSSSHHHHH', 'SSSSSHHHHH', 'SSSSSHHHHH',
+  'SSSSSHHHHH', 'HHSSSHHHHH', 'DDDDDDDDHH', 'DDDDDDDDHH', 'HDDDDHHHHH',
+  'HHHHHHHHHH', 'SSSSSSSSSS', 'SSSSSSSHHH', 'HHHHHHHHHH', '222222222H',
+  'SSSSSSSSSS', '22222S22SS', '22222222HH', '222222HHHH', '22222HHHHH',
+  'DDDDDDDDHH', 'HHH22HHHHH', '222222HHHH', '222222HHHH'
+];
+
+let dealer, you;
+const stats = { H: [0, 0], S: [0, 0], D: [0, 0], '2': [0, 0], T: [0, 0] };
+
+function normalize(d, p1, p2) {
+  const deal = d === 1 ? 9 : (d > 10 ? 8 : d - 2);
+  let play;
+
+  if (!p2) {
+    play = p1;
+  } else {
+    p1 = Math.min(p1, 10);
+    p2 = Math.min(p2, 10);
+    if (p1 > p2) [p1, p2] = [p2, p1];
+
+    if (p1 === p2) {
+      play = p1 === 1 ? 'A-A' : `${p1}-${p1}`;
+    } else if (p1 === 1) {
+      play = 'A' + Math.max(Math.min(p2, 8), 6);
+    } else {
+      play = '' + Math.max(Math.min(p1 + p2, 17), 8);
+    }
+  }
+  return { deal, play };
+}
+
+function strat(d, p1, p2) {
+  const n = normalize(d, p1, p2);
+  return strategy[hands.indexOf(n.play)].charAt(n.deal);
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomCard() {
+  const suit = pick(['spades', 'hearts', 'diams', 'clubs']);
+  const card = pick(cards);
+  const value = cards.indexOf(card) + 1;
+  return { suit, card, value };
+}
+
+function toHtml(c) {
+  const suitSymbols = { spades: '\u2660', hearts: '\u2665', diams: '\u2666', clubs: '\u2663' };
+  return `<div class="card ${c.suit}">
+    <span class="rank">${c.card}</span>
+    <span class="suit">${suitSymbols[c.suit]}</span>
+  </div>`;
+}
+
+function pickCards() {
+  const target = pick(['H', 'S', 'D', '2']);
+  const evenout = document.getElementById('evenout').checked;
+
+  while (true) {
+    dealer = randomCard();
+    you = [randomCard(), randomCard()];
+    if (!evenout || target === strat(dealer.value, you[0].value, you[1].value)) {
+      break;
+    }
+  }
+
+  document.getElementById('dealer').innerHTML = toHtml(dealer);
+  document.getElementById('you').innerHTML = toHtml(you[0]) + toHtml(you[1]);
+}
+
+function updateStats(action) {
+  const s = stats[action];
+  const pct = s[1] > 0 ? Math.round(100 * s[0] / s[1]) : 0;
+  document.getElementById('stat' + action).textContent = `${pct}% (${s[0]}/${s[1]})`;
+}
+
+function handleAction(guess) {
+  const s = strat(dealer.value, you[0].value, you[1].value);
+  const n = normalize(dealer.value, you[0].value, you[1].value);
+  const msgEl = document.getElementById('message');
+
+  if (guess === s) {
+    msgEl.textContent = `Correct! ${n.play} vs ${rows[n.deal]} = ${guess}`;
+    msgEl.className = 'correct';
+    stats[s][0]++;
+    stats.T[0]++;
+  } else {
+    msgEl.textContent = `Wrong! ${n.play} vs ${rows[n.deal]} = ${s}, not ${guess}`;
+    msgEl.className = 'wrong';
+  }
+
+  stats[s][1]++;
+  stats.T[1]++;
+
+  updateStats(s);
+  updateStats('T');
+  pickCards();
+}
+
+function buildStrategyTable() {
+  let html = '<tr><th></th><th>' + rows.join('</th><th>') + '</th></tr>';
+
+  hands.forEach(hand => {
+    html += '<tr><th>' + hand + '</th>';
+    rows.forEach(d => {
+      const action = strat(d === 'A' ? 1 : parseInt(d), hand);
+      html += `<td class="action${action}">${action}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  document.getElementById('strategy').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildStrategyTable();
+
+  const toggleBtn = document.getElementById('toggleStrategy');
+  const strategyTable = document.getElementById('strategy');
+
+  toggleBtn.addEventListener('click', () => {
+    if (strategyTable.style.display === 'none') {
+      strategyTable.style.display = '';
+      toggleBtn.textContent = 'Hide Strategy Chart';
+    } else {
+      strategyTable.style.display = 'none';
+      toggleBtn.textContent = 'Show Strategy Chart';
+    }
+  });
+
+  document.getElementById('bHit').addEventListener('click', () => handleAction('H'));
+  document.getElementById('bStay').addEventListener('click', () => handleAction('S'));
+  document.getElementById('bDouble').addEventListener('click', () => handleAction('D'));
+  document.getElementById('bSplit').addEventListener('click', () => handleAction('2'));
+
+  pickCards();
+});
+</script>
+
+</body>
+</html>
