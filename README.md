@@ -6,10 +6,18 @@
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [firefighter](firefighter.html)
 * [pianotrainer](pianotrainer.html)
+* [wordle](wordle.html)
 * [zipview-gpt52pro](zipview-gpt52pro.html)
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [wordle](wordle.html)
+
+> last updated: 2025-12-28 19:53:38
+> Wordle letter order brute forcer for the lazy
+>
+> [view commit](https://github.com/jokkebk/tools/commit/351f0b016a72f78fb39b18e0d89fe9dc729f741d)
 
 ### [blackjack_trainer](blackjack_trainer.html)
 
