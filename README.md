@@ -2,6 +2,7 @@
 
 ## Alphabetical Index
 
+* [blackjack_trainer](blackjack_trainer.html)
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [firefighter](firefighter.html)
 * [pianotrainer](pianotrainer.html)
@@ -9,6 +10,13 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [blackjack_trainer](blackjack_trainer.html)
+
+> last updated: 2025-12-28 13:20:23
+> Blackjack trainer for basic strategy
+>
+> [view commit](https://github.com/jokkebk/tools/commit/868a96d54419da1a8e6a440f382b27c3714c87ab)
 
 ### [pianotrainer](pianotrainer.html)
 

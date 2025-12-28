@@ -7,6 +7,13 @@
         "message": "Left/right hand piano trainer"
       }
     },
+    "blackjack_trainer.html": {
+      "last_commit": {
+        "hash": "868a96d54419da1a8e6a440f382b27c3714c87ab",
+        "date": "2025-12-28T13:20:23+02:00",
+        "message": "Blackjack trainer for basic strategy"
+      }
+    },
     "zipview-opus45.html": {
       "last_commit": {
         "hash": "18535cf925056e4946444e777e16524f2ffa7170",
