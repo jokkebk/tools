@@ -4,10 +4,18 @@
 
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [firefighter](firefighter.html)
+* [pianotrainer](pianotrainer.html)
 * [zipview-gpt52pro](zipview-gpt52pro.html)
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [pianotrainer](pianotrainer.html)
+
+> last updated: 2025-12-28 13:03:03
+> Left/right hand piano trainer
+>
+> [view commit](https://github.com/jokkebk/tools/commit/594cd68236c86c08329fa290929963bf4a0fc273)
 
 ### [firefighter](firefighter.html)
 

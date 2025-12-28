@@ -1,5 +1,12 @@
 {
   "pages": {
+    "pianotrainer.html": {
+      "last_commit": {
+        "hash": "594cd68236c86c08329fa290929963bf4a0fc273",
+        "date": "2025-12-28T13:03:03+02:00",
+        "message": "Left/right hand piano trainer"
+      }
+    },
     "zipview-opus45.html": {
       "last_commit": {
         "hash": "18535cf925056e4946444e777e16524f2ffa7170",
