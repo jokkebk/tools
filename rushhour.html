@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rush Hour Solver</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f0f4f8;
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      h1 {
+        color: #2d3748;
+        margin: 0 0 10px 0;
+        font-size: 1.8rem;
+      }
+
+      .app-container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .instructions {
+        color: #4a5568;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+      }
+
+      .main-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+      }
+
+      /* Board Section - keeps board, controls, and samples together */
+      .board-section {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      /* Game Board */
+      .board-wrapper {
+        position: relative;
+      }
+
+      .board-frame {
+        background: linear-gradient(145deg, #4a5568, #2d3748);
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        position: relative;
+        width: fit-content;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(6, 50px);
+        grid-template-rows: repeat(6, 50px);
+        gap: 3px;
+        background: #1a202c;
+        padding: 3px;
+        border-radius: 6px;
+        position: relative;
+        width: fit-content;
+      }
+
+      .cell {
+        background: linear-gradient(145deg, #e2e8f0, #cbd5e0);
+        border-radius: 4px;
+        position: relative;
+      }
+
+      .cell.drop-target {
+        background: linear-gradient(145deg, #9ae6b4, #68d391);
+      }
+
+      .cell.drop-invalid {
+        background: linear-gradient(145deg, #feb2b2, #fc8181);
+      }
+
+      /* Exit marker */
+      .exit-marker {
+        position: absolute;
+        right: -24px;
+        top: calc(12px + 3px + 2 * 53px + 10px);
+        width: 20px;
+        height: 40px;
+        background: linear-gradient(90deg, #2d3748, #48bb78);
+        clip-path: polygon(0 0, 60% 0, 100% 50%, 60% 100%, 0 100%);
+      }
+
+      .exit-label {
+        position: absolute;
+        right: -55px;
+        top: calc(12px + 3px + 2 * 53px + 18px);
+        color: #48bb78;
+        font-weight: bold;
+        font-size: 0.8rem;
+      }
+
+      /* Cars on board */
+      .car {
+        position: absolute;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.9);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        transition: transform 0.1s, box-shadow 0.1s;
+        user-select: none;
+        z-index: 10;
+      }
+
+      .car:hover {
+        transform: scale(1.02);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      }
+
+      .car.horizontal {
+        height: 44px;
+      }
+
+      .car.vertical {
+        width: 44px;
+      }
+
+      .car.size-2.horizontal { width: 97px; }
+      .car.size-3.horizontal { width: 150px; }
+      .car.size-2.vertical { height: 97px; }
+      .car.size-3.vertical { height: 150px; }
+
+      /* Garage */
+      .garage {
+        background: white;
+        border-radius: 12px;
+        padding: 15px 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .garage h3 {
+        margin: 0;
+        color: #2d3748;
+        font-size: 0.9rem;
+      }
+
+      .garage-row {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .garage-buttons {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .btn-sample {
+        background: #718096;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+      }
+
+      .btn-sample:hover {
+        background: #4a5568;
+      }
+
+      .btn-danger {
+        background: #e53e3e;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+      }
+
+      .btn-danger:hover {
+        background: #c53030;
+      }
+
+      .garage-section {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .garage-section h4 {
+        margin: 0;
+        color: #718096;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .garage-cars {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .garage-car {
+        border-radius: 6px;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.9);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        transition: transform 0.1s, opacity 0.2s;
+        user-select: none;
+      }
+
+      .garage-car:hover:not(.used) {
+        transform: scale(1.05);
+      }
+
+      .garage-car.used {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .garage-car.dragging {
+        opacity: 0.5;
+      }
+
+      .garage-car.horizontal.size-2 { width: 60px; height: 28px; }
+      .garage-car.horizontal.size-3 { width: 88px; height: 28px; }
+      .garage-car.vertical.size-2 { width: 28px; height: 60px; }
+      .garage-car.vertical.size-3 { width: 28px; height: 88px; }
+
+      /* Controls */
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .control-group {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .btn-edit {
+        background: #718096;
+        margin-left: 10px;
+      }
+
+      .btn-edit:hover {
+        background: #4a5568;
+      }
+
+      button {
+        background: #4299e1;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #3182ce;
+      }
+
+      button:disabled {
+        background: #a0aec0;
+        cursor: not-allowed;
+      }
+
+      .btn-solve {
+        background: linear-gradient(145deg, #e53e3e, #c53030);
+        padding: 12px 24px;
+        font-size: 1.1rem;
+        font-weight: bold;
+      }
+
+      .btn-solve:hover {
+        background: linear-gradient(145deg, #c53030, #9b2c2c);
+      }
+
+      .move-counter {
+        background: #2d3748;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: bold;
+      }
+
+      /* Responsive */
+      @media (max-width: 500px) {
+        .garage-row {
+          gap: 15px;
+        }
+
+        .board {
+          grid-template-columns: repeat(6, 45px);
+          grid-template-rows: repeat(6, 45px);
+        }
+
+        .car.size-2.horizontal { width: 87px; }
+        .car.size-3.horizontal { width: 135px; }
+        .car.size-2.vertical { height: 87px; }
+        .car.size-3.vertical { height: 135px; }
+
+        .car.horizontal { height: 39px; }
+        .car.vertical { width: 39px; }
+
+        .exit-marker {
+          top: calc(12px + 3px + 2 * 48px + 8px);
+          height: 36px;
+        }
+
+        .exit-label {
+          top: calc(12px + 3px + 2 * 48px + 14px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app-container">
+      <h1>Rush Hour Solver</h1>
+      <p class="instructions">Drag cars from the garage onto the board to recreate a puzzle.
+        The red car must reach the exit on the right. Click a car on the board to remove it.</p>
+
+      <div class="main-layout">
+        <!-- Garage on top -->
+        <div class="garage">
+          <h3>Car Garage</h3>
+
+          <div class="garage-row">
+            <div class="garage-section">
+              <h4>Cars (2 sq)</h4>
+              <div class="garage-cars">
+                <div v-for="car in garageCars" :key="car.id + '-h'"
+                     class="garage-car horizontal size-2"
+                     :class="{ used: isCarUsed(car.id) }"
+                     :style="{ background: car.gradient }"
+                     :draggable="!isCarUsed(car.id)"
+                     @dragstart="onDragStart($event, car, 'horizontal', 2)"
+                     @dragend="onDragEnd"
+                     @touchstart="onTouchStart($event, car, 'horizontal', 2)">
+                </div>
+              </div>
+              <div class="garage-cars">
+                <div v-for="car in garageCars" :key="car.id + '-v'"
+                     class="garage-car vertical size-2"
+                     :class="{ used: isCarUsed(car.id) }"
+                     :style="{ background: car.gradient }"
+                     :draggable="!isCarUsed(car.id)"
+                     @dragstart="onDragStart($event, car, 'vertical', 2)"
+                     @dragend="onDragEnd"
+                     @touchstart="onTouchStart($event, car, 'vertical', 2)">
+                </div>
+              </div>
+            </div>
+
+            <div class="garage-section">
+              <h4>Trucks (3 sq)</h4>
+              <div class="garage-cars">
+                <div v-for="car in garageTrucks" :key="car.id + '-h'"
+                     class="garage-car horizontal size-3"
+                     :class="{ used: isCarUsed(car.id) }"
+                     :style="{ background: car.gradient }"
+                     :draggable="!isCarUsed(car.id)"
+                     @dragstart="onDragStart($event, car, 'horizontal', 3)"
+                     @dragend="onDragEnd"
+                     @touchstart="onTouchStart($event, car, 'horizontal', 3)">
+                </div>
+              </div>
+              <div class="garage-cars">
+                <div v-for="car in garageTrucks" :key="car.id + '-v'"
+                     class="garage-car vertical size-3"
+                     :class="{ used: isCarUsed(car.id) }"
+                     :style="{ background: car.gradient }"
+                     :draggable="!isCarUsed(car.id)"
+                     @dragstart="onDragStart($event, car, 'vertical', 3)"
+                     @dragend="onDragEnd"
+                     @touchstart="onTouchStart($event, car, 'vertical', 3)">
+                </div>
+              </div>
+            </div>
+
+            </div>
+          <div class="garage-buttons">
+            <button class="btn-sample" @click="loadSample(samples[0].grid)">Sample</button>
+            <button class="btn-danger" @click="clearBoard">Clear</button>
+          </div>
+        </div>
+
+        <!-- Game Board + Controls -->
+        <div class="board-section">
+          <div class="board-wrapper">
+            <div class="board-frame">
+              <div class="board" ref="board"
+                   @dragover.prevent="onDragOver"
+                   @drop="onDrop"
+                   @dragleave="onDragLeave"
+                   @touchmove.prevent="onTouchMove"
+                   @touchend="onTouchEnd">
+                <template v-for="i in 6">
+                  <div v-for="j in 6" :key="'cell-'+(i-1)+'-'+(j-1)"
+                       class="cell"
+                       :class="{ 'drop-target': isDropTarget(i-1, j-1), 'drop-invalid': isDropInvalid(i-1, j-1) }"
+                       :data-row="i-1" :data-col="j-1">
+                  </div>
+                </template>
+                <!-- Cars on board -->
+                <div v-for="car in displayCars" :key="car.id"
+                     class="car"
+                     :class="[car.orientation, 'size-' + car.size]"
+                     :style="getCarStyle(car)"
+                     @click="removeCar(car)">
+                </div>
+              </div>
+              <div class="exit-marker"></div>
+              <div class="exit-label">EXIT</div>
+            </div>
+          </div>
+
+          <!-- Controls directly under board -->
+          <div class="controls">
+            <button class="btn-solve" @click="solve" :disabled="!hasRedCar" v-if="solution.length === 0">Solve!</button>
+
+            <div class="control-group" v-if="solution.length > 0">
+              <button @click="pos = 0" :disabled="pos === 0">⏮</button>
+              <button @click="pos = Math.max(pos-1, 0)" :disabled="pos === 0">◀</button>
+              <span class="move-counter">{{ pos }} / {{ solution.length - 1 }}</span>
+              <button @click="pos = Math.min(pos+1, solution.length-1)" :disabled="pos === solution.length-1">▶</button>
+              <button @click="pos = solution.length-1" :disabled="pos === solution.length-1">⏭</button>
+              <button class="btn-edit" @click="editBoard">Edit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const CELL_SIZE = 50;
+      const GAP = 3;
+      const PADDING = 3;
+
+      // Convert grid string to 2D array
+      const toGrid = (s) => s.split(' ').map(r => r.split(''));
+      const toStr = (g) => g.map(r => r.join('')).join(' ');
+
+      // Generate all possible moves from a grid state
+      function moves(g) {
+        const seen = new Set();
+        const ret = [];
+
+        for(let i=0; i<6; i++) {
+          for(let j=0; j<6; j++) {
+            const ch = g[i][j];
+            if(ch == '_' || seen.has(ch)) continue;
+            seen.add(ch);
+
+            const horiz = (j<5 && g[i][j+1] === ch);
+            let i2 = horiz ? i : (i<4 && g[i+2][j]==ch ? i+2 : i+1);
+            let j2 = horiz ? (j<4 && g[i][j+2]==ch ? j+2 : j+1) : j;
+
+            let ib = horiz ? i : i-1, jb = horiz ? j-1 : j;
+            if(ib >= 0 && jb >= 0 && g[ib][jb] == '_') {
+              let g2 = g.map(r => [...r]);
+              g2[ib][jb] = ch;
+              g2[i2][j2] = '_';
+              ret.push(g2);
+            }
+
+            let ia = horiz ? i2 : i2+1, ja = horiz ? j2+1 : j2;
+            if(ia < 6 && ja < 6 && g[ia][ja] == '_') {
+              let g2 = g.map(r => [...r]);
+              g2[ia][ja] = ch;
+              g2[i][j] = '_';
+              ret.push(g2);
+            }
+          }
+        }
+        return ret;
+      }
+
+      // Car definitions with game-like colors
+      // Size is determined dynamically based on board placement, not from definitions
+      const CAR_DEFS = [
+        // The red car (goal) - always size 2, horizontal only on row 2
+        { id: 'X', label: '', gradient: 'linear-gradient(145deg, #fc8181, #c53030)' },
+        // Cars (typically size 2)
+        { id: 'A', label: '', gradient: 'linear-gradient(145deg, #9ae6b4, #48bb78)' },
+        { id: 'B', label: '', gradient: 'linear-gradient(145deg, #63b3ed, #3182ce)' },
+        { id: 'C', label: '', gradient: 'linear-gradient(145deg, #b794f4, #805ad5)' },
+        { id: 'D', label: '', gradient: 'linear-gradient(145deg, #fbd38d, #dd6b20)' },
+        { id: 'E', label: '', gradient: 'linear-gradient(145deg, #4fd1c5, #2c7a7b)' },
+        { id: 'F', label: '', gradient: 'linear-gradient(145deg, #f687b3, #d53f8c)' },
+        { id: 'G', label: '', gradient: 'linear-gradient(145deg, #cbd5e0, #718096)' },
+        { id: 'H', label: '', gradient: 'linear-gradient(145deg, #f6e05e, #d69e2e)' },
+        { id: 'I', label: '', gradient: 'linear-gradient(145deg, #718096, #2d3748)' },
+        { id: 'J', label: '', gradient: 'linear-gradient(145deg, #b2f5ea, #4fd1c5)' },
+        { id: 'K', label: '', gradient: 'linear-gradient(145deg, #fed7d7, #fc8181)' },
+        { id: 'L', label: '', gradient: 'linear-gradient(145deg, #faf089, #ecc94b)' },
+        // Original puzzle colors
+        { id: 'r', label: '', gradient: 'linear-gradient(145deg, #9ae6b4, #68d391)' }, // lightgreen
+        { id: 'M', label: '', gradient: 'linear-gradient(145deg, #f687b3, #b83280)' }, // magenta
+        { id: 'Y', label: '', gradient: 'linear-gradient(145deg, #faf089, #d69e2e)' }, // yellow
+        { id: 't', label: '', gradient: 'linear-gradient(145deg, #81e6d9, #319795)' }, // turquoise
+        // Trucks (typically size 3)
+        { id: 'O', label: '', gradient: 'linear-gradient(145deg, #fbd38d, #ed8936)' },
+        { id: 'P', label: '', gradient: 'linear-gradient(145deg, #9f7aea, #6b46c1)' },
+        { id: 'Q', label: '', gradient: 'linear-gradient(145deg, #4299e1, #2c5282)' },
+        { id: 'R', label: '', gradient: 'linear-gradient(145deg, #68d391, #276749)' },
+      ];
+
+      // Fallback gradient for unknown car IDs
+      const FALLBACK_GRADIENT = 'linear-gradient(145deg, #a0aec0, #718096)';
+
+      function getCarGradient(id) {
+        const def = CAR_DEFS.find(c => c.id === id);
+        return def ? def.gradient : FALLBACK_GRADIENT;
+      }
+
+      // Separate cars and trucks for garage display
+      const GARAGE_CARS = CAR_DEFS.slice(0, 13); // X through L (size 2)
+      const GARAGE_TRUCKS = CAR_DEFS.slice(13);  // O through R (size 3)
+
+      var app = new Vue({
+        el: '#app',
+        data: {
+          garageCars: GARAGE_CARS,
+          garageTrucks: GARAGE_TRUCKS,
+          placedCars: [],
+          draggingCar: null,
+          draggingOrientation: null,
+          draggingSize: 2,
+          dropRow: -1,
+          dropCol: -1,
+          dropValid: false,
+          solution: [],
+          pos: 0,
+          samples: [
+            { name: 'Sample', grid: 'rr___O M__B_O MXXB_O M__B__ Y___CC Y_ttt_' },
+          ],
+        },
+        computed: {
+          grid() {
+            if (this.solution.length > 0) {
+              return this.solution[this.pos];
+            }
+            // Build grid from placed cars
+            const g = Array.from({length: 6}, () => Array(6).fill('_'));
+            for (const car of this.placedCars) {
+              const dr = car.orientation === 'vertical' ? 1 : 0;
+              const dc = car.orientation === 'horizontal' ? 1 : 0;
+              for (let s = 0; s < car.size; s++) {
+                g[car.row + s * dr][car.col + s * dc] = car.id;
+              }
+            }
+            return g;
+          },
+          gridStr() {
+            return toStr(this.grid);
+          },
+          hasRedCar() {
+            return this.placedCars.some(c => c.id === 'X');
+          },
+          // During solution playback, derive cars from grid
+          displayCars() {
+            if (this.solution.length === 0) {
+              return this.placedCars;
+            }
+            // Parse current solution grid into cars
+            const g = this.solution[this.pos];
+            const cars = [];
+            const seen = new Set();
+
+            for (let i = 0; i < 6; i++) {
+              for (let j = 0; j < 6; j++) {
+                const ch = g[i][j];
+                if (ch === '_' || seen.has(ch)) continue;
+                seen.add(ch);
+
+                let horizontal = j < 5 && g[i][j+1] === ch;
+                let size = 2;
+
+                if (horizontal) {
+                  if (j < 4 && g[i][j+2] === ch) size = 3;
+                } else {
+                  if (i < 4 && g[i+2][j] === ch) size = 3;
+                }
+
+                cars.push({
+                  id: ch,
+                  size: size,
+                  orientation: horizontal ? 'horizontal' : 'vertical',
+                  row: i,
+                  col: j
+                });
+              }
+            }
+            return cars;
+          }
+        },
+        methods: {
+          getCarStyle(car) {
+            const top = PADDING + car.row * (CELL_SIZE + GAP) + 3;
+            const left = PADDING + car.col * (CELL_SIZE + GAP) + 3;
+            return {
+              background: getCarGradient(car.id),
+              top: top + 'px',
+              left: left + 'px'
+            };
+          },
+          isCarUsed(id) {
+            return this.placedCars.some(c => c.id === id);
+          },
+          onDragStart(e, car, orientation, size) {
+            if (this.isCarUsed(car.id)) {
+              e.preventDefault();
+              return;
+            }
+            this.draggingCar = car;
+            this.draggingOrientation = orientation;
+            this.draggingSize = size;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+          },
+          onDragEnd(e) {
+            e.target.classList.remove('dragging');
+            this.draggingCar = null;
+            this.draggingOrientation = null;
+            this.dropRow = -1;
+            this.dropCol = -1;
+          },
+          // Touch event handlers for mobile
+          onTouchStart(e, car, orientation, size) {
+            if (this.isCarUsed(car.id)) return;
+            this.draggingCar = car;
+            this.draggingOrientation = orientation;
+            this.draggingSize = size;
+          },
+          onTouchMove(e) {
+            if (!this.draggingCar || !this.$refs.board) return;
+
+            const touch = e.touches[0];
+            const rect = this.$refs.board.getBoundingClientRect();
+            const x = touch.clientX - rect.left - PADDING;
+            const y = touch.clientY - rect.top - PADDING;
+
+            const col = Math.floor(x / (CELL_SIZE + GAP));
+            const row = Math.floor(y / (CELL_SIZE + GAP));
+
+            this.dropRow = row;
+            this.dropCol = col;
+            this.dropValid = this.canPlace(this.draggingSize, this.draggingOrientation, row, col);
+          },
+          onTouchEnd(e) {
+            if (!this.draggingCar) return;
+
+            if (this.dropValid) {
+              // Special rule: red car must be on row 2 and horizontal
+              if (this.draggingCar.id === 'X') {
+                if (this.draggingOrientation !== 'horizontal' || this.dropRow !== 2) {
+                  alert('The red car must be placed horizontally on row 3 (the exit row)!');
+                  this.resetDrag();
+                  return;
+                }
+              }
+
+              this.placedCars.push({
+                id: this.draggingCar.id,
+                size: this.draggingSize,
+                orientation: this.draggingOrientation,
+                row: this.dropRow,
+                col: this.dropCol
+              });
+
+              this.solution = [];
+              this.pos = 0;
+            }
+
+            this.resetDrag();
+          },
+          resetDrag() {
+            this.draggingCar = null;
+            this.draggingOrientation = null;
+            this.dropRow = -1;
+            this.dropCol = -1;
+            this.dropValid = false;
+          },
+          onDragOver(e) {
+            if (!this.draggingCar) return;
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left - PADDING;
+            const y = e.clientY - rect.top - PADDING;
+
+            const col = Math.floor(x / (CELL_SIZE + GAP));
+            const row = Math.floor(y / (CELL_SIZE + GAP));
+
+            this.dropRow = row;
+            this.dropCol = col;
+            this.dropValid = this.canPlace(this.draggingSize, this.draggingOrientation, row, col);
+          },
+          onDragLeave() {
+            this.dropRow = -1;
+            this.dropCol = -1;
+          },
+          onDrop(e) {
+            if (!this.draggingCar || !this.dropValid) return;
+
+            // Special rule: red car must be on row 2 and horizontal
+            if (this.draggingCar.id === 'X') {
+              if (this.draggingOrientation !== 'horizontal' || this.dropRow !== 2) {
+                alert('The red car must be placed horizontally on row 3 (the exit row)!');
+                return;
+              }
+            }
+
+            this.placedCars.push({
+              id: this.draggingCar.id,
+              size: this.draggingSize,
+              orientation: this.draggingOrientation,
+              row: this.dropRow,
+              col: this.dropCol
+            });
+
+            this.solution = [];
+            this.pos = 0;
+          },
+          canPlace(size, orientation, row, col) {
+            if (row < 0 || col < 0) return false;
+
+            const dr = orientation === 'vertical' ? 1 : 0;
+            const dc = orientation === 'horizontal' ? 1 : 0;
+
+            // Check bounds
+            if (row + (size - 1) * dr > 5) return false;
+            if (col + (size - 1) * dc > 5) return false;
+
+            // Check collision with existing cars
+            for (let s = 0; s < size; s++) {
+              const r = row + s * dr;
+              const c = col + s * dc;
+              if (this.grid[r][c] !== '_') return false;
+            }
+
+            return true;
+          },
+          isDropTarget(row, col) {
+            if (!this.draggingCar || !this.dropValid) return false;
+            const dr = this.draggingOrientation === 'vertical' ? 1 : 0;
+            const dc = this.draggingOrientation === 'horizontal' ? 1 : 0;
+            for (let s = 0; s < this.draggingSize; s++) {
+              if (row === this.dropRow + s * dr && col === this.dropCol + s * dc) return true;
+            }
+            return false;
+          },
+          isDropInvalid(row, col) {
+            if (!this.draggingCar || this.dropValid) return false;
+            if (row === this.dropRow && col === this.dropCol) return true;
+            return false;
+          },
+          removeCar(car) {
+            if (this.solution.length > 0) return; // Don't allow removal during solution playback
+            const idx = this.placedCars.findIndex(c => c.id === car.id);
+            if (idx >= 0) {
+              this.placedCars.splice(idx, 1);
+            }
+          },
+          clearBoard() {
+            this.placedCars = [];
+            this.solution = [];
+            this.pos = 0;
+          },
+          editBoard() {
+            // Exit solution playback and return to edit mode
+            // Keep the current board state from the solution
+            if (this.solution.length > 0) {
+              this.placedCars = [...this.displayCars];
+              this.solution = [];
+              this.pos = 0;
+            }
+          },
+          loadSample(gridStr) {
+            this.placedCars = [];
+            this.solution = [];
+            this.pos = 0;
+
+            const g = toGrid(gridStr);
+            const seen = new Set();
+
+            for (let i = 0; i < 6; i++) {
+              for (let j = 0; j < 6; j++) {
+                const ch = g[i][j];
+                if (ch === '_' || seen.has(ch)) continue;
+                seen.add(ch);
+
+                // Determine orientation and size
+                let horizontal = j < 5 && g[i][j+1] === ch;
+                let size = 2;
+
+                if (horizontal) {
+                  if (j < 4 && g[i][j+2] === ch) size = 3;
+                } else {
+                  if (i < 4 && g[i+2][j] === ch) size = 3;
+                }
+
+                this.placedCars.push({
+                  id: ch,
+                  size: size,
+                  orientation: horizontal ? 'horizontal' : 'vertical',
+                  row: i,
+                  col: j
+                });
+              }
+            }
+          },
+          solve() {
+            const startGrid = this.grid;
+            let prev = new Map([[toStr(startGrid), '']]);
+            let q = [startGrid];
+            let ans = [];
+
+            while(q.length) {
+              let g = q.shift();
+
+              for(let g2 of moves(g)) {
+                if(prev.has(toStr(g2))) continue;
+                q.push(g2);
+                const key = toStr(g2);
+                prev.set(key, g);
+                if(g2[2][5] == 'X') {
+                  while(g2) {
+                    ans.push(g2);
+                    g2 = prev.get(toStr(g2));
+                  }
+                  q = [];
+                  break;
+                }
+              }
+            }
+
+            if (ans.length === 0) {
+              alert('No solution found! Make sure the red car can reach the exit.');
+              return;
+            }
+
+            this.solution = ans.reverse();
+            this.pos = 0;
+          }
+        },
+        created() {
+          // Load first sample by default
+          this.loadSample(this.samples[0].grid);
+        }
+      });
+    </script>
+  </body>
+</html>
