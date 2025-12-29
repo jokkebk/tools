@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <title>Jokeripokeri Advisor</title>
+  <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #1a472a;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.05) 2px, rgba(0,0,0,.05) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,.05) 2px, rgba(0,0,0,.05) 4px);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: 0.5rem;
+  color: #fff;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.3rem;
+  margin: 0.5rem 0;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  font-weight: 700;
+}
+
+.section {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  color: #ffd700;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* API Key Section */
+.api-key-input {
+  display: none;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.api-key-input.active {
+  display: flex;
+}
+
+.api-key-input input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #666;
+  background: #fff;
+  font-size: 0.85rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  background: #333;
+  color: #fff;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.api-status {
+  font-size: 0.75rem;
+  color: #ffd700;
+  margin-bottom: 0.5rem;
+}
+
+/* Card Styling - Same as trainer */
+.card {
+  position: relative;
+  display: inline-block;
+  width: 3.2em;
+  height: 4.5em;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  margin: 0.2em;
+  cursor: pointer;
+  vertical-align: top;
+  overflow: hidden;
+  font-size: 1rem;
+}
+
+.card:before,
+.card:after {
+  position: absolute;
+  font-size: 0.55em;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.1;
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-line;
+}
+
+.card:before {
+  top: 0.15em;
+  left: 0.25em;
+}
+
+.card:after {
+  bottom: 0.15em;
+  right: 0.25em;
+  transform: rotate(180deg);
+}
+
+.card .suit-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.8em;
+  line-height: 1;
+}
+
+.card-H, .card-D { color: #d40000; }
+.card-S, .card-C { color: #000; }
+
+.card-H.card-2:before, .card-H.card-2:after { content: "2\a♥"; }
+.card-H.card-3:before, .card-H.card-3:after { content: "3\a♥"; }
+.card-H.card-4:before, .card-H.card-4:after { content: "4\a♥"; }
+.card-H.card-5:before, .card-H.card-5:after { content: "5\a♥"; }
+.card-H.card-6:before, .card-H.card-6:after { content: "6\a♥"; }
+.card-H.card-7:before, .card-H.card-7:after { content: "7\a♥"; }
+.card-H.card-8:before, .card-H.card-8:after { content: "8\a♥"; }
+.card-H.card-9:before, .card-H.card-9:after { content: "9\a♥"; }
+.card-H.card-T:before, .card-H.card-T:after { content: "10\a♥"; }
+.card-H.card-J:before, .card-H.card-J:after { content: "J\a♥"; }
+.card-H.card-Q:before, .card-H.card-Q:after { content: "Q\a♥"; }
+.card-H.card-K:before, .card-H.card-K:after { content: "K\a♥"; }
+.card-H.card-A:before, .card-H.card-A:after { content: "A\a♥"; }
+
+.card-S.card-2:before, .card-S.card-2:after { content: "2\a♠"; }
+.card-S.card-3:before, .card-S.card-3:after { content: "3\a♠"; }
+.card-S.card-4:before, .card-S.card-4:after { content: "4\a♠"; }
+.card-S.card-5:before, .card-S.card-5:after { content: "5\a♠"; }
+.card-S.card-6:before, .card-S.card-6:after { content: "6\a♠"; }
+.card-S.card-7:before, .card-S.card-7:after { content: "7\a♠"; }
+.card-S.card-8:before, .card-S.card-8:after { content: "8\a♠"; }
+.card-S.card-9:before, .card-S.card-9:after { content: "9\a♠"; }
+.card-S.card-T:before, .card-S.card-T:after { content: "10\a♠"; }
+.card-S.card-J:before, .card-S.card-J:after { content: "J\a♠"; }
+.card-S.card-Q:before, .card-S.card-Q:after { content: "Q\a♠"; }
+.card-S.card-K:before, .card-S.card-K:after { content: "K\a♠"; }
+.card-S.card-A:before, .card-S.card-A:after { content: "A\a♠"; }
+
+.card-D.card-2:before, .card-D.card-2:after { content: "2\a♦"; }
+.card-D.card-3:before, .card-D.card-3:after { content: "3\a♦"; }
+.card-D.card-4:before, .card-D.card-4:after { content: "4\a♦"; }
+.card-D.card-5:before, .card-D.card-5:after { content: "5\a♦"; }
+.card-D.card-6:before, .card-D.card-6:after { content: "6\a♦"; }
+.card-D.card-7:before, .card-D.card-7:after { content: "7\a♦"; }
+.card-D.card-8:before, .card-D.card-8:after { content: "8\a♦"; }
+.card-D.card-9:before, .card-D.card-9:after { content: "9\a♦"; }
+.card-D.card-T:before, .card-D.card-T:after { content: "10\a♦"; }
+.card-D.card-J:before, .card-D.card-J:after { content: "J\a♦"; }
+.card-D.card-Q:before, .card-D.card-Q:after { content: "Q\a♦"; }
+.card-D.card-K:before, .card-D.card-K:after { content: "K\a♦"; }
+.card-D.card-A:before, .card-D.card-A:after { content: "A\a♦"; }
+
+.card-C.card-2:before, .card-C.card-2:after { content: "2\a♣"; }
+.card-C.card-3:before, .card-C.card-3:after { content: "3\a♣"; }
+.card-C.card-4:before, .card-C.card-4:after { content: "4\a♣"; }
+.card-C.card-5:before, .card-C.card-5:after { content: "5\a♣"; }
+.card-C.card-6:before, .card-C.card-6:after { content: "6\a♣"; }
+.card-C.card-7:before, .card-C.card-7:after { content: "7\a♣"; }
+.card-C.card-8:before, .card-C.card-8:after { content: "8\a♣"; }
+.card-C.card-9:before, .card-C.card-9:after { content: "9\a♣"; }
+.card-C.card-T:before, .card-C.card-T:after { content: "10\a♣"; }
+.card-C.card-J:before, .card-C.card-J:after { content: "J\a♣"; }
+.card-C.card-Q:before, .card-C.card-Q:after { content: "Q\a♣"; }
+.card-C.card-K:before, .card-C.card-K:after { content: "K\a♣"; }
+.card-C.card-A:before, .card-C.card-A:after { content: "A\a♣"; }
+
+.card-X {
+  background: linear-gradient(135deg, #fff 0%, #ffe0e0 50%, #fff 100%);
+  color: #d40000;
+}
+.card-X:before, .card-X:after {
+  content: "J\ao\ak\ae\ar";
+  font-size: 0.35em;
+  line-height: 0.55em;
+  letter-spacing: 0;
+  width: 0.6em;
+  padding-top: 0.1em;
+}
+.card-X .suit-center {
+  font-size: 1.5em;
+}
+
+/* Card Grid Input */
+.hand-display {
+  text-align: center;
+  min-height: 5em;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(0,0,0,0.2);
+  border: 2px dashed rgba(255,255,255,0.3);
+}
+
+.hand-display.has-cards {
+  border-style: solid;
+  border-color: #ffd700;
+}
+
+.card-grid {
+  margin-bottom: 0.5rem;
+}
+
+.suit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2em;
+  margin-bottom: 0.3em;
+  justify-content: center;
+}
+
+/* Compact cards for input grid */
+.card-compact {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2.2em;
+  height: 3em;
+  background-color: #fff;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: opacity 0.2s;
+  padding: 0.1em;
+}
+
+.card-compact.used {
+  opacity: 0.3;
+}
+
+.card-compact .card-value {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.card-compact .card-suit {
+  font-size: 1.3em;
+  line-height: 1;
+}
+
+.card-compact.red {
+  color: #d40000;
+}
+
+.card-compact.black {
+  color: #000;
+}
+
+.card-compact.joker {
+  background: linear-gradient(135deg, #fff 0%, #ffe0e0 50%, #fff 100%);
+  color: #d40000;
+  font-size: 0.9rem;
+}
+
+.joker-container {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .card-compact {
+    font-size: 0.85rem;
+  }
+}
+
+/* Upload Section */
+.upload-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.upload-buttons .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.btn-upload {
+  background: #2a5a3a;
+}
+
+.btn-delete {
+  background: #8b0000;
+}
+
+.btn-key {
+  background: #333;
+}
+
+#fileInput, #cameraInput {
+  display: none;
+}
+
+.preview-container {
+  display: none;
+  margin-top: 0.5rem;
+}
+
+.preview-container.active {
+  display: block;
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  background: #000;
+  margin-bottom: 0.5rem;
+}
+
+.analyzing {
+  text-align: center;
+  padding: 0.5rem;
+  color: #ffd700;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Results */
+.results {
+  display: none;
+}
+
+.results.active {
+  display: block;
+}
+
+.result-item {
+  background: rgba(0,0,0,0.3);
+  border: 2px solid rgba(255,255,255,0.2);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.result-item.best {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.result-rank {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.result-rank.best {
+  color: #ffd700;
+}
+
+.result-ev {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+.result-cards {
+  text-align: center;
+}
+
+.result-cards .card {
+  font-size: 0.9rem;
+}
+
+.card.dimmed {
+  opacity: 0.3;
+}
+
+.error-message {
+  background: #8b0000;
+  color: #fff;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #ff0000;
+}
+
+.clear-btn {
+  background: #8b0000;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🃏 Jokeripokeri Advisor</h1>
+
+  <!-- Card Input Section -->
+  <div class="section">
+    <div class="section-title">
+      Your Hand
+      <button class="clear-btn" id="clearBtn">Clear</button>
+    </div>
+    <div class="hand-display" id="handDisplay">
+      Click cards below to build your hand (5 cards)
+    </div>
+
+    <div class="card-grid" id="cardGrid"></div>
+
+    <div class="joker-container">
+      <div class="card-compact joker" data-card="52">
+        <span class="card-value">JJ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key Section -->
+  <div class="section">
+    <div class="section-title">AI Card Recognition (Optional)</div>
+    <div class="api-status" id="apiStatus"></div>
+    <div class="api-key-input" id="apiKeyInputContainer">
+      <input type="password" id="apiKeyInput" placeholder="Gemini API key">
+      <button class="btn" id="saveApiKeyBtn">Save</button>
+    </div>
+
+    <div class="upload-buttons">
+      <button class="btn btn-key" id="setKeyBtn">🔑 Set API Key</button>
+      <button class="btn btn-upload" id="uploadBtn" disabled>📁 Upload</button>
+      <button class="btn btn-upload" id="cameraBtn" disabled>📷 Camera</button>
+      <button class="btn btn-delete" id="deleteKeyBtn" style="display:none;">🗑️ Delete Key</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+
+    <div class="preview-container" id="previewContainer">
+      <img class="preview-image" id="previewImage" alt="Card preview">
+      <div class="analyzing" id="analyzingText"></div>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div class="results" id="results">
+    <div class="section">
+      <div class="section-title">Top 3 Optimal Selections</div>
+      <div id="resultsContent"></div>
+    </div>
+  </div>
+
+  <div id="errorMessage"></div>
+</div>
+
+<script type="module">
+// ===== JOKERIPOKERI CORE LOGIC =====
+const suitNames = ['H', 'S', 'D', 'C'];
+const cardValues = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const suitSymbols = ['♥', '♠', '♦', '♣'];
+
+function C(n, k) {
+  if (k > n) return 0;
+  if (k * 2 > n) k = n - k;
+  if (k == 0) return 1;
+  let result = n;
+  for (let i = 2; i <= k; ++i) {
+    result *= (n - i + 1);
+    result /= i;
+  }
+  return result;
+}
+
+function next_combi(c, n, max) {
+  let i;
+  for (i = n - 1; i >= 0; i--) {
+    c[i]++;
+    if (c[i] <= max - n + i + 1) break;
+  }
+  if (i < 0) return false;
+  for (i++; i < n; i++) c[i] = c[i - 1] + 1;
+  return true;
+}
+
+function numcomp(a, b) { return a - b; }
+
+function win(a) {
+  const h = a.slice(0);
+  h.sort(numcomp);
+
+  const c = [1, 0, 0, 0, 0];
+  let n = 0;
+  let flush = (h[0] & 3) == (h[1] & 3) && (h[0] & 3) == (h[2] & 3) &&
+    (h[0] & 3) == (h[3] & 3);
+
+  if (h[4] == 52) { // joker
+    h[0] >>= 2;
+    for (let i = 1; i < 4; i++) {
+      h[i] >>= 2;
+      if (h[i] != h[i - 1]) n++;
+      c[n]++;
+    }
+
+    if (c[0] == 4) return 50;
+    if (c[0] == 3 || c[1] == 3) return 15;
+    if (c[2] == 0) return 8;
+    if (c[0] == 2 || c[1] == 2 || c[2] == 2) return 2;
+
+    if (h[3] - h[0] <= 4 || (h[2] <= 3 && h[3] == 12))
+      return flush ? 30 : 3;
+  } else {
+    flush = flush && (h[0] & 3) == (h[4] & 3);
+
+    h[0] >>= 2;
+    for (let i = 1; i < 5; i++) {
+      h[i] >>= 2;
+      if (h[i] != h[i - 1]) n++;
+      c[n]++;
+    }
+
+    if (c[2] == 0) return (c[0] == 4 || c[1] == 4) ? 15 : 8;
+    if (c[3] == 0) return 2;
+
+    if (n == 4 && (h[4] - h[0] == 4 || (h[3] == 3 && h[4] == 12)))
+      return flush ? 30 : 3;
+  }
+
+  return flush ? 4 : 0;
+}
+
+function ONE_BIT(v) {
+  return !(v & (v - 1));
+}
+
+function is_paired(a) {
+  const c = [];
+  for (let i = 0; i < a.length; i++)
+    if (c[a[i] >> 2] === undefined) c[a[i] >> 2] = 1; else return true;
+  return false;
+}
+
+function optimal_selection(h, opti = true) {
+  const left = [];
+  const ans = [{ p: 0, s: 0 }];
+
+  for (let c = 0; c < 53; c++) if (!h.includes(c)) left.push(c);
+
+  const paired = is_paired(h);
+  let S, I, n, sel = [0, 0, 0, 0, 0], ci;
+
+  for (let s = (opti && h[4] == 52) ? 16 : 1; s < 32; s++) {
+    if (opti && ONE_BIT(s) && paired) continue;
+
+    S = I = n = 0;
+    ci = [0, 1, 2, 3];
+
+    for (let j = 0; j < 5; j++) if ((s >> j) & 1) sel[n++] = h[j];
+
+    do {
+      for (let j = 0; j < 5 - n; j++) sel[n + j] = left[ci[j]];
+      S += win(sel);
+      I++;
+    } while (next_combi(ci, 5 - n, 53 - 5 - 1));
+
+    ans.push({ p: S / I, s: s });
+  }
+
+  return ans;
+}
+
+// ===== UI LOGIC =====
+const userHand = [];
+
+// Build card grid (organized by suit)
+function buildCardGrid() {
+  const grid = document.getElementById('cardGrid');
+
+  // Create 4 rows, one for each suit
+  for (let suit = 0; suit < 4; suit++) {
+    const row = document.createElement('div');
+    row.className = 'suit-row';
+
+    for (let value = 0; value < 13; value++) {
+      const cardCode = (value << 2) | suit;
+      const card = createCompactCard(cardCode);
+      card.dataset.card = cardCode;
+      card.addEventListener('click', () => handleCardClick(cardCode, card));
+      row.appendChild(card);
+    }
+
+    grid.appendChild(row);
+  }
+
+  // Add joker listener
+  const joker = document.querySelector('[data-card="52"]');
+  joker.addEventListener('click', () => handleCardClick(52, joker));
+}
+
+// Create compact card for input grid
+function createCompactCard(cardCode) {
+  const div = document.createElement('div');
+  div.className = 'card-compact';
+
+  const suit = cardCode & 3;
+  const value = cardCode >> 2;
+
+  // Add color class
+  if (suit === 0 || suit === 2) { // Hearts or Diamonds
+    div.classList.add('red');
+  } else {
+    div.classList.add('black');
+  }
+
+  // Value
+  const valueSpan = document.createElement('span');
+  valueSpan.className = 'card-value';
+  valueSpan.textContent = cardValues[value];
+
+  // Suit
+  const suitSpan = document.createElement('span');
+  suitSpan.className = 'card-suit';
+  suitSpan.textContent = suitSymbols[suit];
+
+  div.appendChild(valueSpan);
+  div.appendChild(suitSpan);
+
+  return div;
+}
+
+function createCard(cardCode) {
+  const div = document.createElement('div');
+  div.className = 'card';
+
+  if (cardCode === 52) {
+    div.classList.add('card-X');
+    div.innerHTML = '<span class="suit-center">★</span>';
+  } else {
+    const suit = cardCode & 3;
+    const value = cardCode >> 2;
+    div.classList.add('card-' + suitNames[suit]);
+    div.classList.add('card-' + cardValues[value]);
+    div.innerHTML = '<span class="suit-center">' + suitSymbols[suit] + '</span>';
+  }
+
+  return div;
+}
+
+function handleCardClick(cardCode, cardElement) {
+  if (cardElement.classList.contains('used')) {
+    // Remove from hand
+    const index = userHand.indexOf(cardCode);
+    if (index > -1) {
+      userHand.splice(index, 1);
+      cardElement.classList.remove('used');
+      updateHandDisplay();
+    }
+  } else {
+    // Add to hand
+    if (userHand.length < 5) {
+      userHand.push(cardCode);
+      cardElement.classList.add('used');
+      updateHandDisplay();
+    }
+  }
+}
+
+function updateHandDisplay() {
+  const display = document.getElementById('handDisplay');
+
+  if (userHand.length === 0) {
+    display.innerHTML = 'Click cards below to build your hand (5 cards)';
+    display.classList.remove('has-cards');
+    document.getElementById('results').classList.remove('active');
+  } else {
+    display.innerHTML = '';
+    display.classList.add('has-cards');
+    userHand.forEach((cardCode, index) => {
+      const cardEl = createCard(cardCode);
+      cardEl.style.cursor = 'pointer';
+      cardEl.title = 'Click to remove';
+      cardEl.addEventListener('click', () => {
+        // Remove card from hand
+        userHand.splice(index, 1);
+        // Unmark in grid
+        const gridCard = document.querySelector(`[data-card="${cardCode}"]`);
+        if (gridCard) gridCard.classList.remove('used');
+        updateHandDisplay();
+      });
+      display.appendChild(cardEl);
+    });
+
+    // Auto-calculate when 5 cards are selected
+    if (userHand.length === 5) {
+      calculateOptimal();
+    } else {
+      document.getElementById('results').classList.remove('active');
+    }
+  }
+}
+
+function calculateOptimal() {
+  try {
+    const h = userHand.slice();
+    const results = optimal_selection(h, false);
+    results.sort((a, b) => b.p - a.p);
+    displayResults(results.slice(0, 3), h);
+  } catch (error) {
+    showError(error.message);
+  }
+}
+
+// Clear hand
+document.getElementById('clearBtn').addEventListener('click', () => {
+  userHand.length = 0;
+  document.querySelectorAll('.used').forEach(card => {
+    card.classList.remove('used');
+  });
+  updateHandDisplay();
+});
+
+// API Key Management
+const apiKeyInput = document.getElementById('apiKeyInput');
+const apiKeyInputContainer = document.getElementById('apiKeyInputContainer');
+const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+const setKeyBtn = document.getElementById('setKeyBtn');
+const deleteKeyBtn = document.getElementById('deleteKeyBtn');
+const apiStatus = document.getElementById('apiStatus');
+const uploadBtn = document.getElementById('uploadBtn');
+const cameraBtn = document.getElementById('cameraBtn');
+
+function loadApiKey() {
+  const savedKey = localStorage.getItem('gemini_api_key');
+  if (savedKey) {
+    apiKeyInput.value = savedKey;
+    apiStatus.textContent = '✓ API key saved';
+    uploadBtn.disabled = false;
+    cameraBtn.disabled = false;
+    setKeyBtn.style.display = 'none';
+    deleteKeyBtn.style.display = 'block';
+  }
+}
+
+setKeyBtn.addEventListener('click', () => {
+  apiKeyInputContainer.classList.toggle('active');
+});
+
+saveApiKeyBtn.addEventListener('click', () => {
+  const key = apiKeyInput.value.trim();
+  if (key) {
+    localStorage.setItem('gemini_api_key', key);
+    apiStatus.textContent = '✓ API key saved';
+    uploadBtn.disabled = false;
+    cameraBtn.disabled = false;
+    apiKeyInputContainer.classList.remove('active');
+    setKeyBtn.style.display = 'none';
+    deleteKeyBtn.style.display = 'block';
+  }
+});
+
+deleteKeyBtn.addEventListener('click', () => {
+  if (confirm('Delete saved API key?')) {
+    localStorage.removeItem('gemini_api_key');
+    apiKeyInput.value = '';
+    apiStatus.textContent = '';
+    uploadBtn.disabled = true;
+    cameraBtn.disabled = true;
+    setKeyBtn.style.display = 'block';
+    deleteKeyBtn.style.display = 'none';
+  }
+});
+
+// Image Upload Handlers
+const fileInput = document.getElementById('fileInput');
+const cameraInput = document.getElementById('cameraInput');
+const previewContainer = document.getElementById('previewContainer');
+const previewImage = document.getElementById('previewImage');
+const analyzingText = document.getElementById('analyzingText');
+
+uploadBtn.addEventListener('click', () => fileInput.click());
+cameraBtn.addEventListener('click', () => cameraInput.click());
+
+fileInput.addEventListener('change', handleImageUpload);
+cameraInput.addEventListener('change', handleImageUpload);
+
+async function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    previewImage.src = e.target.result;
+    previewContainer.classList.add('active');
+    analyzingText.textContent = 'Analyzing image...';
+  };
+  reader.readAsDataURL(file);
+
+  try {
+    const apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) {
+      throw new Error('No API key found');
+    }
+
+    const base64 = await fileToBase64(file);
+    const cards = await analyzeCardsWithGemini(apiKey, base64, file.type);
+
+    // Clear current hand and add recognized cards
+    userHand.length = 0;
+    document.querySelectorAll('.card.used').forEach(card => {
+      card.classList.remove('used');
+    });
+
+    cards.forEach(cardCode => {
+      if (cardCode !== null) {
+        userHand.push(cardCode);
+        const cardElement = document.querySelector(`[data-card="${cardCode}"]`);
+        if (cardElement) {
+          cardElement.classList.add('used');
+        }
+      }
+    });
+
+    updateHandDisplay();
+    analyzingText.textContent = '✓ Cards recognized!';
+  } catch (error) {
+    analyzingText.textContent = '✗ Error: ' + error.message;
+    console.error(error);
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function analyzeCardsWithGemini(apiKey, base64Image, mimeType) {
+  const { GoogleGenAI } = await import('https://esm.run/@google/genai');
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `Look at this image of a Jokeripokeri (video poker) hand and identify the 5 cards.
+
+Return ONLY the cards in standard poker notation, space-separated, like this:
+9S 9D KH QC JJ
+
+Format:
+- Ranks: 2, 3, 4, 5, 6, 7, 8, 9, T (ten), J, Q, K, A
+- Suits: H (hearts), S (spades), D (diamonds), C (clubs)
+- Joker: JJ (two J's)
+
+Examples:
+- Nine of spades, nine of diamonds, king of hearts, queen of clubs, joker: 9S 9D KH QC JJ
+- Ace of hearts, king of hearts, queen of hearts, jack of hearts, ten of hearts: AH KH QH JH TH
+- Two of clubs, five of diamonds, seven of spades, nine of hearts, king of clubs: 2C 5D 7S 9H KC
+
+Return ONLY the 5 cards in the format shown above, nothing else.`;
+
+  const result = await ai.models.generateContent({
+    model: 'gemini-2.0-flash-exp',
+    contents: [
+      { role: 'user', parts: [
+        { text: prompt },
+        { inlineData: { mimeType, data: base64Image } }
+      ]}
+    ]
+  });
+
+  console.log('Gemini result:', result);
+
+  // Handle different response structures
+  let text;
+  if (result.text) {
+    text = result.text;
+  } else if (result.response && typeof result.response.text === 'function') {
+    text = result.response.text();
+  } else if (result.candidates && result.candidates[0]) {
+    text = result.candidates[0].content.parts[0].text;
+  } else {
+    throw new Error('Unexpected API response structure');
+  }
+
+  text = text.trim();
+  console.log('Gemini response text:', text);
+
+  return parsePokerNotation(text);
+}
+
+function parsePokerNotation(notation) {
+  const cards = notation.trim().toUpperCase().split(/\s+/);
+  if (cards.length !== 5) {
+    throw new Error('Expected 5 cards, got ' + cards.length);
+  }
+
+  return cards.map(card => {
+    if (card === 'JJ') return 52; // Joker
+
+    if (card.length < 2) throw new Error('Invalid card: ' + card);
+
+    const rank = card[0];
+    const suit = card[card.length - 1];
+
+    const valueIndex = cardValues.indexOf(rank);
+    const suitIndex = suitNames.indexOf(suit);
+
+    if (valueIndex === -1) throw new Error('Invalid rank: ' + rank);
+    if (suitIndex === -1) throw new Error('Invalid suit: ' + suit);
+
+    return (valueIndex << 2) | suitIndex;
+  });
+}
+
+// Display Results
+function displayResults(topResults, originalHand) {
+  const resultsContainer = document.getElementById('results');
+  const resultsContent = document.getElementById('resultsContent');
+
+  resultsContent.innerHTML = '';
+
+  topResults.forEach((result, index) => {
+    const div = document.createElement('div');
+    div.className = `result-item ${index === 0 ? 'best' : ''}`;
+
+    const header = document.createElement('div');
+    header.className = 'result-header';
+
+    const rank = document.createElement('div');
+    rank.className = `result-rank ${index === 0 ? 'best' : ''}`;
+    rank.textContent = index === 0 ? '⭐ BEST PLAY' : `#${index + 1}`;
+
+    const ev = document.createElement('div');
+    ev.className = 'result-ev';
+    ev.textContent = `EV: ${result.p.toFixed(3)}`;
+
+    header.appendChild(rank);
+    header.appendChild(ev);
+
+    const cardsDiv = document.createElement('div');
+    cardsDiv.className = 'result-cards';
+
+    for (let i = 0; i < 5; i++) {
+      const card = originalHand[i];
+      const isSelected = (result.s >> i) & 1;
+      const cardElement = createCard(card);
+      if (!isSelected) {
+        cardElement.classList.add('dimmed');
+      }
+      cardsDiv.appendChild(cardElement);
+    }
+
+    div.appendChild(header);
+    div.appendChild(cardsDiv);
+    resultsContent.appendChild(div);
+  });
+
+  resultsContainer.classList.add('active');
+}
+
+function showError(message) {
+  const errorDiv = document.getElementById('errorMessage');
+  errorDiv.className = 'error-message';
+  errorDiv.textContent = message;
+  setTimeout(() => {
+    errorDiv.textContent = '';
+    errorDiv.className = '';
+  }, 5000);
+}
+
+// Initialize
+buildCardGrid();
+loadApiKey();
+</script>
+</body>
+</html>
