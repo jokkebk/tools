@@ -21,6 +21,13 @@
         "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
       }
     },
+    "jokeripokeri_trainer.html": {
+      "last_commit": {
+        "hash": "964330e160f52fe70b6f2a703a2804e2f5838a88",
+        "date": "2025-12-29T15:29:23+02:00",
+        "message": "Jokeripokeri optimal selection trainer redone to SPA w. Opus 4.5"
+      }
+    },
     "rushhour.html": {
       "last_commit": {
         "hash": "4f8ad3d61ed235494353d2456270ac57da68e0b3",

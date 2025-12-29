@@ -6,6 +6,7 @@
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [find_fraction](find_fraction.html)
 * [firefighter](firefighter.html)
+* [jokeripokeri_trainer](jokeripokeri_trainer.html)
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
 * [wordle](wordle.html)
@@ -13,6 +14,13 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [jokeripokeri_trainer](jokeripokeri_trainer.html)
+
+> last updated: 2025-12-29 15:29:23
+> Jokeripokeri optimal selection trainer redone to SPA w. Opus 4.5
+>
+> [view commit](https://github.com/jokkebk/tools/commit/964330e160f52fe70b6f2a703a2804e2f5838a88)
 
 ### [rushhour](rushhour.html)
 
