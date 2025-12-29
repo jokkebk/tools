@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <title>Jokeripokeri trainer</title>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Roboto" rel="stylesheet">
+  <style>
+/* Responsive base font size */
+@media (min-width: 640px) {
+  html { font-size: 125%; }
+}
+@media (min-width: 1000px) {
+  html { font-size: 200%; }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #63A8BE;
+  color: white;
+  text-align: center;
+  font-family: 'Roboto', sans-serif;
+  text-size-adjust: 100%;
+}
+
+h1, h2 {
+  font-weight: bold;
+  font-style: italic;
+}
+h1 { font-size: 1.6em; }
+h2 { font-size: 1.2em; }
+
+#content {
+  max-width: 1280px;
+  margin: 0.5em auto;
+  user-select: none;
+}
+
+#cards {
+  position: relative;
+  width: 100%;
+  min-height: 6em;
+}
+
+/* ===== CARD STYLING (Pure CSS, no external images) ===== */
+.card {
+  position: relative;
+  display: inline-block;
+  width: 3.875em;
+  height: 5.5em;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  margin: 0.3em;
+  cursor: pointer;
+  vertical-align: top;
+  overflow: hidden;
+}
+
+/* Card value in corners */
+.card:before,
+.card:after {
+  position: absolute;
+  font-size: 0.65em;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.1;
+  font-family: 'Roboto', sans-serif;
+  white-space: pre-line;
+}
+
+.card:before {
+  top: 0.15em;
+  left: 0.25em;
+}
+
+.card:after {
+  bottom: 0.15em;
+  right: 0.25em;
+  transform: rotate(180deg);
+}
+
+/* Center suit symbol */
+.card .suit-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.2em;
+  line-height: 1;
+}
+
+/* Card back */
+.card-back {
+  background: linear-gradient(135deg, #1a4a6e 25%, #2a5a7e 25%, #2a5a7e 50%, #1a4a6e 50%, #1a4a6e 75%, #2a5a7e 75%);
+  background-size: 10px 10px;
+  border: 3px solid #0d3a5e;
+}
+.card-back:before, .card-back:after { content: none !important; }
+
+/* Suit colors */
+.card-H, .card-D { color: #d40000; }
+.card-S, .card-C { color: #000; }
+
+/* Corner value+suit display */
+.card-H.card-2:before, .card-H.card-2:after { content: "2\a\2665"; }
+.card-H.card-3:before, .card-H.card-3:after { content: "3\a\2665"; }
+.card-H.card-4:before, .card-H.card-4:after { content: "4\a\2665"; }
+.card-H.card-5:before, .card-H.card-5:after { content: "5\a\2665"; }
+.card-H.card-6:before, .card-H.card-6:after { content: "6\a\2665"; }
+.card-H.card-7:before, .card-H.card-7:after { content: "7\a\2665"; }
+.card-H.card-8:before, .card-H.card-8:after { content: "8\a\2665"; }
+.card-H.card-9:before, .card-H.card-9:after { content: "9\a\2665"; }
+.card-H.card-T:before, .card-H.card-T:after { content: "10\a\2665"; }
+.card-H.card-J:before, .card-H.card-J:after { content: "J\a\2665"; }
+.card-H.card-Q:before, .card-H.card-Q:after { content: "Q\a\2665"; }
+.card-H.card-K:before, .card-H.card-K:after { content: "K\a\2665"; }
+.card-H.card-A:before, .card-H.card-A:after { content: "A\a\2665"; }
+
+.card-S.card-2:before, .card-S.card-2:after { content: "2\a\2660"; }
+.card-S.card-3:before, .card-S.card-3:after { content: "3\a\2660"; }
+.card-S.card-4:before, .card-S.card-4:after { content: "4\a\2660"; }
+.card-S.card-5:before, .card-S.card-5:after { content: "5\a\2660"; }
+.card-S.card-6:before, .card-S.card-6:after { content: "6\a\2660"; }
+.card-S.card-7:before, .card-S.card-7:after { content: "7\a\2660"; }
+.card-S.card-8:before, .card-S.card-8:after { content: "8\a\2660"; }
+.card-S.card-9:before, .card-S.card-9:after { content: "9\a\2660"; }
+.card-S.card-T:before, .card-S.card-T:after { content: "10\a\2660"; }
+.card-S.card-J:before, .card-S.card-J:after { content: "J\a\2660"; }
+.card-S.card-Q:before, .card-S.card-Q:after { content: "Q\a\2660"; }
+.card-S.card-K:before, .card-S.card-K:after { content: "K\a\2660"; }
+.card-S.card-A:before, .card-S.card-A:after { content: "A\a\2660"; }
+
+.card-D.card-2:before, .card-D.card-2:after { content: "2\a\2666"; }
+.card-D.card-3:before, .card-D.card-3:after { content: "3\a\2666"; }
+.card-D.card-4:before, .card-D.card-4:after { content: "4\a\2666"; }
+.card-D.card-5:before, .card-D.card-5:after { content: "5\a\2666"; }
+.card-D.card-6:before, .card-D.card-6:after { content: "6\a\2666"; }
+.card-D.card-7:before, .card-D.card-7:after { content: "7\a\2666"; }
+.card-D.card-8:before, .card-D.card-8:after { content: "8\a\2666"; }
+.card-D.card-9:before, .card-D.card-9:after { content: "9\a\2666"; }
+.card-D.card-T:before, .card-D.card-T:after { content: "10\a\2666"; }
+.card-D.card-J:before, .card-D.card-J:after { content: "J\a\2666"; }
+.card-D.card-Q:before, .card-D.card-Q:after { content: "Q\a\2666"; }
+.card-D.card-K:before, .card-D.card-K:after { content: "K\a\2666"; }
+.card-D.card-A:before, .card-D.card-A:after { content: "A\a\2666"; }
+
+.card-C.card-2:before, .card-C.card-2:after { content: "2\a\2663"; }
+.card-C.card-3:before, .card-C.card-3:after { content: "3\a\2663"; }
+.card-C.card-4:before, .card-C.card-4:after { content: "4\a\2663"; }
+.card-C.card-5:before, .card-C.card-5:after { content: "5\a\2663"; }
+.card-C.card-6:before, .card-C.card-6:after { content: "6\a\2663"; }
+.card-C.card-7:before, .card-C.card-7:after { content: "7\a\2663"; }
+.card-C.card-8:before, .card-C.card-8:after { content: "8\a\2663"; }
+.card-C.card-9:before, .card-C.card-9:after { content: "9\a\2663"; }
+.card-C.card-T:before, .card-C.card-T:after { content: "10\a\2663"; }
+.card-C.card-J:before, .card-C.card-J:after { content: "J\a\2663"; }
+.card-C.card-Q:before, .card-C.card-Q:after { content: "Q\a\2663"; }
+.card-C.card-K:before, .card-C.card-K:after { content: "K\a\2663"; }
+.card-C.card-A:before, .card-C.card-A:after { content: "A\a\2663"; }
+
+/* Joker */
+.card-X {
+  background: linear-gradient(135deg, #fff 0%, #ffe0e0 50%, #fff 100%);
+  color: #d40000;
+}
+.card-X:before, .card-X:after {
+  content: "J\a o\a k\a e\a r";
+  font-size: 0.4em;
+  line-height: 0.55em;
+  letter-spacing: 0;
+  width: 0.6em;
+  padding-top: 0.1em;
+}
+.card-X .suit-center {
+  font-size: 1.8em;
+}
+
+/* ===== SELECTION OVERLAY ===== */
+.card .selected {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  padding: 0.15em 0;
+  text-align: center;
+  text-shadow: 1px 1px 1px #000;
+  box-shadow: 1px 1px 3px #000;
+  border-radius: 0.3em;
+  font-weight: bold;
+  font-size: 0.5em;
+  font-style: italic;
+  border: 2px solid rgb(254, 221, 1);
+  color: rgb(254, 221, 1);
+  background-color: rgb(16, 172, 194);
+  z-index: 10;
+}
+.card .selected:after {
+  content: "LUKITTU";
+}
+
+/* ===== MESSAGE OVERLAY ===== */
+.message {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 90%;
+  max-width: 500px;
+  z-index: 20;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  text-shadow: 1px 1px 1px #000;
+  box-shadow: 2px 2px 4px #000;
+  border-radius: 0.3em;
+  font-weight: bold;
+  font-size: 0.6em;
+  font-style: italic;
+  padding: 0.3em 0.5em;
+  color: white;
+}
+.message.success { background-color: green; }
+.message.fail { background-color: red; }
+
+/* ===== RESULTS TABLE ===== */
+table {
+  border-collapse: collapse;
+}
+
+table#ans {
+  margin: 0.5em auto;
+}
+
+#ans td {
+  padding: 0.1em;
+  vertical-align: middle;
+}
+
+#ans .card {
+  font-size: 0.5em;
+  margin: 0.1em;
+  cursor: default;
+}
+
+tr.correct {
+  border: 2px solid green;
+  background-color: rgba(0, 255, 0, 0.3);
+}
+
+tr.incorrect {
+  border: 2px solid red;
+  background-color: rgba(255, 0, 0, 0.3);
+}
+
+#ans .card.selected {
+  border: 3px solid #000;
+}
+#ans .card.unselected {
+  background-color: #bbb;
+  opacity: 0.6;
+}
+
+/* ===== UI ELEMENTS ===== */
+.hint {
+  font-weight: bold;
+  font-size: 0.6em;
+  font-style: italic;
+  margin: 0.3em 0;
+}
+
+.hint .jako {
+  color: rgb(100, 255, 99);
+}
+
+.modeline {
+  margin: 0.5em auto;
+}
+
+.infobox, .deal {
+  display: inline-block;
+  border: 2px solid white;
+  box-shadow: 1px 1px 1px #000;
+  border-radius: 0.8em;
+  margin: 0.1em;
+  padding: 0 0.5em;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 0.8em;
+  line-height: 1.4em;
+  color: black;
+  background-color: rgba(255,255,255,0.9);
+}
+
+.infobox .amount {
+  margin-left: 0.3em;
+  color: rgb(200, 160, 0);
+  text-shadow: 1px 1px 0px #000;
+}
+
+button.deal {
+  color: white !important;
+  text-shadow: 1px 1px 1px #000;
+  font-size: 0.8em;
+  padding: 0.3em 0.8em;
+  border-radius: 1.0em;
+  cursor: pointer;
+  border: 2px solid white;
+  margin-left: 0.5em;
+  background-color: rgb(0, 155, 70);
+}
+
+button:focus { outline: 0; }
+button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+<div id="content">
+  <div id="cards">
+    <div id="message"></div>
+    <div id="card0" class="card card-back"></div>
+    <div id="card1" class="card card-back"></div>
+    <div id="card2" class="card card-back"></div>
+    <div id="card3" class="card card-back"></div>
+    <div id="card4" class="card card-back"></div>
+  </div>
+  <p class="hint">Valitse haluamasi kortit koskettamalla niit&auml; ruudulla ja paina <span class="jako">JAKO</span></p>
+
+  <div class="modeline">
+    <div class="infobox" id="games">PELIT <span class="amount">0</span></div>
+    <div class="infobox" id="winnings">VOITOT <span class="amount">0.00</span></div>
+    <div class="infobox" id="avg_wins">ODOTUS <span class="amount">0.00</span></div>
+    <button class="deal">UUSI</button>
+  </div>
+
+  <h2>Optimistrategia</h2>
+  <div class="modeline">
+    <div class="infobox" id="opti_winnings">VOITOT <span class="amount">0.00</span></div>
+    <div class="infobox" id="opti_wins">ODOTUS <span class="amount">0.00</span></div>
+  </div>
+  <table id="ans"></table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+// ===== JOKERIPOKERI CORE LOGIC (inlined from jokeripokeri.js) =====
+var suitNames = ['H', 'S', 'D', 'C'];
+var cardValues = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+var suitSymbols = ['\u2665', '\u2660', '\u2666', '\u2663']; // Hearts, Spades, Diamonds, Clubs
+
+function C(n, k) {
+  if (k > n) return 0;
+  if (k * 2 > n) k = n - k;
+  if (k == 0) return 1;
+  var result = n;
+  for (var i = 2; i <= k; ++i) {
+    result *= (n - i + 1);
+    result /= i;
+  }
+  return result;
+}
+
+function next_combi(c, n, max) {
+  var i;
+  for (i = n - 1; i >= 0; i--) {
+    c[i]++;
+    if (c[i] <= max - n + i + 1) break;
+  }
+  if (i < 0) return false;
+  for (i++; i < n; i++) c[i] = c[i - 1] + 1;
+  return true;
+}
+
+function numcomp(a, b) { return a - b; }
+
+function win(a) {
+  var h = a.slice(0);
+  h.sort(numcomp);
+
+  var c = [1, 0, 0, 0, 0], n = 0;
+  var flush = (h[0] & 3) == (h[1] & 3) && (h[0] & 3) == (h[2] & 3) &&
+    (h[0] & 3) == (h[3] & 3);
+
+  if (h[4] == 52) { // joker
+    h[0] >>= 2;
+    for (var i = 1; i < 4; i++) {
+      h[i] >>= 2;
+      if (h[i] != h[i - 1]) n++;
+      c[n]++;
+    }
+
+    if (c[0] == 4) return 50; // five of a kind
+    if (c[0] == 3 || c[1] == 3) return 15; // four of a kind
+    if (c[2] == 0) return 8; // full house (has to be 2+2)
+    if (c[0] == 2 || c[1] == 2 || c[2] == 2) return 2;
+
+    if (h[3] - h[0] <= 4 || (h[2] <= 3 && h[3] == 12))
+      return flush ? 30 : 3; // straight (flush)
+  } else {
+    flush = flush && (h[0] & 3) == (h[4] & 3);
+
+    h[0] >>= 2;
+    for (var i = 1; i < 5; i++) {
+      h[i] >>= 2;
+      if (h[i] != h[i - 1]) n++;
+      c[n]++;
+    }
+
+    if (c[2] == 0) return (c[0] == 4 || c[1] == 4) ? 15 : 8;
+    if (c[3] == 0) return 2;
+
+    if (n == 4 && (h[4] - h[0] == 4 || (h[3] == 3 && h[4] == 12)))
+      return flush ? 30 : 3; // Straight (flush)
+  }
+
+  return flush ? 4 : 0;
+}
+
+function ONE_BIT(v) {
+  return !(v & (v - 1));
+}
+
+function is_paired(a) {
+  var c = [];
+  for (var i = 0; i < a.length; i++)
+    if (c[a[i] >> 2] === undefined) c[a[i] >> 2] = 1; else return true;
+  return false;
+}
+
+function optimal_selection(h, opti) {
+  if (opti === undefined) opti = true;
+  var left = [], ans = [{ p: 0, s: 0 }];
+
+  for (var c = 0; c < 53; c++) if (!h.includes(c)) left.push(c);
+
+  var paired = is_paired(h);
+  var S, I, n, sel = [0, 0, 0, 0, 0], ci;
+
+  // With joker, you have to select the joker, not toss it
+  for (var s = (opti && h[4] == 52) ? 16 : 1; s < 32; s++) {
+    if (opti && ONE_BIT(s) && paired) continue;
+
+    S = I = n = 0;
+    ci = [0, 1, 2, 3];
+
+    for (var j = 0; j < 5; j++) if ((s >> j) & 1) sel[n++] = h[j];
+
+    do {
+      for (var j = 0; j < 5 - n; j++) sel[n + j] = left[ci[j]];
+      S += win(sel);
+      I++;
+    } while (next_combi(ci, 5 - n, 53 - 5 - 1));
+
+    ans.push({ p: S / I, s: s });
+  }
+
+  return ans;
+}
+
+function shuffle(a) {
+  var j, x, i;
+  for (i = a.length - 1; i > 0; i--) {
+    j = Math.floor(Math.random() * (i + 1));
+    x = a[i];
+    a[i] = a[j];
+    a[j] = x;
+  }
+  return a;
+}
+
+// ===== TRAINER GAME LOGIC =====
+var games = 0, winnings = 0.0, opti_winnings = 0.0;
+var avg_wins = 0.0, opti_wins = 0.0;
+var h = [];
+
+function updateWins() {
+  $('#games .amount').html(games);
+  $('#winnings .amount').html(parseFloat(winnings).toFixed(2));
+  $('#opti_winnings .amount').html(parseFloat(opti_winnings).toFixed(2));
+  $('#avg_wins .amount').html(games ? parseFloat(avg_wins / games).toFixed(2) : '0.00');
+  $('#opti_wins .amount').html(games ? parseFloat(opti_wins / games).toFixed(2) : '0.00');
+}
+
+function createCardHTML(val, extraClass) {
+  extraClass = extraClass || '';
+  if (val == -1) {
+    return '<div class="card card-back ' + extraClass + '"></div>';
+  } else if (val == 52) {
+    return '<div class="card card-X ' + extraClass + '"><span class="suit-center">\u2605</span></div>';
+  } else {
+    var suit = val & 3;
+    var value = val >> 2;
+    var suitClass = 'card-' + suitNames[suit];
+    var valClass = 'card-' + cardValues[value];
+    return '<div class="card ' + suitClass + ' ' + valClass + ' ' + extraClass + '"><span class="suit-center">' + suitSymbols[suit] + '</span></div>';
+  }
+}
+
+function setCard(n, val) {
+  var $card = $('#card' + n);
+  $card.removeClass().addClass('card');
+  $card.empty();
+
+  if (val == -1) {
+    $card.addClass('card-back');
+  } else if (val == 52) {
+    $card.addClass('card-X');
+    $card.html('<span class="suit-center">\u2605</span>');
+  } else {
+    var suit = val & 3;
+    var value = val >> 2;
+    $card.addClass('card-' + suitNames[suit]);
+    $card.addClass('card-' + cardValues[value]);
+    $card.html('<span class="suit-center">' + suitSymbols[suit] + '</span>');
+  }
+}
+
+function newDeal() {
+  h = [];
+  for (var i = 0; i < 53; i++) h.push(i);
+  shuffle(h);
+
+  for (var i = 0; i < 5; i++)
+    setCard(i, h[i]);
+}
+
+function reportOptimal(o, h, usersel) {
+  $('#ans').empty();
+  for (var j = 0; j < 32; j++) {
+    if (j >= 3 && o[j].s != usersel) continue;
+
+    var cells = ['<td>' + (j + 1) + '.</td>'];
+    for (var i = 0; i < 5; i++) {
+      var selected = ((o[j].s >> i) & 1) ? 'selected' : 'unselected';
+      if (h[i] != 52) {
+        var suit = h[i] & 3;
+        var value = h[i] >> 2;
+        cells.push('<td><div class="card ' + selected + ' card-' + suitNames[suit] + ' card-' + cardValues[value] + '"><span class="suit-center">' + suitSymbols[suit] + '</span></div></td>');
+      } else {
+        cells.push('<td><div class="card ' + selected + ' card-X"><span class="suit-center">\u2605</span></div></td>');
+      }
+    }
+
+    var hi = '';
+    if (usersel == o[j].s)
+      hi = ' class="' + (o[j].p == o[0].p ? 'correct' : 'incorrect') + '"';
+
+    cells.push('<td>odotusarvo ' + (Math.round(o[j].p * 1000) / 1000) + '</td>');
+    $('#ans').append('<tr' + hi + '>' + cells.join('') + '</tr>');
+  }
+}
+
+$(function() {
+  var selected = 0;
+
+  $('#cards').on('click', '.card:not(.card-back)', function(e) {
+    var el = $(this);
+
+    if (el.find('.selected').length === 0) {
+      el.append('<div class="selected"></div>');
+      selected++;
+    } else {
+      el.find('.selected').remove();
+      selected--;
+    }
+  });
+
+  $('.deal').click(function(e) {
+    if ($('.deal').html() == 'JAKO') {
+      if (!selected) {
+        alert('Valitse ainakin yksi kortti!');
+        return;
+      }
+
+      var h2 = h.slice(0, 5), n = 0, usersel = 0;
+
+      for (var i = 0; i < 5; i++)
+        if ($('#card' + i).find('.selected').length > 0) usersel += 1 << i;
+
+      var t0 = performance.now();
+      var o = optimal_selection(h2, false);
+      var t1 = performance.now();
+      console.log('optimal_selection took ' + (t1 - t0) + ' ms');
+
+      o.sort(function(a, b) { return b.p - a.p });
+
+      opti_wins += o[0].p;
+
+      var avgwin = o.find(v => v.s == usersel).p;
+      avg_wins += avgwin;
+      avgwin = parseFloat(avgwin).toFixed(3);
+
+      reportOptimal(o, h2, usersel);
+
+      for (var i = 0; i < 5; i++) {
+        h2[i] = (usersel & (1 << i)) ? h[i] : h[5 + (n++)];
+        setCard(i, h2[i]);
+      }
+      h2.sort(numcomp);
+
+      var w = win(h2);
+      winnings += w;
+
+      n = 0;
+      for (var i = 0; i < 5; i++)
+        h2[i] = (o[0].s & (1 << i)) ? h[i] : h[5 + (n++)];
+      h2.sort(numcomp);
+
+      var opti_w = win(h2);
+      opti_winnings += opti_w;
+
+      if (w > 0)
+        $('#message').html('<div class="message success">Voitit ' + w + ' (optimi ' + opti_w + '), odotusarvo ' + avgwin + '</div>');
+      else
+        $('#message').html('<div class="message success">Ei voittoa (optimi ' + opti_w + '), odotusarvo ' + avgwin + '</div>');
+
+      $('.deal').html('UUSI');
+
+      games++;
+      updateWins();
+    } else {
+      newDeal();
+      selected = 0;
+      $('#message').html('');
+      $('#ans').empty();
+      $('.deal').html('JAKO');
+    }
+  });
+});
+</script>
+</body>
+</html>
