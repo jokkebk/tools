@@ -35,6 +35,13 @@
         "message": "Rush Hour solver, UI pimped with Claude Opus 4.5"
       }
     },
+    "jokeripokeri_advisor.html": {
+      "last_commit": {
+        "hash": "2279684e6b2f281acd34b567f45db692334c544b",
+        "date": "2025-12-29T17:30:12+02:00",
+        "message": "Jokeripokeri advisor tool with image upload capability w. Google API key"
+      }
+    },
     "christmas-screensaver-opus45.html": {
       "last_commit": {
         "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",

@@ -6,6 +6,7 @@
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [find_fraction](find_fraction.html)
 * [firefighter](firefighter.html)
+* [jokeripokeri_advisor](jokeripokeri_advisor.html)
 * [jokeripokeri_trainer](jokeripokeri_trainer.html)
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
@@ -14,6 +15,13 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [jokeripokeri_advisor](jokeripokeri_advisor.html)
+
+> last updated: 2025-12-29 17:30:12
+> Jokeripokeri advisor tool with image upload capability w. Google API key
+>
+> [view commit](https://github.com/jokkebk/tools/commit/2279684e6b2f281acd34b567f45db692334c544b)
 
 ### [jokeripokeri_trainer](jokeripokeri_trainer.html)
 
