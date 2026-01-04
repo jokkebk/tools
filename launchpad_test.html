@@ -1,0 +1,577 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Launchpad Mini Toolkit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-a: #0b1520;
+      --bg-b: #182838;
+      --panel: #f7f1e7;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #e4572e;
+      --accent-2: #1c9a8e;
+      --shadow: rgba(9, 16, 26, 0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 80% -10%, #355070 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-a), var(--bg-b));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .app {
+      width: min(980px, 100%);
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 22px 60px var(--shadow);
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 18px;
+    }
+    h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: 0.02em; }
+    .sub { color: var(--muted); margin-bottom: 16px; }
+    .panel { display: grid; gap: 12px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button {
+      border: 1px solid #d7cdbf;
+      background: #fff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, border 120ms ease;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    button:active { transform: translateY(0); }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.mode.active { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f0e9dd;
+      color: #5b5b5b;
+      font-size: 0.85rem;
+    }
+    .hint { background: #fff; border-radius: 12px; padding: 12px; color: var(--muted); }
+    .board {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid #e6dece;
+      image-rendering: pixelated;
+    }
+    pre {
+      background: #101623;
+      color: #c6f68d;
+      padding: 12px;
+      border-radius: 12px;
+      margin: 0;
+      min-height: 120px;
+      max-height: 240px;
+      overflow: auto;
+      font-size: 0.85rem;
+    }
+    .hidden { display: none; }
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="panel">
+      <div>
+        <h1>Launchpad Mini Toolkit</h1>
+        <div class="sub">Debug, Blob Tap, and Snake in one tidy page.</div>
+      </div>
+      <div class="row">
+        <button id="connect" class="primary">Connect Launchpad</button>
+        <span id="status" class="badge">Not connected</span>
+      </div>
+      <div class="row">
+        <button class="mode active" data-mode="debug">Debug</button>
+        <button class="mode" data-mode="blob">Blob Tap</button>
+        <button class="mode" data-mode="snake">Snake</button>
+      </div>
+      <div id="modeHint" class="hint"></div>
+      <div id="modeControls" class="row"></div>
+    </section>
+    <section class="board">
+      <canvas id="viz" width="240" height="240"></canvas>
+      <pre id="log" class="hidden"></pre>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const PROGRAMMER_MODE = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x0E, 0x01, 0xF7];
+  const W = 8, H = 8;
+
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $("status");
+  const connectBtn = $("connect");
+  const modeHint = $("modeHint");
+  const modeControls = $("modeControls");
+  const logEl = $("log");
+  const canvas = $("viz");
+  const ctx = canvas.getContext("2d");
+
+  let midiOut = null;
+  let midiIn = null;
+  let currentMode = null;
+
+  const log = (msg) => {
+    logEl.textContent += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+  }
+
+  function findPorts(access) {
+    const outs = [...access.outputs.values()];
+    const ins = [...access.inputs.values()];
+    const out = outs.find(p => p.name.includes("LPMiniMK3 MIDI")) ||
+                outs.find(p => p.name.includes("Launchpad Mini MK3") && p.name.includes("MIDI") && !p.name.includes("DAW"));
+    const inp = ins.find(p => p.name.includes("LPMiniMK3 MIDI")) ||
+                ins.find(p => p.name.includes("Launchpad Mini MK3") && p.name.includes("MIDI") && !p.name.includes("DAW"));
+    return { out, inp };
+  }
+
+  function sendLED(note, velocity) {
+    if (!midiOut) return;
+    midiOut.send([0x90, note, velocity]);
+  }
+
+  function clearGrid() {
+    for (let y = 1; y <= 8; y++) {
+      for (let x = 1; x <= 8; x++) sendLED(y * 10 + x, 0);
+    }
+  }
+
+  function xyToNote(x, y) {
+    return (8 - y) * 10 + (x + 1);
+  }
+
+  function noteToXY(note) {
+    const row = Math.floor(note / 10);
+    const col = note % 10;
+    return { x: col - 1, y: 8 - row };
+  }
+
+  function drawGridBackground() {
+    const size = canvas.width / W;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#eee";
+    for (let i = 0; i <= W; i++) {
+      ctx.beginPath(); ctx.moveTo(i * size, 0); ctx.lineTo(i * size, canvas.height); ctx.stroke();
+    }
+    for (let i = 0; i <= H; i++) {
+      ctx.beginPath(); ctx.moveTo(0, i * size); ctx.lineTo(canvas.width, i * size); ctx.stroke();
+    }
+    return size;
+  }
+
+  function setMode(name) {
+    if (currentMode?.stop) currentMode.stop();
+    document.querySelectorAll(".mode").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.mode === name);
+    });
+    logEl.classList.toggle("hidden", name !== "debug");
+    modeControls.innerHTML = "";
+    currentMode = modes[name];
+    modeHint.textContent = currentMode.hint;
+    currentMode.controls?.(modeControls);
+    currentMode.start();
+    if (midiOut && currentMode.onConnect) currentMode.onConnect();
+  }
+
+  function handleMidi(e) {
+    currentMode?.handleMidi?.(e);
+  }
+
+  function handleKey(e) {
+    currentMode?.handleKey?.(e);
+  }
+
+  window.addEventListener("keydown", handleKey);
+
+  connectBtn.onclick = async () => {
+    try {
+      const access = await navigator.requestMIDIAccess({ sysex: true });
+      const { out, inp } = findPorts(access);
+      if (!out || !inp) {
+        setStatus("Launchpad MIDI ports not found");
+        return;
+      }
+      midiOut = out;
+      midiIn = inp;
+      midiIn.onmidimessage = handleMidi;
+      midiOut.send(PROGRAMMER_MODE);
+      setStatus("Connected");
+      if (currentMode?.onConnect) currentMode.onConnect();
+    } catch (err) {
+      console.error(err);
+      setStatus("MIDI access denied / unsupported");
+    }
+  };
+
+  function createDebugMode() {
+    const palette = Array.from({ length: 64 }, (_, i) => i);
+    function ledToCss(v) {
+      const hue = (v * 5) % 360;
+      return `hsl(${hue}, 85%, 55%)`;
+    }
+    function drawPalette() {
+      const size = drawGridBackground();
+      palette.forEach((v, i) => {
+        const x = i % W;
+        const y = (i / W) | 0;
+        ctx.fillStyle = ledToCss(v);
+        ctx.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+      });
+    }
+    function drawPaletteToLaunchpad() {
+      if (!midiOut) return;
+      palette.forEach((v, i) => {
+        const x = i % W;
+        const y = (i / W) | 0;
+        sendLED(xyToNote(x, y), v);
+      });
+    }
+    return {
+      hint: "Debug mode: MIDI messages stream below. Tap pads to echo lights.",
+      start() {
+        logEl.textContent = "";
+        drawPalette();
+      },
+      onConnect() {
+        drawPaletteToLaunchpad();
+        setStatus("Connected — Debug");
+      },
+      handleMidi(e) {
+        const [status, data1, data2] = e.data;
+        log(`MIDI: ${status.toString(16)} ${data1} ${data2}`);
+        if ((status & 0xF0) === 0x90 && data2 > 0) {
+          sendLED(data1, data2);
+        }
+      },
+      stop() {
+        clearGrid();
+      }
+    };
+  }
+
+  function createBlobMode() {
+    const BLOB_COLORS = [5, 9, 13, 17, 21, 25, 29, 37, 45, 53];
+    const CSS_COLORS = ["#e11d48","#f97316","#eab308","#84cc16","#22c55e",
+      "#14b8a6","#0ea5e9","#6366f1","#a855f7","#ec4899"];
+    let blob = null;
+    let score = 0;
+    let blobTimeout = null;
+    let animating = false;
+
+    function randInt(max) { return (Math.random() * max) | 0; }
+
+    function spawnBlob() {
+      if (animating) return;
+      blob = { x: randInt(W), y: randInt(H), colorIdx: randInt(BLOB_COLORS.length) };
+      render();
+      drawBlob();
+      clearTimeout(blobTimeout);
+      blobTimeout = setTimeout(() => {
+        if (!animating) spawnBlob();
+      }, 5000);
+    }
+
+    function drawBlob() {
+      if (!midiOut || !blob) return;
+      clearGrid();
+      sendLED(xyToNote(blob.x, blob.y), BLOB_COLORS[blob.colorIdx]);
+    }
+
+    function render() {
+      const size = drawGridBackground();
+      if (blob) {
+        ctx.fillStyle = CSS_COLORS[blob.colorIdx];
+        ctx.fillRect(blob.x * size + 2, blob.y * size + 2, size - 4, size - 4);
+      }
+      modeHint.textContent = `Blob Tap: score ${score}. Tap the glowing pad.`;
+    }
+
+    function playFlare(cx, cy, colorIdx) {
+      animating = true;
+      clearTimeout(blobTimeout);
+      const baseColor = BLOB_COLORS[colorIdx];
+      let frame = 0;
+      const maxFrames = 4;
+      function drawFrame() {
+        clearGrid();
+        const ring = frame;
+        const dimColor = Math.max(1, baseColor - frame * 4);
+        for (let dx = -ring; dx <= ring; dx++) {
+          for (let dy = -ring; dy <= ring; dy++) {
+            if (Math.abs(dx) + Math.abs(dy) !== ring) continue;
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+              sendLED(xyToNote(nx, ny), dimColor);
+            }
+          }
+        }
+        sendLED(xyToNote(cx, cy), baseColor);
+        frame++;
+        if (frame < maxFrames) {
+          setTimeout(drawFrame, 120);
+        } else {
+          setTimeout(() => {
+            clearGrid();
+            animating = false;
+            spawnBlob();
+          }, 200);
+        }
+      }
+      drawFrame();
+    }
+
+    function handleHit(x, y) {
+      if (animating || !blob) return;
+      if (x === blob.x && y === blob.y) {
+        score++;
+        playFlare(blob.x, blob.y, blob.colorIdx);
+        render();
+      }
+    }
+
+    return {
+      hint: "Blob Tap: score 0. Tap the glowing pad.",
+      start() {
+        score = 0;
+        render();
+        spawnBlob();
+      },
+      onConnect() {
+        clearGrid();
+        spawnBlob();
+      },
+      handleMidi(e) {
+        const [status, note, velocity] = e.data;
+        if ((status & 0xF0) === 0x90 && velocity > 0) {
+          const { x, y } = noteToXY(note);
+          if (x >= 0 && x < W && y >= 0 && y < H) handleHit(x, y);
+        }
+      },
+      stop() {
+        clearTimeout(blobTimeout);
+        animating = false;
+        blob = null;
+        clearGrid();
+      }
+    };
+  }
+
+  function createSnakeMode() {
+    const DIR = { UP:{x:0,y:-1}, DOWN:{x:0,y:1}, LEFT:{x:-1,y:0}, RIGHT:{x:1,y:0} };
+    const CC_TO_DIR = { 91: DIR.UP, 92: DIR.DOWN, 93: DIR.LEFT, 94: DIR.RIGHT };
+    const LED_BODY = 21, LED_HEAD = 45, LED_FOOD = 5;
+
+    let running = false;
+    let tickHandle = null;
+    let tickMs = 220;
+    let dir = DIR.RIGHT;
+    let nextDir = DIR.RIGHT;
+    let snake = [];
+    let food = null;
+    let score = 0;
+
+    function cellEq(a, b) { return a.x === b.x && a.y === b.y; }
+    function randCell() { return { x: (Math.random() * W) | 0, y: (Math.random() * H) | 0 }; }
+
+    function placeFood() {
+      for (let tries = 0; tries < 300; tries++) {
+        const c = randCell();
+        if (!snake.some(s => cellEq(s, c))) return c;
+      }
+      return null;
+    }
+
+    function resetGame() {
+      score = 0;
+      tickMs = 440;
+      dir = DIR.RIGHT;
+      nextDir = DIR.RIGHT;
+      snake = [{x:3,y:4},{x:2,y:4}];
+      food = placeFood();
+      render();
+      drawToLaunchpad();
+      setStatus((midiOut ? "Connected" : "Local") + ` — score ${score}`);
+    }
+
+    function setDirection(d) {
+      const rev = (d.x === -dir.x && d.y === -dir.y);
+      if (snake.length > 1 && rev) return;
+      nextDir = d;
+    }
+
+    function step() {
+      if (!running) return;
+      dir = nextDir;
+      const head = snake[0];
+      const newHead = { x: head.x + dir.x, y: head.y + dir.y };
+      newHead.x = (newHead.x + W) % W;
+      newHead.y = (newHead.y + H) % H;
+      const hit = snake.some((s, idx) => idx !== snake.length - 1 && cellEq(s, newHead));
+      if (hit) return gameOver();
+      snake.unshift(newHead);
+      if (food && cellEq(newHead, food)) {
+        score++;
+        food = placeFood();
+        tickMs = Math.max(220, tickMs - 5);
+        restartLoop();
+        if (!food) return win();
+      } else {
+        snake.pop();
+      }
+      render();
+      drawToLaunchpad();
+      setStatus((midiOut ? "Connected" : "Local") + ` — score ${score}`);
+    }
+
+    function gameOver() {
+      running = false;
+      stopLoop();
+      setStatus(`Game over — score ${score} (Space to restart)`);
+      if (midiOut) {
+        clearGrid();
+        for (const c of snake) sendLED(xyToNote(c.x, c.y), 64 + LED_FOOD);
+      }
+    }
+
+    function win() {
+      running = false;
+      stopLoop();
+      setStatus(`You win! — score ${score} (Space to restart)`);
+    }
+
+    function stopLoop() {
+      if (tickHandle) clearInterval(tickHandle);
+      tickHandle = null;
+    }
+
+    function restartLoop() {
+      stopLoop();
+      if (running) tickHandle = setInterval(step, tickMs);
+    }
+
+    function startLoop() {
+      if (running) return;
+      running = true;
+      restartLoop();
+    }
+
+    function pauseLoop() {
+      running = false;
+      stopLoop();
+      setStatus((midiOut ? "Connected" : "Local") + ` — paused (score ${score})`);
+    }
+
+    function render() {
+      const size = drawGridBackground();
+      if (food) {
+        ctx.fillStyle = "#e11d48";
+        ctx.fillRect(food.x * size + 2, food.y * size + 2, size - 4, size - 4);
+      }
+      snake.forEach((c, i) => {
+        ctx.fillStyle = i === 0 ? "#4ade80" : "#16a34a";
+        ctx.fillRect(c.x * size + 2, c.y * size + 2, size - 4, size - 4);
+      });
+    }
+
+    function drawToLaunchpad() {
+      if (!midiOut) return;
+      clearGrid();
+      if (food) sendLED(xyToNote(food.x, food.y), LED_FOOD);
+      snake.forEach((c, i) => sendLED(xyToNote(c.x, c.y), i === 0 ? LED_HEAD : LED_BODY));
+    }
+
+    return {
+      hint: "Snake: use arrows or Launchpad CC 91-94. Space resets.",
+      controls(host) {
+        const startBtn = document.createElement("button");
+        startBtn.textContent = "Start";
+        startBtn.onclick = startLoop;
+        const pauseBtn = document.createElement("button");
+        pauseBtn.textContent = "Pause";
+        pauseBtn.onclick = pauseLoop;
+        const resetBtn = document.createElement("button");
+        resetBtn.textContent = "Reset";
+        resetBtn.onclick = resetGame;
+        host.append(startBtn, pauseBtn, resetBtn);
+      },
+      start() {
+        resetGame();
+        startLoop();
+      },
+      onConnect() {
+        resetGame();
+        startLoop();
+      },
+      handleMidi(e) {
+        const [status, cc, value] = e.data;
+        if ((status & 0xF0) !== 0xB0) return;
+        if (value !== 127) return;
+        const d = CC_TO_DIR[cc];
+        if (d) setDirection(d);
+      },
+      handleKey(e) {
+        if (e.key === "ArrowUp") setDirection(DIR.UP);
+        if (e.key === "ArrowDown") setDirection(DIR.DOWN);
+        if (e.key === "ArrowLeft") setDirection(DIR.LEFT);
+        if (e.key === "ArrowRight") setDirection(DIR.RIGHT);
+        if (e.key === " ") resetGame();
+      },
+      stop() {
+        running = false;
+        stopLoop();
+        clearGrid();
+      }
+    };
+  }
+
+  const modes = {
+    debug: createDebugMode(),
+    blob: createBlobMode(),
+    snake: createSnakeMode()
+  };
+
+  document.querySelectorAll(".mode").forEach(btn => {
+    btn.onclick = () => setMode(btn.dataset.mode);
+  });
+
+  setMode("debug");
+})();
+</script>
+</body>
+</html>
