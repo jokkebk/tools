@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import subprocess
+from pathlib import Path
 from datetime import datetime
 
 def get_github_url():
@@ -25,6 +26,38 @@ def get_github_url():
         print("Could not get git remote URL.")
         return None
 
+def extract_summary(md_path):
+    """
+    Read a sidecar Markdown file and return the first paragraph as a summary.
+    """
+    try:
+        content = md_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return None
+
+    lines = content.splitlines()
+    i = 0
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+
+    if i < len(lines) and lines[i].lstrip().startswith("#"):
+        i += 1
+        while i < len(lines) and not lines[i].strip():
+            i += 1
+
+    para = []
+    while i < len(lines):
+        line = lines[i]
+        if not line.strip():
+            break
+        para.append(line.rstrip())
+        i += 1
+
+    summary = "\n".join(para).strip()
+    return summary or None
+
 def main():
     github_url = get_github_url()
     if not github_url:
@@ -46,12 +79,14 @@ def main():
         if "last_commit" in details:
             commit = details["last_commit"]
             tool_name = filename.replace(".html", "")
+            summary = extract_summary(Path(filename).with_suffix(".md"))
             tools.append({
                 "name": tool_name,
                 "filename": filename,
                 "commit_hash": commit["hash"],
                 "commit_date": commit["date"],
                 "commit_message": commit["message"],
+                "summary": summary,
             })
 
     if not tools:
@@ -80,7 +115,10 @@ def main():
     md_content += "\n## Tools\n\n"
     for tool in sorted_date:
         md_content += f"### [{tool['name']}]({tool['filename']})\n\n"
-        
+
+        if tool.get("summary"):
+            md_content += f"{tool['summary']}\n\n"
+
         md_content += f"> last updated: {tool['commit_date_parsed'].strftime('%Y-%m-%d %H:%M:%S')}\n"
         
         message_lines = tool['commit_message'].strip().split('\n')
