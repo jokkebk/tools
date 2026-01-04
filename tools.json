@@ -42,6 +42,13 @@
         "message": "Jokeripokeri advisor tool with image upload capability w. Google API key"
       }
     },
+    "launchpad_test.html": {
+      "last_commit": {
+        "hash": "b82b9593e6e7b19fab147594dd2df49e5cd48965",
+        "date": "2026-01-04T09:28:22+02:00",
+        "message": "Novation Launchpad Mk3 test suite and snake/blob games"
+      }
+    },
     "christmas-screensaver-opus45.html": {
       "last_commit": {
         "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",

@@ -8,6 +8,7 @@
 * [firefighter](firefighter.html)
 * [jokeripokeri_advisor](jokeripokeri_advisor.html)
 * [jokeripokeri_trainer](jokeripokeri_trainer.html)
+* [launchpad_test](launchpad_test.html)
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
 * [wordle](wordle.html)
@@ -15,6 +16,13 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [launchpad_test](launchpad_test.html)
+
+> last updated: 2026-01-04 09:28:22
+> Novation Launchpad Mk3 test suite and snake/blob games
+>
+> [view commit](https://github.com/jokkebk/tools/commit/b82b9593e6e7b19fab147594dd2df49e5cd48965)
 
 ### [jokeripokeri_advisor](jokeripokeri_advisor.html)
 
