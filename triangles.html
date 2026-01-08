@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triangle Evolution Image Approximator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom animations */
+    @keyframes dash {
+      to { stroke-dashoffset: -20; }
+    }
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgb(99 102 241 / 0.5); }
+      50% { border-color: rgb(99 102 241 / 1); }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes skeleton {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    .upload-area {
+      transition: all 0.3s ease;
+    }
+    .upload-area:hover {
+      border-color: rgb(99 102 241);
+      background-color: rgb(238 242 255);
+    }
+    .upload-area.dragover {
+      border-color: rgb(99 102 241);
+      background-color: rgb(224 231 255);
+      animation: pulse-border 1s ease infinite;
+    }
+
+    .sample-card {
+      animation: fade-in 0.5s ease forwards;
+      opacity: 0;
+    }
+    .sample-card:nth-child(1) { animation-delay: 0.1s; }
+    .sample-card:nth-child(2) { animation-delay: 0.2s; }
+    .sample-card:nth-child(3) { animation-delay: 0.3s; }
+    .sample-card:nth-child(4) { animation-delay: 0.4s; }
+
+    .sample-card:hover {
+      transform: translateY(-4px);
+    }
+    .sample-card.loading .sample-img {
+      animation: skeleton 1.5s ease infinite;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgb(79 70 229) 0%, rgb(99 102 241) 100%);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgb(99 102 241 / 0.4);
+    }
+    .btn-primary:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, rgb(220 38 38) 0%, rgb(239 68 68) 100%);
+      transition: all 0.2s ease;
+    }
+    .btn-danger:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgb(239 68 68 / 0.4);
+    }
+    .btn-danger:active {
+      transform: scale(0.98);
+    }
+
+    .progress-bar {
+      transition: width 0.3s ease;
+    }
+
+    .canvas-fade-in {
+      animation: fade-in 0.3s ease forwards;
+    }
+
+    .history-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgb(203 213 225) transparent;
+    }
+    .history-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .history-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .history-scroll::-webkit-scrollbar-thumb {
+      background: rgb(203 213 225);
+      border-radius: 3px;
+    }
+
+    /* Slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: rgb(226 232 240);
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, rgb(79 70 229) 0%, rgb(99 102 241) 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgb(99 102 241 / 0.3);
+      transition: transform 0.2s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, rgb(79 70 229) 0%, rgb(99 102 241) 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgb(99 102 241 / 0.3);
+    }
+
+    /* Toast animation */
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes toast-out {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-10px); }
+    }
+    .toast {
+      animation: toast-in 0.3s ease forwards;
+    }
+    .toast.hiding {
+      animation: toast-out 0.3s ease forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-gradient-to-r from-slate-800 to-slate-700 text-white shadow-lg">
+    <div class="container mx-auto px-4 py-6">
+      <h1 class="text-2xl md:text-3xl font-bold flex items-center gap-3">
+        <span class="text-3xl">△</span>
+        Triangle Evolution
+      </h1>
+      <p class="text-slate-300 text-sm mt-1">Approximate images using evolutionary algorithms</p>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-8 max-w-5xl">
+    <!-- Upload Section -->
+    <section class="bg-white rounded-2xl shadow-md p-6 mb-6">
+      <div id="upload-area" class="upload-area flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl h-48 cursor-pointer">
+        <svg class="w-12 h-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p class="text-slate-500 font-medium">Drop image here or click to upload</p>
+        <p class="text-slate-400 text-sm mt-1">PNG, JPG up to 10MB</p>
+        <input type="file" id="file-input" accept="image/*" class="hidden">
+      </div>
+
+      <!-- Sample Images -->
+      <div class="mt-6">
+        <p class="text-slate-600 text-sm font-medium mb-3">Or try a sample:</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="samples-container">
+          <button class="sample-card group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 aspect-square bg-slate-100" data-url="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/256px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/128px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg" alt="Mona Lisa" class="sample-img w-full h-full object-cover" crossorigin="anonymous">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+              <span class="text-white text-xs font-medium">Mona Lisa</span>
+            </div>
+          </button>
+          <button class="sample-card group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 aspect-square bg-slate-100" data-url="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/256px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/128px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg" alt="Starry Night" class="sample-img w-full h-full object-cover" crossorigin="anonymous">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+              <span class="text-white text-xs font-medium">Starry Night</span>
+            </div>
+          </button>
+          <button class="sample-card group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 aspect-square bg-slate-100" data-url="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/256px-Tsunami_by_hokusai_19th_century.jpg">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/128px-Tsunami_by_hokusai_19th_century.jpg" alt="The Great Wave" class="sample-img w-full h-full object-cover" crossorigin="anonymous">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+              <span class="text-white text-xs font-medium">The Great Wave</span>
+            </div>
+          </button>
+          <button class="sample-card group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 aspect-square bg-slate-100" data-url="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/256px-1665_Girl_with_a_Pearl_Earring.jpg">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/128px-1665_Girl_with_a_Pearl_Earring.jpg" alt="Girl with a Pearl Earring" class="sample-img w-full h-full object-cover" crossorigin="anonymous">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+              <span class="text-white text-xs font-medium">Girl with Pearl Earring</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Section -->
+    <section class="bg-white rounded-2xl shadow-md p-6 mb-6">
+      <h2 class="text-lg font-semibold text-slate-800 mb-4">Settings</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-slate-50 rounded-xl p-4">
+          <label for="trianglesSlider" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Triangles</label>
+          <div class="text-2xl font-bold text-slate-800 mb-2" id="trianglesCount">50</div>
+          <input id="trianglesSlider" type="range" min="5" max="300" value="50" class="w-full">
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4">
+          <label for="runsSlider" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Mutations/Iter</label>
+          <div class="text-2xl font-bold text-slate-800 mb-2" id="runsCount">30</div>
+          <input id="runsSlider" type="range" min="5" max="100" value="30" class="w-full">
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4">
+          <label for="itersPerRoundSlider" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Iters/Round</label>
+          <div class="text-2xl font-bold text-slate-800 mb-2" id="itersPerRoundCount">64</div>
+          <input id="itersPerRoundSlider" type="range" min="1" max="256" value="64" class="w-full">
+        </div>
+        <div class="bg-slate-50 rounded-xl p-4">
+          <label for="roundsSlider" class="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Rounds</label>
+          <div class="text-2xl font-bold text-slate-800 mb-2" id="roundsCount">100</div>
+          <input id="roundsSlider" type="range" min="1" max="256" value="100" class="w-full">
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button id="runBtn" class="btn-primary text-white px-8 py-3 rounded-xl font-semibold shadow-md">
+          Run Evolution
+        </button>
+        <button id="stopBtn" class="btn-danger text-white px-6 py-3 rounded-xl font-semibold shadow-md hidden">
+          Stop
+        </button>
+      </div>
+    </section>
+
+    <!-- Progress Section -->
+    <section id="progress-section" class="bg-white rounded-2xl shadow-md p-6 mb-6 hidden">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div>
+          <span class="text-sm text-slate-500">Round</span>
+          <span class="text-lg font-bold text-slate-800 ml-1"><span id="currentRound">0</span>/<span id="totalRounds">100</span></span>
+        </div>
+        <div>
+          <span class="text-sm text-slate-500">Fitness</span>
+          <span class="text-lg font-bold text-indigo-600 ml-1"><span id="fitnessPercent">0</span>%</span>
+        </div>
+        <div>
+          <span class="text-sm text-slate-500">Time</span>
+          <span class="text-lg font-bold text-slate-800 ml-1" id="elapsedTime">00:00</span>
+        </div>
+      </div>
+      <div class="h-3 bg-slate-200 rounded-full overflow-hidden">
+        <div id="progressBar" class="progress-bar h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full" style="width: 0%"></div>
+      </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section id="comparison-section" class="bg-white rounded-2xl shadow-md p-6 mb-6 hidden">
+      <h2 class="text-lg font-semibold text-slate-800 mb-4">Comparison</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div class="flex flex-col items-center">
+          <span class="text-sm font-medium text-slate-500 mb-2">Target</span>
+          <div class="bg-slate-100 rounded-xl p-2 shadow-inner">
+            <canvas id="targetCanvas" class="rounded-lg max-w-full"></canvas>
+          </div>
+        </div>
+        <div class="flex flex-col items-center">
+          <span class="text-sm font-medium text-slate-500 mb-2">Current</span>
+          <div class="bg-slate-100 rounded-xl p-2 shadow-inner">
+            <canvas id="currentCanvas" class="rounded-lg max-w-full"></canvas>
+          </div>
+          <div class="mt-3 flex items-center gap-2">
+            <select id="exportScale" class="px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="1">1× (256px)</option>
+              <option value="2">2× (512px)</option>
+              <option value="4" selected>4× (1024px)</option>
+            </select>
+            <button id="downloadBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm font-medium text-slate-700">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- History Section -->
+    <section id="history-section" class="bg-white rounded-2xl shadow-md p-6 mb-6 hidden">
+      <h2 class="text-lg font-semibold text-slate-800 mb-4">Evolution History</h2>
+      <div id="iterationsContainer" class="flex gap-4 overflow-x-auto pb-4 history-scroll"></div>
+    </section>
+
+    <!-- JSON Export Section -->
+    <section id="json-section" class="bg-white rounded-2xl shadow-md p-6 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-slate-800">JSON Export</h2>
+        <button id="copyBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm font-medium text-slate-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          Copy
+        </button>
+      </div>
+      <textarea id="jsonExport" class="w-full h-48 font-mono text-xs p-4 bg-slate-50 border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" readonly></textarea>
+    </section>
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
+  <script>
+    // DOM Elements
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const targetCanvas = document.getElementById('targetCanvas');
+    const currentCanvas = document.getElementById('currentCanvas');
+    const targetCtx = targetCanvas.getContext('2d');
+    const currentCtx = currentCanvas.getContext('2d');
+    const iterationsContainer = document.getElementById('iterationsContainer');
+    const runBtn = document.getElementById('runBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const samplesContainer = document.getElementById('samples-container');
+
+    // Sliders
+    const trianglesSlider = document.getElementById('trianglesSlider');
+    const runsSlider = document.getElementById('runsSlider');
+    const itersPerRoundSlider = document.getElementById('itersPerRoundSlider');
+    const roundsSlider = document.getElementById('roundsSlider');
+
+    // Labels
+    const trianglesCountLabel = document.getElementById('trianglesCount');
+    const runsCountLabel = document.getElementById('runsCount');
+    const itersPerRoundLabel = document.getElementById('itersPerRoundCount');
+    const roundsCountLabel = document.getElementById('roundsCount');
+
+    // Progress elements
+    const progressSection = document.getElementById('progress-section');
+    const currentRoundEl = document.getElementById('currentRound');
+    const totalRoundsEl = document.getElementById('totalRounds');
+    const fitnessPercentEl = document.getElementById('fitnessPercent');
+    const elapsedTimeEl = document.getElementById('elapsedTime');
+    const progressBar = document.getElementById('progressBar');
+
+    // Sections
+    const comparisonSection = document.getElementById('comparison-section');
+    const historySection = document.getElementById('history-section');
+    const jsonSection = document.getElementById('json-section');
+
+    const MAX_SIDE = 256;
+    let targetData, targetWidth, targetHeight;
+    let shouldStop = false;
+    let startTime = null;
+    let timerInterval = null;
+    let initialFitness = null;
+    let currentTriangles = null;
+
+    // Slider event listeners
+    [trianglesSlider, runsSlider, itersPerRoundSlider, roundsSlider].forEach(slider => {
+      slider.addEventListener('input', () => {
+        trianglesCountLabel.textContent = trianglesSlider.value;
+        runsCountLabel.textContent = runsSlider.value;
+        itersPerRoundLabel.textContent = itersPerRoundSlider.value;
+        roundsCountLabel.textContent = roundsSlider.value;
+      });
+    });
+
+    // Upload events
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    // Sample image clicks
+    samplesContainer.addEventListener('click', e => {
+      const card = e.target.closest('.sample-card');
+      if (card && !card.classList.contains('loading')) {
+        const url = card.dataset.url;
+        loadImageFromUrl(url, card);
+      }
+    });
+
+    function loadImageFromUrl(url, card) {
+      if (card) card.classList.add('loading');
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        if (card) card.classList.remove('loading');
+        processImage(img);
+        showToast('Image loaded successfully');
+      };
+      img.onerror = () => {
+        if (card) card.classList.remove('loading');
+        showToast('Failed to load image', 'error');
+      };
+      img.src = url;
+    }
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => processImage(img);
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function processImage(img) {
+      const scale = Math.min(MAX_SIDE / img.width, MAX_SIDE / img.height, 1);
+      targetWidth = Math.round(img.width * scale);
+      targetHeight = Math.round(img.height * scale);
+
+      targetCanvas.width = targetWidth;
+      targetCanvas.height = targetHeight;
+      currentCanvas.width = targetWidth;
+      currentCanvas.height = targetHeight;
+
+      targetCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      targetData = targetCtx.getImageData(0, 0, targetWidth, targetHeight).data;
+
+      // Show comparison section
+      comparisonSection.classList.remove('hidden');
+
+      // Clear current canvas
+      currentCtx.fillStyle = 'white';
+      currentCtx.fillRect(0, 0, targetWidth, targetHeight);
+    }
+
+    // Triangle functions
+    function randomTriangle() {
+      return {
+        x1: Math.random(), y1: Math.random(),
+        x2: Math.random(), y2: Math.random(),
+        x3: Math.random(), y3: Math.random(),
+        r: Math.random() * 255,
+        g: Math.random() * 255,
+        b: Math.random() * 255,
+        a: Math.random()
+      };
+    }
+
+    function cloneTriangle(t) { return { ...t }; }
+
+    function mutateTriangle(t) {
+      const mutated = cloneTriangle(t);
+      const attr = Math.floor(Math.random() * 10);
+      const delta = () => (Math.random() - 0.5) * 0.2;
+      switch (attr) {
+        case 0: mutated.x1 = clamp(mutated.x1 + delta()); break;
+        case 1: mutated.y1 = clamp(mutated.y1 + delta()); break;
+        case 2: mutated.x2 = clamp(mutated.x2 + delta()); break;
+        case 3: mutated.y2 = clamp(mutated.y2 + delta()); break;
+        case 4: mutated.x3 = clamp(mutated.x3 + delta()); break;
+        case 5: mutated.y3 = clamp(mutated.y3 + delta()); break;
+        case 6: mutated.r = clampColor(mutated.r + delta() * 255); break;
+        case 7: mutated.g = clampColor(mutated.g + delta() * 255); break;
+        case 8: mutated.b = clampColor(mutated.b + delta() * 255); break;
+        case 9: mutated.a = clamp(mutated.a + delta()); break;
+      }
+      return mutated;
+    }
+
+    function clamp(v) { return Math.min(1, Math.max(0, v)); }
+    function clampColor(v) { return Math.min(255, Math.max(0, v)); }
+
+    function drawCandidate(ctx, triangles, width, height) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, width, height);
+      triangles.forEach(tri => {
+        ctx.beginPath();
+        ctx.moveTo(tri.x1 * width, tri.y1 * height);
+        ctx.lineTo(tri.x2 * width, tri.y2 * height);
+        ctx.lineTo(tri.x3 * width, tri.y3 * height);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${tri.r},${tri.g},${tri.b},${tri.a})`;
+        ctx.fill();
+      });
+    }
+
+    function computeFitness(ctx, width, height) {
+      const data = ctx.getImageData(0, 0, width, height).data;
+      let diff = 0;
+      for (let i = 0; i < data.length; i++) {
+        const d = data[i] - targetData[i];
+        diff += d * d;
+      }
+      return diff;
+    }
+
+    function renderIter(round, candidate) {
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      canvas.className = 'rounded-lg shadow-sm canvas-fade-in';
+      canvas.style.width = '80px';
+      canvas.style.height = `${80 * targetHeight / targetWidth}px`;
+
+      const ctx = canvas.getContext('2d');
+      drawCandidate(ctx, candidate, targetWidth, targetHeight);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex flex-col items-center flex-shrink-0';
+
+      const label = document.createElement('span');
+      label.className = 'text-xs font-medium text-slate-500 mb-1';
+      label.textContent = `R${round}`;
+
+      wrapper.append(label, canvas);
+      iterationsContainer.append(wrapper);
+      iterationsContainer.scrollLeft = iterationsContainer.scrollWidth;
+
+      // Update JSON export
+      document.getElementById('jsonExport').value = JSON.stringify(candidate, null, 2);
+    }
+
+    function updateTimer() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+      const secs = (elapsed % 60).toString().padStart(2, '0');
+      elapsedTimeEl.textContent = `${mins}:${secs}`;
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      }`;
+      toast.textContent = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    // Copy button
+    copyBtn.addEventListener('click', () => {
+      const json = document.getElementById('jsonExport').value;
+      navigator.clipboard.writeText(json).then(() => {
+        showToast('Copied to clipboard');
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    });
+
+    // Download button
+    const downloadBtn = document.getElementById('downloadBtn');
+    const exportScale = document.getElementById('exportScale');
+    downloadBtn.addEventListener('click', () => {
+      if (!currentTriangles) {
+        showToast('No image to download', 'error');
+        return;
+      }
+      const scale = parseInt(exportScale.value);
+      const exportWidth = targetWidth * scale;
+      const exportHeight = targetHeight * scale;
+
+      // Create high-res canvas and render
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = exportWidth;
+      exportCanvas.height = exportHeight;
+      const exportCtx = exportCanvas.getContext('2d');
+      drawCandidate(exportCtx, currentTriangles, exportWidth, exportHeight);
+
+      const link = document.createElement('a');
+      link.download = `triangle-evolution-${exportWidth}x${exportHeight}.png`;
+      link.href = exportCanvas.toDataURL('image/png');
+      link.click();
+      showToast(`Downloaded at ${exportWidth}×${exportHeight}`);
+    });
+
+    // Stop button
+    stopBtn.addEventListener('click', () => {
+      shouldStop = true;
+      stopBtn.disabled = true;
+      stopBtn.textContent = 'Stopping...';
+    });
+
+    // Run button
+    runBtn.addEventListener('click', () => {
+      if (!targetData) {
+        showToast('Please upload an image first', 'error');
+        return;
+      }
+
+      const numTriangles = parseInt(trianglesSlider.value);
+      const runsPerIter = parseInt(runsSlider.value);
+      const itersPerRound = parseInt(itersPerRoundSlider.value);
+      const numRounds = parseInt(roundsSlider.value);
+
+      // Reset state
+      shouldStop = false;
+      initialFitness = null;
+      iterationsContainer.innerHTML = '';
+
+      // Show sections
+      progressSection.classList.remove('hidden');
+      historySection.classList.remove('hidden');
+      jsonSection.classList.remove('hidden');
+
+      // Update UI
+      runBtn.disabled = true;
+      runBtn.textContent = 'Running...';
+      stopBtn.classList.remove('hidden');
+      stopBtn.disabled = false;
+      stopBtn.textContent = 'Stop';
+      totalRoundsEl.textContent = numRounds;
+
+      // Start timer
+      startTime = Date.now();
+      timerInterval = setInterval(updateTimer, 1000);
+
+      // Offscreen canvas
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = targetWidth;
+      offCanvas.height = targetHeight;
+      const offCtx = offCanvas.getContext('2d');
+
+      // Initialize candidate
+      let candidate = Array.from({ length: numTriangles }, randomTriangle);
+      drawCandidate(offCtx, candidate, targetWidth, targetHeight);
+      let bestFitness = computeFitness(offCtx, targetWidth, targetHeight);
+      initialFitness = bestFitness;
+      let round = 0;
+
+      const evolveRound = () => {
+        if (shouldStop || round >= numRounds) {
+          clearInterval(timerInterval);
+          runBtn.disabled = false;
+          runBtn.textContent = 'Run Evolution';
+          stopBtn.classList.add('hidden');
+          showToast(shouldStop ? 'Evolution stopped' : 'Evolution complete');
+          return;
+        }
+
+        // Evolution iterations
+        for (let i = 0; i < itersPerRound; i++) {
+          let bestLocal = candidate;
+          let bestLocalFit = bestFitness;
+
+          for (let r = 0; r < runsPerIter; r++) {
+            const mutated = candidate.map(tri =>
+              Math.random() < 1 / numTriangles ? mutateTriangle(tri) : cloneTriangle(tri)
+            );
+            drawCandidate(offCtx, mutated, targetWidth, targetHeight);
+            const fit = computeFitness(offCtx, targetWidth, targetHeight);
+            if (fit < bestLocalFit) {
+              bestLocalFit = fit;
+              bestLocal = mutated;
+            }
+          }
+          candidate = bestLocal;
+          bestFitness = bestLocalFit;
+        }
+
+        round++;
+
+        // Update progress
+        currentRoundEl.textContent = round;
+        progressBar.style.width = `${(round / numRounds) * 100}%`;
+
+        // Calculate fitness improvement percentage
+        const improvement = ((initialFitness - bestFitness) / initialFitness) * 100;
+        fitnessPercentEl.textContent = improvement.toFixed(1);
+
+        // Update current canvas
+        drawCandidate(currentCtx, candidate, targetWidth, targetHeight);
+        currentTriangles = candidate;
+
+        // Render history thumbnail
+        renderIter(round, candidate);
+
+        // Next round
+        setTimeout(evolveRound, 0);
+      };
+
+      // Start evolution
+      renderIter(0, candidate);
+      drawCandidate(currentCtx, candidate, targetWidth, targetHeight);
+      currentTriangles = candidate;
+      evolveRound();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+Approximate any image using semi-transparent triangles through evolutionary algorithms. Upload your own image or try classic artworks like Mona Lisa and Starry Night. Watch the evolution in real-time and export high-resolution PNGs or JSON triangle data.
