@@ -4,6 +4,7 @@
 
 * [blackjack_trainer](blackjack_trainer.html)
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
+* [crt_simulator](crt_simulator.html)
 * [find_fraction](find_fraction.html)
 * [firefighter](firefighter.html)
 * [jokeripokeri_advisor](jokeripokeri_advisor.html)
@@ -16,6 +17,23 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [crt_simulator](crt_simulator.html)
+
+CRT display simulator that renders images through an authentic phosphor grain pattern with RGB shadow mask, scanlines, and animated luminance noise. Supports drag-and-drop, paste, or file browse for image input, with three selectable resolution modes: SPECTRUM (256x192), CGA (320x200), and VGA (640x480). Resolution auto-selects based on viewport size but can be cycled manually via the corner toggle.
+
+> last updated: 2026-01-08 11:25:52
+> Add CRT display simulator with phosphor grain rendering
+> 
+> Simulates classic CRT displays with authentic RGB shadow mask pattern,
+> scanlines, and luminance noise. Supports three resolution modes
+> (SPECTRUM, CGA, VGA) with auto-selection based on viewport size.
+> 
+> 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+> 
+> Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+>
+> [view commit](https://github.com/jokkebk/tools/commit/e6d08e7c3ce55d81adb294cf6978163ade4664bb)
 
 ### [launchpad_test](launchpad_test.html)
 

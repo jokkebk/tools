@@ -49,6 +49,13 @@
         "message": "Novation Launchpad Mk3 test suite and snake/blob games"
       }
     },
+    "crt_simulator.html": {
+      "last_commit": {
+        "hash": "e6d08e7c3ce55d81adb294cf6978163ade4664bb",
+        "date": "2026-01-08T11:25:52+02:00",
+        "message": "Add CRT display simulator with phosphor grain rendering\n\nSimulates classic CRT displays with authentic RGB shadow mask pattern,\nscanlines, and luminance noise. Supports three resolution modes\n(SPECTRUM, CGA, VGA) with auto-selection based on viewport size.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+      }
+    },
     "christmas-screensaver-opus45.html": {
       "last_commit": {
         "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",
