@@ -49,6 +49,13 @@
         "message": "Novation Launchpad Mk3 test suite and snake/blob games"
       }
     },
+    "triangles.html": {
+      "last_commit": {
+        "hash": "53648a544444ea98f3748a39b8b761ec880e54ff",
+        "date": "2026-01-08T13:33:30+02:00",
+        "message": "Add triangle evolution image approximator\n\nGenetic algorithm tool that approximates images using semi-transparent\ntriangles. Features sample images from Wikimedia Commons, live progress\ntracking, stop button, high-res PNG export, and JSON export.\n\nAlso clarifies in CLAUDE.md that sidecar .md files should be 2-3 sentences.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+      }
+    },
     "crt_simulator.html": {
       "last_commit": {
         "hash": "e6d08e7c3ce55d81adb294cf6978163ade4664bb",

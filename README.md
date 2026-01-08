@@ -12,11 +12,31 @@
 * [launchpad_test](launchpad_test.html)
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
+* [triangles](triangles.html)
 * [wordle](wordle.html)
 * [zipview-gpt52pro](zipview-gpt52pro.html)
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [triangles](triangles.html)
+
+Approximate any image using semi-transparent triangles through evolutionary algorithms. Upload your own image or try classic artworks like Mona Lisa and Starry Night. Watch the evolution in real-time and export high-resolution PNGs or JSON triangle data.
+
+> last updated: 2026-01-08 13:33:30
+> Add triangle evolution image approximator
+> 
+> Genetic algorithm tool that approximates images using semi-transparent
+> triangles. Features sample images from Wikimedia Commons, live progress
+> tracking, stop button, high-res PNG export, and JSON export.
+> 
+> Also clarifies in CLAUDE.md that sidecar .md files should be 2-3 sentences.
+> 
+> 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+> 
+> Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+>
+> [view commit](https://github.com/jokkebk/tools/commit/53648a544444ea98f3748a39b8b761ec880e54ff)
 
 ### [crt_simulator](crt_simulator.html)
 
