@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Samefile (Client-Side)</title>
+  <style>
+    :root{
+      color-scheme: light;
+      --bg: #f5f2ea;
+      --panel: #fdfbf7;
+      --ink: #1e1b16;
+      --muted: #6e6254;
+      --accent: #0b6a5b;
+      --accent-2: #b35b2b;
+      --stroke: #c9bcae;
+      --shadow: 0 12px 40px rgba(0,0,0,0.14);
+      font-family: "Trebuchet MS", "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+    *{ box-sizing: border-box; }
+    body{
+      margin: 0;
+      background:
+        radial-gradient(900px 380px at 15% -10%, rgba(11,106,91,0.18), transparent 60%),
+        radial-gradient(900px 380px at 85% 0%, rgba(179,91,43,0.18), transparent 60%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    header{
+      padding: 28px 20px 10px;
+      text-align: center;
+    }
+    header h1{
+      margin: 0;
+      font-size: clamp(24px, 3.2vw, 36px);
+      letter-spacing: 0.6px;
+    }
+    header p{
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    main{
+      width: min(1100px, 92vw);
+      margin: 16px auto 36px;
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px 18px 12px;
+    }
+    .controls{
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .field{
+      display: grid;
+      gap: 6px;
+    }
+    label{
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    input[type="number"],
+    input[type="text"]{
+      padding: 10px 12px;
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--ink);
+    }
+    button{
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #0b6a5b, #138a76);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+    }
+    button.secondary{
+      background: #fff;
+      color: var(--ink);
+    }
+    button:disabled{
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .status{
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #f6efe4;
+      border: 1px dashed var(--stroke);
+      color: var(--muted);
+      font-size: 13px;
+      min-height: 1.2em;
+    }
+    .results{
+      margin-top: 14px;
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .results header{
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--stroke);
+      background: #fbf7f1;
+    }
+    .results header strong{
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    pre{
+      margin: 0;
+      padding: 12px;
+      max-height: 60vh;
+      overflow: auto;
+      font-size: 12.5px;
+      line-height: 1.45;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #fff;
+    }
+    .footer{
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 2px 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tag{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: #fff;
+      font-size: 12px;
+    }
+    .hint{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      background: #fff;
+      cursor: help;
+      text-transform: none;
+    }
+    @media (max-width: 980px){
+      .controls{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 640px){
+      .controls{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Samefile (Client-Side)</h1>
+    <p>Find files with matching size and hash using the browser-only File System Access API.</p>
+  </header>
+  <main>
+    <section class="controls">
+      <div class="field">
+        <label for="root">Folder</label>
+        <button id="pick" class="secondary">Pick folder</button>
+        <div id="root" class="status">No folder selected.</div>
+      </div>
+      <div class="field">
+        <label for="size">Hash first N bytes</label>
+        <input id="size" type="number" min="1" step="1" value="2048" />
+      </div>
+      <div class="field">
+        <label for="minsize">Min file size (bytes)</label>
+        <input id="minsize" type="number" min="1" step="1" value="1" />
+      </div>
+      <div class="field">
+        <label for="include">Include patterns <span class="hint" title="Comma-separated globs. * matches within a segment, ** crosses folders, ? matches one character. Example: *.png,images/**">?</span></label>
+        <input id="include" type="text" placeholder="*.png,*.jpg" />
+      </div>
+      <div class="field">
+        <label for="exclude">Exclude patterns <span class="hint" title="Comma-separated globs. * matches within a segment, ** crosses folders, ? matches one character. Example: node_modules/**,*.tmp">?</span></label>
+        <input id="exclude" type="text" placeholder="node_modules/**,*.tmp" />
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button id="run">Scan</button>
+      </div>
+    </section>
+
+    <div class="status" id="status">Idle.</div>
+
+    <section class="results">
+      <header><strong>Matches</strong></header>
+      <pre id="output">(no results yet)</pre>
+    </section>
+
+    <div class="footer">
+      <span class="tag">Digest: SHA-256</span>
+      <button id="copy" class="secondary" disabled>Copy results</button>
+    </div>
+  </main>
+
+  <script>
+    const pickBtn = document.getElementById("pick");
+    const runBtn = document.getElementById("run");
+    const copyBtn = document.getElementById("copy");
+    const rootEl = document.getElementById("root");
+    const statusEl = document.getElementById("status");
+    const outputEl = document.getElementById("output");
+    const sizeEl = document.getElementById("size");
+    const minSizeEl = document.getElementById("minsize");
+    const includeEl = document.getElementById("include");
+    const excludeEl = document.getElementById("exclude");
+
+    let rootHandle = null;
+
+    const setStatus = (msg) => { statusEl.textContent = msg; };
+    const setOutput = (msg) => { outputEl.textContent = msg; };
+
+    function formatBytes(n){
+      if (n < 1024) return `${n} B`;
+      const units = ["KB", "MB", "GB", "TB"];
+      let i = -1;
+      let v = n;
+      while (v >= 1024 && i < units.length - 1){
+        v /= 1024;
+        i += 1;
+      }
+      return `${v.toFixed(2)} ${units[i]}`;
+    }
+
+    function globToRegex(glob){
+      const esc = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+      const withDouble = esc.replace(/\\\*\\\*/g, "<<<ALL>>>");
+      const withSingle = withDouble.replace(/\\\*/g, "[^/]*");
+      const withQ = withSingle.replace(/\\\?/g, ".");
+      const restored = withQ.replace(/<<<ALL>>>/g, ".*");
+      return new RegExp(`^${restored}$`, "i");
+    }
+
+    function compilePatterns(raw){
+      const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+      return parts.map(globToRegex);
+    }
+
+    function matchesAny(path, patterns){
+      if (patterns.length === 0) return true;
+      return patterns.some(rx => rx.test(path));
+    }
+
+    async function* walkDir(handle, prefix){
+      for await (const entry of handle.values()){
+        if (entry.kind === "file"){
+          yield { handle: entry, path: `${prefix}${entry.name}` };
+        } else if (entry.kind === "directory"){
+          yield* walkDir(entry, `${prefix}${entry.name}/`);
+        }
+      }
+    }
+
+    function hexFromBuffer(buffer){
+      const bytes = new Uint8Array(buffer);
+      let hex = "";
+      for (const b of bytes){
+        hex += b.toString(16).padStart(2, "0");
+      }
+      return hex;
+    }
+
+    async function hashFileSlice(file, maxBytes){
+      const slice = file.slice(0, maxBytes);
+      const buf = await slice.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      return hexFromBuffer(digest);
+    }
+
+    async function scan(){
+      if (!rootHandle) return;
+      const maxBytes = Math.max(1, Number(sizeEl.value || 2048));
+      const minSize = Math.max(1, Number(minSizeEl.value || 1));
+      const includePatterns = compilePatterns(includeEl.value || "");
+      const excludePatterns = compilePatterns(excludeEl.value || "");
+      const started = performance.now();
+      runBtn.disabled = true;
+      pickBtn.disabled = true;
+      copyBtn.disabled = true;
+      setOutput("Scanning...\n");
+      setStatus("Collecting file sizes...");
+
+      const sizeMap = new Map();
+      let fileCount = 0;
+      let byteCount = 0;
+
+      for await (const entry of walkDir(rootHandle, "")){
+        try{
+          const file = await entry.handle.getFile();
+          const size = file.size;
+          if (size < minSize) continue;
+          if (!matchesAny(entry.path, includePatterns)) continue;
+          if (excludePatterns.length && excludePatterns.some(rx => rx.test(entry.path))) continue;
+          if (!sizeMap.has(size)) sizeMap.set(size, []);
+          sizeMap.get(size).push({ path: entry.path, handle: entry.handle });
+          fileCount += 1;
+          byteCount += size;
+          if (fileCount % 200 === 0){
+            setStatus(`Collected ${fileCount} files (${formatBytes(byteCount)}).`);
+          }
+        } catch (err){
+          // Ignore unreadable files.
+        }
+      }
+
+      setStatus(`Hashing candidate groups... (${fileCount} files, ${sizeMap.size} size buckets)`);
+
+      const lines = [];
+      let hashed = 0;
+      let matchCount = 0;
+
+      for (const [size, files] of sizeMap.entries()){
+        if (files.length < 2) continue;
+        const hashMap = new Map();
+        for (const entry of files){
+          try{
+            const file = await entry.handle.getFile();
+            const digest = await hashFileSlice(file, maxBytes);
+            if (!hashMap.has(digest)) hashMap.set(digest, []);
+            hashMap.get(digest).push(entry.path);
+            hashed += 1;
+            if (hashed % 100 === 0){
+              setStatus(`Hashed ${hashed} files...`);
+            }
+          } catch (err){
+            // Ignore unreadable files.
+          }
+        }
+        for (const [digest, paths] of hashMap.entries()){
+          if (paths.length < 2) continue;
+          for (const p of paths){
+            lines.push(`${size} ${digest} ${p}`);
+            matchCount += 1;
+          }
+        }
+      }
+
+      const elapsed = ((performance.now() - started) / 1000).toFixed(2);
+      if (lines.length === 0){
+        setOutput("No matching files found.");
+      } else {
+        setOutput(lines.join("\n"));
+        copyBtn.disabled = false;
+      }
+      setStatus(`Done. ${matchCount} matches in ${elapsed}s.`);
+      runBtn.disabled = false;
+      pickBtn.disabled = false;
+    }
+
+    pickBtn.addEventListener("click", async () => {
+      try{
+        rootHandle = await window.showDirectoryPicker();
+        rootEl.textContent = rootHandle.name;
+        setStatus("Ready to scan.");
+      } catch (err){
+        if (err && err.name !== "AbortError"){
+          setStatus("Failed to open folder. Make sure your browser supports the File System Access API.");
+        }
+      }
+    });
+
+    runBtn.addEventListener("click", async () => {
+      if (!rootHandle){
+        setStatus("Pick a folder first.");
+        return;
+      }
+      await scan();
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      try{
+        await navigator.clipboard.writeText(outputEl.textContent);
+        setStatus("Results copied to clipboard.");
+      } catch (err){
+        setStatus("Clipboard copy failed.");
+      }
+    });
+  </script>
+</body>
+</html>

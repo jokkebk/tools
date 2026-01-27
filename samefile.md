@@ -1,0 +1,1 @@
+Samefile is a browser-only duplicate finder that groups files by size and hashes the first N bytes using SHA-256. It scans a user-selected folder via the File System Access API and reports matches as `size hash path` lines. Optional include/exclude globs and a minimum size filter help narrow the search.
