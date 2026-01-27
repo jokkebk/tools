@@ -12,12 +12,22 @@
 * [launchpad_test](launchpad_test.html)
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
+* [samefile](samefile.html)
 * [triangles](triangles.html)
 * [wordle](wordle.html)
 * [zipview-gpt52pro](zipview-gpt52pro.html)
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [samefile](samefile.html)
+
+Samefile is a browser-only duplicate finder that groups files by size and hashes the first N bytes using SHA-256. It scans a user-selected folder via the File System Access API and reports matches as `size hash path` lines. Optional include/exclude globs and a minimum size filter help narrow the search.
+
+> last updated: 2026-01-27 13:30:01
+> Add filters and docs for samefile tool
+>
+> [view commit](https://github.com/jokkebk/tools/commit/2b6a16d11e95da254dc2d5d0993f0cec56e06634)
 
 ### [triangles](triangles.html)
 

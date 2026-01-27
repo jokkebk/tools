@@ -49,6 +49,13 @@
         "message": "Novation Launchpad Mk3 test suite and snake/blob games"
       }
     },
+    "samefile.html": {
+      "last_commit": {
+        "hash": "2b6a16d11e95da254dc2d5d0993f0cec56e06634",
+        "date": "2026-01-27T13:30:01+02:00",
+        "message": "Add filters and docs for samefile tool"
+      }
+    },
     "triangles.html": {
       "last_commit": {
         "hash": "53648a544444ea98f3748a39b8b761ec880e54ff",
