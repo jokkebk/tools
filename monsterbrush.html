@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MonsterBrush 🦷</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --pink: #FFB3DE;
+    --blue: #B3E5FC;
+    --green: #C8E6C9;
+    --yellow: #FFF9C4;
+    --purple: #E1BEE7;
+    --shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    background: linear-gradient(135deg, #e8d5f5 0%, #d0f0e8 100%);
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .screen.hidden {
+    opacity: 0; pointer-events: none; transform: scale(0.97);
+  }
+
+  /* ── SELECT SCREEN ── */
+  #select-screen {
+    background: linear-gradient(160deg, #f0d9ff 0%, #d0f5e8 100%);
+    padding: 24px 16px;
+    gap: 24px;
+  }
+
+  .select-title {
+    font-size: clamp(28px, 6vw, 48px);
+    color: #7B5EA7;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.6);
+    text-align: center;
+  }
+
+  .monster-cards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .monster-card {
+    background: white;
+    border-radius: 28px;
+    padding: 16px;
+    width: clamp(160px, 28vw, 260px);
+    display: flex; flex-direction: column;
+    align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    animation: float 3s ease-in-out infinite;
+    transition: transform 0.15s, box-shadow 0.15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .monster-card:nth-child(2) { animation-delay: 0.4s; }
+  .monster-card:nth-child(3) { animation-delay: 0.8s; }
+
+  .monster-card:active { transform: scale(0.93) !important; }
+  .monster-card:hover  { transform: scale(1.04); box-shadow: 0 10px 32px rgba(0,0,0,0.2); }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-10px); }
+  }
+
+  .monster-card img {
+    width: 100%; aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 18px;
+    display: block;
+  }
+
+  .monster-card .card-name {
+    font-size: clamp(18px, 3.5vw, 26px);
+    color: #555;
+  }
+
+  .monster-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  .coming-soon-badge {
+    background: #FFB3DE;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+  }
+
+  /* ── BRUSH SCREEN ── */
+  #brush-screen {
+    background: linear-gradient(160deg, #fce4f4 0%, #e3f2fd 100%);
+    padding: 0;
+    justify-content: flex-start;
+  }
+
+  .top-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    flex-shrink: 0;
+  }
+
+  .back-btn {
+    background: white;
+    border: none;
+    border-radius: 50%;
+    width: 52px; height: 52px;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back-btn:active { transform: scale(0.88); }
+
+  .center-label {
+    font-size: clamp(18px, 4vw, 28px);
+    color: #7B5EA7;
+    text-align: center;
+    flex: 1;
+  }
+
+  /* Timer */
+  .timer-wrap {
+    position: relative;
+    width: 52px; height: 52px;
+    flex-shrink: 0;
+  }
+  .timer-svg { width: 52px; height: 52px; transform: rotate(-90deg); }
+  .timer-track { fill: none; stroke: #e0e0e0; stroke-width: 4; }
+  .timer-ring  { fill: none; stroke: #FFB3DE; stroke-width: 4; stroke-linecap: round;
+                 stroke-dasharray: 138; stroke-dashoffset: 0;
+                 transition: stroke-dashoffset 1s linear, stroke 0.5s; }
+  .timer-text  {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: #7B5EA7; font-family: 'Fredoka One', cursive;
+    pointer-events: none;
+  }
+
+  /* Viewport */
+  .viewport-wrap {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .monster-viewport {
+    position: relative;
+    display: inline-block;
+    max-height: calc(100vh - 200px);
+    max-width: min(90vw, calc((100vh - 200px) * 2 / 3));
+    aspect-ratio: 2/3;
+    cursor: none;
+  }
+
+  .clean-layer {
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    border-radius: 24px;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+
+  #brush-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border-radius: 24px;
+    touch-action: none;
+  }
+
+  /* Bottom bar */
+  .bottom-bar {
+    width: 100%;
+    padding: 10px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .teeth-progress {
+    display: flex;
+    gap: 8px;
+    font-size: clamp(22px, 5vw, 34px);
+    line-height: 1;
+  }
+  .tooth-icon { transition: filter 0.4s; filter: grayscale(0.8) opacity(0.4); }
+  .tooth-icon.filled { filter: none; }
+
+  .btn-row {
+    display: flex;
+    gap: 14px;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 40px;
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(18px, 4vw, 26px);
+    padding: 14px 32px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s, box-shadow 0.15s;
+    min-height: 60px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.91); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+
+  .btn-restart { background: var(--yellow); color: #8D6E00; }
+  .btn-done    { background: #A5D6A7; color: #2E7D32; }
+
+  /* ── CUSTOM CURSOR ── */
+  #cursor {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    transform-origin: center center;
+    will-change: transform;
+  }
+  #cursor svg { width: 56px; height: 56px; transform: rotate(45deg); }
+  #cursor.brushing { animation: wobble 0.12s ease-in-out infinite alternate; }
+
+  @keyframes wobble {
+    from { transform: rotate(-6deg); }
+    to   { transform: rotate(6deg); }
+  }
+
+  /* ── SPARKLES ── */
+  .sparkle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    font-size: 16px;
+    animation: sparkle-up 0.5s ease-out forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes sparkle-up {
+    0%   { transform: translate(0, 0) scale(0.5); opacity: 1; }
+    100% { transform: translate(var(--sx), var(--sy)) scale(1.4); opacity: 0; }
+  }
+
+  /* ── CELEBRATION ── */
+  #celebration {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px;
+    padding: 24px;
+    background: rgba(100, 50, 160, 0.72);
+    backdrop-filter: blur(4px);
+    animation: fadein 0.4s ease;
+  }
+  #celebration.hidden { display: none; }
+
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+  .celeb-img {
+    width: min(280px, 65vw);
+    height: min(280px, 65vw);
+    object-fit: contain;
+    border-radius: 28px;
+    animation: pulse-glow 1.5s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.8);
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px 4px rgba(255,220,255,0.6); }
+    50%       { box-shadow: 0 0 50px 20px rgba(255,220,255,0.9); }
+  }
+
+  .celeb-title {
+    font-size: clamp(32px, 8vw, 60px);
+    color: white;
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.2);
+    animation: bounce-in 0.5s cubic-bezier(.36,1.6,.4,1) both;
+    text-align: center;
+  }
+  @keyframes bounce-in {
+    from { opacity: 0; transform: scale(0.4); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .celeb-btns { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .btn-play-again  { background: #FFB3DE; color: #8B0053; }
+  .btn-choose-other { background: white;   color: #7B5EA7; }
+
+  /* confetti */
+  .confetti-piece {
+    position: fixed;
+    pointer-events: none;
+    z-index: 99;
+    border-radius: 3px;
+    animation: confetti-fall var(--dur) ease-in var(--delay) forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes confetti-fall {
+    0%   { transform: translate(0, -20px) rotate(0deg);   opacity: 1; }
+    100% { transform: translate(var(--cx), var(--cy)) rotate(var(--cr)); opacity: 0; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-height: 600px) {
+    .monster-viewport { max-width: min(70vw, calc(100vh - 180px)); }
+    .top-bar { padding: 6px 12px 4px; }
+    .bottom-bar { padding: 6px 12px 10px; gap: 6px; }
+    .btn { padding: 10px 24px; font-size: 18px; min-height: 50px; }
+  }
+
+  @media (max-width: 400px) {
+    .monster-cards { gap: 12px; }
+    .monster-card  { width: clamp(130px, 42vw, 200px); padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 1: CHARACTER SELECT
+════════════════════════════════════════════ -->
+<div id="select-screen" class="screen">
+  <h1 class="select-title">Who needs a brushing? 🦷</h1>
+  <div class="monster-cards" id="monster-cards"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 2: BRUSH SCREEN
+════════════════════════════════════════════ -->
+<div id="brush-screen" class="screen hidden">
+  <div class="top-bar">
+    <button class="back-btn" id="back-btn" aria-label="Back">←</button>
+    <span class="center-label" id="brush-label">Time to brush! 🪥</span>
+    <div class="timer-wrap" id="timer-wrap">
+      <svg class="timer-svg" viewBox="0 0 48 48">
+        <circle class="timer-track" cx="24" cy="24" r="22"/>
+        <circle class="timer-ring"  cx="24" cy="24" r="22" id="timer-ring"/>
+      </svg>
+      <div class="timer-text" id="timer-text">2:00</div>
+    </div>
+  </div>
+
+  <div class="viewport-wrap">
+    <div class="monster-viewport" id="monster-viewport">
+      <img class="clean-layer" id="clean-img" src="" alt="clean monster">
+      <canvas id="brush-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="teeth-progress" id="teeth-progress"></div>
+    <div class="btn-row">
+      <button class="btn btn-restart" id="restart-btn">↺ Restart</button>
+      <button class="btn btn-done"    id="done-btn">✓ All Done!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN 3: CELEBRATION OVERLAY
+════════════════════════════════════════════ -->
+<div id="celebration" class="hidden">
+  <img id="celeb-img" src="" alt="clean monster" class="celeb-img">
+  <div class="celeb-title">Squeaky Clean! ⭐</div>
+  <div class="celeb-btns">
+    <button class="btn btn-play-again"   id="play-again-btn">Play Again</button>
+    <button class="btn btn-choose-other" id="choose-other-btn">Choose Another</button>
+  </div>
+</div>
+
+<!-- Custom cursor -->
+<div id="cursor">
+  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- handle -->
+    <rect x="28" y="36" width="8" height="22" rx="4" fill="#B0BEC5"/>
+    <!-- head -->
+    <rect x="22" y="8"  width="20" height="28" rx="6" fill="white" stroke="#90CAF9" stroke-width="2"/>
+    <!-- bristles -->
+    <rect x="24" y="10" width="3" height="14" rx="1.5" fill="#81D4FA"/>
+    <rect x="30" y="10" width="3" height="14" rx="1.5" fill="#FFB3DE"/>
+    <rect x="36" y="10" width="3" height="14" rx="1.5" fill="#A5D6A7"/>
+    <!-- toothpaste blob -->
+    <circle cx="25" cy="9" r="3" fill="#FFE082"/>
+  </svg>
+</div>
+
+<script>
+'use strict';
+
+/* ══════════════════════════════════════════
+   DATA
+════════════════════════════════════════════ */
+const MONSTERS = [
+  { id: 1, name: 'Fluffy',  color: '#FFB3DE', clean: 'monsterbrush/monster1_clean.avif', dirty: 'monsterbrush/monster1_dirty.avif' },
+  { id: 2, name: 'Pajamas', color: '#B3E5FC', clean: 'monsterbrush/monster2_clean.avif', dirty: 'monsterbrush/monster2_dirty.avif' },
+  { id: 3, name: 'Zapper',  color: '#C8E6C9', clean: 'monsterbrush/monster3_clean.avif', dirty: 'monsterbrush/monster3_dirty.avif' },
+];
+
+const BRUSH_RADIUS   = 44;   // canvas px
+const CELEBRATE_AT   = 0.75; // 75% revealed
+const SAMPLE_INTERVAL = 200; // ms
+const TIMER_SECS     = 120;
+const SPARKLE_CHARS  = ['✦', '✧', '★', '⭐', '💧', '·', '•'];
+const PASTEL_COLORS  = ['#FFB3DE','#B3E5FC','#C8E6C9','#FFF9C4','#E1BEE7','#FFD8B1'];
+const TEETH_COUNT    = 5;
+
+/* ══════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let currentMonster  = null;
+let dirtyImageCache = {};   // id → Image
+let cleanImageCache = {};
+let isDrawing       = false;
+let celebrated      = false;
+let timerInterval   = null;
+let timerRemaining  = TIMER_SECS;
+let sampleTimeout   = null;
+let rafPending      = false;
+let cursorX = 0, cursorY = 0;
+
+/* ══════════════════════════════════════════
+   DOM REFS
+════════════════════════════════════════════ */
+const selectScreen  = document.getElementById('select-screen');
+const brushScreen   = document.getElementById('brush-screen');
+const celebration   = document.getElementById('celebration');
+const monsterCards  = document.getElementById('monster-cards');
+const brushLabel    = document.getElementById('brush-label');
+const cleanImg      = document.getElementById('clean-img');
+const brushCanvas   = document.getElementById('brush-canvas');
+const ctx           = brushCanvas.getContext('2d', { willReadFrequently: true });
+const teethProgress = document.getElementById('teeth-progress');
+const backBtn       = document.getElementById('back-btn');
+const restartBtn    = document.getElementById('restart-btn');
+const doneBtn       = document.getElementById('done-btn');
+const playAgainBtn  = document.getElementById('play-again-btn');
+const chooseOtherBtn= document.getElementById('choose-other-btn');
+const timerText     = document.getElementById('timer-text');
+const timerRing     = document.getElementById('timer-ring');
+const cursorEl      = document.getElementById('cursor');
+const celebImg      = document.getElementById('celeb-img');
+const viewport      = document.getElementById('monster-viewport');
+
+const RING_C = 2 * Math.PI * 22; // circumference ≈ 138
+
+/* ══════════════════════════════════════════
+   BUILD SELECT SCREEN
+════════════════════════════════════════════ */
+function buildSelectScreen() {
+  monsterCards.innerHTML = '';
+  MONSTERS.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'monster-card';
+    card.dataset.id = m.id;
+
+    const img = document.createElement('img');
+    img.alt = m.name;
+
+    // Test if dirty image exists
+    const testDirty = dirtyImageCache[m.id] || new Image();
+    if (!dirtyImageCache[m.id]) {
+      testDirty.src = m.dirty;
+      dirtyImageCache[m.id] = testDirty;
+    }
+
+    if (testDirty.complete && testDirty.naturalWidth === 0) {
+      // failed
+      disableCard(card, img, m);
+    } else {
+      testDirty.onload  = () => { img.src = m.dirty; };
+      testDirty.onerror = () => { disableCard(card, img, m); };
+      if (testDirty.complete && testDirty.naturalWidth > 0) img.src = m.dirty;
+    }
+
+    const name = document.createElement('div');
+    name.className = 'card-name';
+    name.textContent = m.name;
+
+    card.appendChild(img);
+    card.appendChild(name);
+    card.addEventListener('click', () => startBrush(m));
+    card.style.setProperty('border', `3px solid ${m.color}`);
+
+    monsterCards.appendChild(card);
+  });
+}
+
+function disableCard(card, img, m) {
+  img.src = m.clean;
+  card.classList.add('disabled');
+  const badge = document.createElement('div');
+  badge.className = 'coming-soon-badge';
+  badge.textContent = 'Coming soon!';
+  card.appendChild(badge);
+}
+
+/* ══════════════════════════════════════════
+   SCREEN TRANSITIONS
+════════════════════════════════════════════ */
+function showScreen(el) {
+  [selectScreen, brushScreen].forEach(s => s.classList.add('hidden'));
+  el.classList.remove('hidden');
+}
+
+/* ══════════════════════════════════════════
+   BRUSH SCREEN
+════════════════════════════════════════════ */
+function startBrush(monster) {
+  currentMonster = monster;
+  celebrated = false;
+
+  brushLabel.textContent = `${monster.name} — Time to brush! 🪥`;
+  cleanImg.src = monster.clean;
+  celebImg.src = monster.clean;
+
+  // Ensure dirty image loaded
+  const dirty = dirtyImageCache[monster.id] || new Image();
+  if (!dirty.src) { dirty.src = monster.dirty; dirtyImageCache[monster.id] = dirty; }
+
+  // Ensure clean image cached
+  const clean = cleanImageCache[monster.id] || new Image();
+  if (!clean.src) { clean.src = monster.clean; cleanImageCache[monster.id] = clean; }
+
+  buildTeeth();
+  resetTimer();
+  showScreen(brushScreen);
+
+  // rAF ensures browser has finished layout before we read getBoundingClientRect
+  const doSize = () => requestAnimationFrame(() => { sizeCanvas(); drawDirty(); });
+  cleanImg.onload = doSize;
+  if (cleanImg.complete) doSize();
+}
+
+function sizeCanvas() {
+  // Use offsetWidth/Height (not affected by CSS transforms like the
+  // screen-transition scale(0.97)).  Let CSS width:100%/height:100%
+  // handle display sizing so the canvas always matches the clean image.
+  brushCanvas.width  = cleanImg.offsetWidth;
+  brushCanvas.height = cleanImg.offsetHeight;
+}
+
+function drawDirty() {
+  const dirty = dirtyImageCache[currentMonster.id];
+  const doRender = () => {
+    ctx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(dirty, 0, 0, brushCanvas.width, brushCanvas.height);
+    celebrated = false;
+    updateTeeth(0);
+  };
+  if (dirty.complete && dirty.naturalWidth > 0) {
+    doRender();
+  } else {
+    dirty.onload = doRender;
+  }
+}
+
+/* ══════════════════════════════════════════
+   BRUSHING
+════════════════════════════════════════════ */
+function getCanvasPos(clientX, clientY) {
+  const rect = brushCanvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (brushCanvas.width  / rect.width),
+    y: (clientY - rect.top)  * (brushCanvas.height / rect.height),
+  };
+}
+
+function brush(clientX, clientY) {
+  const { x, y } = getCanvasPos(clientX, clientY);
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(x, y, BRUSH_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function scheduleSample() {
+  if (sampleTimeout) return;
+  sampleTimeout = setTimeout(() => {
+    sampleTimeout = null;
+    if (!celebrated) checkProgress();
+  }, SAMPLE_INTERVAL);
+}
+
+function checkProgress() {
+  const data   = ctx.getImageData(0, 0, brushCanvas.width, brushCanvas.height).data;
+  let transparent = 0;
+  // Sample every 4th pixel for speed
+  for (let i = 3; i < data.length; i += 16) {
+    if (data[i] < 64) transparent++;
+  }
+  const total   = data.length / 16;
+  const ratio   = transparent / total;
+  updateTeeth(ratio);
+  if (ratio >= CELEBRATE_AT) celebrate();
+}
+
+/* ══════════════════════════════════════════
+   TEETH PROGRESS
+════════════════════════════════════════════ */
+function buildTeeth() {
+  teethProgress.innerHTML = '';
+  for (let i = 0; i < TEETH_COUNT; i++) {
+    const span = document.createElement('span');
+    span.className = 'tooth-icon';
+    span.textContent = '🦷';
+    teethProgress.appendChild(span);
+  }
+}
+
+function updateTeeth(ratio) {
+  const filled = Math.round(ratio * TEETH_COUNT);
+  const icons  = teethProgress.querySelectorAll('.tooth-icon');
+  icons.forEach((el, i) => {
+    el.classList.toggle('filled', i < filled);
+  });
+}
+
+/* ══════════════════════════════════════════
+   TIMER
+════════════════════════════════════════════ */
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRemaining = TIMER_SECS;
+  updateTimerDisplay();
+  timerInterval = setInterval(tickTimer, 1000);
+}
+
+function tickTimer() {
+  timerRemaining--;
+  updateTimerDisplay();
+  if (timerRemaining <= 0) clearInterval(timerInterval);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(timerRemaining / 60);
+  const s = timerRemaining % 60;
+  timerText.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  const progress = 1 - (timerRemaining / TIMER_SECS);
+  timerRing.style.strokeDashoffset = RING_C * (1 - progress);
+  // color shift: pink → green
+  const hue = Math.round(progress * 120);
+  timerRing.style.stroke = `hsl(${hue}, 70%, 65%)`;
+}
+
+/* ══════════════════════════════════════════
+   CELEBRATION
+════════════════════════════════════════════ */
+function celebrate() {
+  if (celebrated) return;
+  celebrated = true;
+  clearInterval(timerInterval);
+  celebration.classList.remove('hidden');
+  spawnConfetti();
+}
+
+function hideCelebration() {
+  celebration.classList.add('hidden');
+  clearConfetti();
+}
+
+function spawnConfetti() {
+  const colors = ['#FFB3DE','#B3E5FC','#C8E6C9','#FFF9C4','#E1BEE7','#FF8A65','#80CBC4'];
+  for (let i = 0; i < 70; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    const size = 8 + Math.random() * 10;
+    const startX = Math.random() * window.innerWidth;
+    const cx = (Math.random() - 0.5) * 300;
+    const cy = window.innerHeight * 0.5 + Math.random() * window.innerHeight * 0.6;
+    const rot = (Math.random() - 0.5) * 720;
+    el.style.cssText = `
+      left: ${startX}px; top: 0;
+      width: ${size}px; height: ${size * (0.5 + Math.random())}px;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      --cx: ${cx}px; --cy: ${cy}px; --cr: ${rot}deg;
+      --dur: ${1.2 + Math.random() * 1.6}s;
+      --delay: ${Math.random() * 0.8}s;
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+function clearConfetti() {
+  document.querySelectorAll('.confetti-piece').forEach(e => e.remove());
+}
+
+/* ══════════════════════════════════════════
+   SPARKLES
+════════════════════════════════════════════ */
+function spawnSparkles(clientX, clientY) {
+  const count = 2 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'sparkle';
+    el.textContent = SPARKLE_CHARS[Math.floor(Math.random() * SPARKLE_CHARS.length)];
+    el.style.cssText = `
+      left: ${clientX - 8}px; top: ${clientY - 8}px;
+      color: ${PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)]};
+      --sx: ${(Math.random() - 0.5) * 60}px;
+      --sy: ${-(20 + Math.random() * 40)}px;
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+/* ══════════════════════════════════════════
+   CURSOR
+════════════════════════════════════════════ */
+function showCursor(x, y) {
+  cursorEl.style.display = 'block';
+  cursorEl.style.left = (x - 28) + 'px';
+  cursorEl.style.top  = (y - 28) + 'px';
+}
+function hideCursorEl() { cursorEl.style.display = 'none'; }
+
+function moveCursor(x, y) {
+  cursorX = x; cursorY = y;
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(() => {
+      showCursor(cursorX, cursorY);
+      rafPending = false;
+    });
+  }
+}
+
+/* ══════════════════════════════════════════
+   CANVAS EVENT HANDLERS
+════════════════════════════════════════════ */
+let lastSparkle = 0;
+
+function handleBrush(clientX, clientY) {
+  if (!isDrawing) return;
+  brush(clientX, clientY);
+  moveCursor(clientX, clientY);
+
+  const now = Date.now();
+  if (now - lastSparkle > 60) {
+    spawnSparkles(clientX, clientY);
+    lastSparkle = now;
+  }
+  scheduleSample();
+}
+
+// Touch
+brushCanvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  isDrawing = true;
+  cursorEl.classList.add('brushing');
+  const t = e.touches[0];
+  moveCursor(t.clientX, t.clientY);
+}, { passive: false });
+
+brushCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  handleBrush(t.clientX, t.clientY);
+}, { passive: false });
+
+brushCanvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  isDrawing = false;
+  cursorEl.classList.remove('brushing');
+}, { passive: false });
+
+// Mouse
+brushCanvas.addEventListener('mousedown', e => {
+  isDrawing = true;
+  cursorEl.classList.add('brushing');
+  moveCursor(e.clientX, e.clientY);
+});
+
+brushCanvas.addEventListener('mousemove', e => {
+  moveCursor(e.clientX, e.clientY);
+  handleBrush(e.clientX, e.clientY);
+});
+
+brushCanvas.addEventListener('mouseup',   () => { isDrawing = false; cursorEl.classList.remove('brushing'); });
+brushCanvas.addEventListener('mouseleave',() => { isDrawing = false; hideCursorEl(); cursorEl.classList.remove('brushing'); });
+brushCanvas.addEventListener('mouseenter',() => { cursorEl.style.display = 'block'; });
+
+/* ══════════════════════════════════════════
+   BUTTON HANDLERS
+════════════════════════════════════════════ */
+backBtn.addEventListener('click', () => {
+  clearInterval(timerInterval);
+  hideCelebration();
+  showScreen(selectScreen);
+});
+
+restartBtn.addEventListener('click', () => {
+  hideCelebration();
+  celebrated = false;
+  clearInterval(timerInterval);
+  sizeCanvas();
+  drawDirty();
+  resetTimer();
+});
+
+doneBtn.addEventListener('click', () => celebrate());
+
+playAgainBtn.addEventListener('click', () => {
+  hideCelebration();
+  celebrated = false;
+  sizeCanvas();
+  drawDirty();
+  resetTimer();
+});
+
+chooseOtherBtn.addEventListener('click', () => {
+  hideCelebration();
+  clearInterval(timerInterval);
+  showScreen(selectScreen);
+});
+
+/* ══════════════════════════════════════════
+   RESIZE HANDLER
+════════════════════════════════════════════ */
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (!brushScreen.classList.contains('hidden') && currentMonster) {
+      sizeCanvas();
+      drawDirty();
+    }
+  }, 200);
+});
+
+/* ══════════════════════════════════════════
+   PRELOAD IMAGES
+════════════════════════════════════════════ */
+function preloadAll() {
+  MONSTERS.forEach(m => {
+    const d = new Image();
+    d.src = m.dirty;
+    dirtyImageCache[m.id] = d;
+
+    const c = new Image();
+    c.src = m.clean;
+    cleanImageCache[m.id] = c;
+  });
+}
+
+/* ══════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+preloadAll();
+buildSelectScreen();
+</script>
+</body>
+</html>
