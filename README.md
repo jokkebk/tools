@@ -10,6 +10,7 @@
 * [jokeripokeri_advisor](jokeripokeri_advisor.html)
 * [jokeripokeri_trainer](jokeripokeri_trainer.html)
 * [launchpad_test](launchpad_test.html)
+* [monsterbrush](monsterbrush.html)
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
 * [samefile](samefile.html)
@@ -19,6 +20,13 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [monsterbrush](monsterbrush.html)
+
+> last updated: 2026-02-21 18:45:58
+> Monsterbrush
+>
+> [view commit](https://github.com/jokkebk/tools/commit/7ad56d79447900b96e697997389ec3e5cd94d4f8)
 
 ### [samefile](samefile.html)
 
