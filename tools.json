@@ -79,9 +79,9 @@
     },
     "monsterbrush.html": {
       "last_commit": {
-        "hash": "7ad56d79447900b96e697997389ec3e5cd94d4f8",
-        "date": "2026-02-21T18:45:58+02:00",
-        "message": "Monsterbrush"
+        "hash": "306686633875301c4b7cfdc5af23e81b9e2b3d5f",
+        "date": "2026-02-22T21:11:26+02:00",
+        "message": "Remove teeth progress bar"
       }
     },
     "wordle.html": {

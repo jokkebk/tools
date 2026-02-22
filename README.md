@@ -23,10 +23,10 @@
 
 ### [monsterbrush](monsterbrush.html)
 
-> last updated: 2026-02-21 18:45:58
-> Monsterbrush
+> last updated: 2026-02-22 21:11:26
+> Remove teeth progress bar
 >
-> [view commit](https://github.com/jokkebk/tools/commit/7ad56d79447900b96e697997389ec3e5cd94d4f8)
+> [view commit](https://github.com/jokkebk/tools/commit/306686633875301c4b7cfdc5af23e81b9e2b3d5f)
 
 ### [samefile](samefile.html)
 
