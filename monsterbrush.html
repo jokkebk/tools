@@ -215,15 +215,6 @@
     flex-shrink: 0;
   }
 
-  .teeth-progress {
-    display: flex;
-    gap: 8px;
-    font-size: clamp(22px, 5vw, 34px);
-    line-height: 1;
-  }
-  .tooth-icon { transition: filter 0.4s; filter: grayscale(0.8) opacity(0.4); }
-  .tooth-icon.filled { filter: none; }
-
   .btn-row {
     display: flex;
     gap: 14px;
@@ -384,7 +375,6 @@
   </div>
 
   <div class="bottom-bar">
-    <div class="teeth-progress" id="teeth-progress"></div>
     <div class="btn-row">
       <button class="btn btn-restart" id="restart-btn">↺ Restart</button>
       <button class="btn btn-done"    id="done-btn">✓ All Done!</button>
@@ -433,12 +423,13 @@ const MONSTERS = [
 ];
 
 const BRUSH_RADIUS   = 44;   // canvas px
+const BRUSH_CENTER_ALPHA = 0.6;
+const BRUSH_MID_ALPHA = 0.28;
 const CELEBRATE_AT   = 0.75; // 75% revealed
 const SAMPLE_INTERVAL = 200; // ms
 const TIMER_SECS     = 120;
 const SPARKLE_CHARS  = ['✦', '✧', '★', '⭐', '💧', '·', '•'];
 const PASTEL_COLORS  = ['#FFB3DE','#B3E5FC','#C8E6C9','#FFF9C4','#E1BEE7','#FFD8B1'];
-const TEETH_COUNT    = 5;
 
 /* ══════════════════════════════════════════
    STATE
@@ -465,7 +456,6 @@ const brushLabel    = document.getElementById('brush-label');
 const cleanImg      = document.getElementById('clean-img');
 const brushCanvas   = document.getElementById('brush-canvas');
 const ctx           = brushCanvas.getContext('2d', { willReadFrequently: true });
-const teethProgress = document.getElementById('teeth-progress');
 const backBtn       = document.getElementById('back-btn');
 const restartBtn    = document.getElementById('restart-btn');
 const doneBtn       = document.getElementById('done-btn');
@@ -557,7 +547,6 @@ function startBrush(monster) {
   const clean = cleanImageCache[monster.id] || new Image();
   if (!clean.src) { clean.src = monster.clean; cleanImageCache[monster.id] = clean; }
 
-  buildTeeth();
   resetTimer();
   showScreen(brushScreen);
 
@@ -582,7 +571,6 @@ function drawDirty() {
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(dirty, 0, 0, brushCanvas.width, brushCanvas.height);
     celebrated = false;
-    updateTeeth(0);
   };
   if (dirty.complete && dirty.naturalWidth > 0) {
     doRender();
@@ -605,6 +593,11 @@ function getCanvasPos(clientX, clientY) {
 function brush(clientX, clientY) {
   const { x, y } = getCanvasPos(clientX, clientY);
   ctx.globalCompositeOperation = 'destination-out';
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, BRUSH_RADIUS);
+  gradient.addColorStop(0, `rgba(0, 0, 0, ${BRUSH_CENTER_ALPHA})`);
+  gradient.addColorStop(0.55, `rgba(0, 0, 0, ${BRUSH_MID_ALPHA})`);
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(x, y, BRUSH_RADIUS, 0, Math.PI * 2);
   ctx.fill();
@@ -627,29 +620,7 @@ function checkProgress() {
   }
   const total   = data.length / 16;
   const ratio   = transparent / total;
-  updateTeeth(ratio);
   if (ratio >= CELEBRATE_AT) celebrate();
-}
-
-/* ══════════════════════════════════════════
-   TEETH PROGRESS
-════════════════════════════════════════════ */
-function buildTeeth() {
-  teethProgress.innerHTML = '';
-  for (let i = 0; i < TEETH_COUNT; i++) {
-    const span = document.createElement('span');
-    span.className = 'tooth-icon';
-    span.textContent = '🦷';
-    teethProgress.appendChild(span);
-  }
-}
-
-function updateTeeth(ratio) {
-  const filled = Math.round(ratio * TEETH_COUNT);
-  const icons  = teethProgress.querySelectorAll('.tooth-icon');
-  icons.forEach((el, i) => {
-    el.classList.toggle('filled', i < filled);
-  });
 }
 
 /* ══════════════════════════════════════════
