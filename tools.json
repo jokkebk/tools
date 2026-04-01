@@ -1,101 +1,10 @@
 {
   "pages": {
-    "pianotrainer.html": {
-      "last_commit": {
-        "hash": "594cd68236c86c08329fa290929963bf4a0fc273",
-        "date": "2025-12-28T13:03:03+02:00",
-        "message": "Left/right hand piano trainer"
-      }
-    },
-    "blackjack_trainer.html": {
-      "last_commit": {
-        "hash": "868a96d54419da1a8e6a440f382b27c3714c87ab",
-        "date": "2025-12-28T13:20:23+02:00",
-        "message": "Blackjack trainer for basic strategy"
-      }
-    },
-    "zipview-opus45.html": {
-      "last_commit": {
-        "hash": "18535cf925056e4946444e777e16524f2ffa7170",
-        "date": "2025-12-16T21:43:39+02:00",
-        "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
-      }
-    },
     "jokeripokeri_trainer.html": {
       "last_commit": {
         "hash": "964330e160f52fe70b6f2a703a2804e2f5838a88",
         "date": "2025-12-29T15:29:23+02:00",
         "message": "Jokeripokeri optimal selection trainer redone to SPA w. Opus 4.5"
-      }
-    },
-    "rushhour.html": {
-      "last_commit": {
-        "hash": "4f8ad3d61ed235494353d2456270ac57da68e0b3",
-        "date": "2025-12-28T20:46:40+02:00",
-        "message": "Rush Hour solver, UI pimped with Claude Opus 4.5"
-      }
-    },
-    "jokeripokeri_advisor.html": {
-      "last_commit": {
-        "hash": "2279684e6b2f281acd34b567f45db692334c544b",
-        "date": "2025-12-29T17:30:12+02:00",
-        "message": "Jokeripokeri advisor tool with image upload capability w. Google API key"
-      }
-    },
-    "launchpad_test.html": {
-      "last_commit": {
-        "hash": "b82b9593e6e7b19fab147594dd2df49e5cd48965",
-        "date": "2026-01-04T09:28:22+02:00",
-        "message": "Novation Launchpad Mk3 test suite and snake/blob games"
-      }
-    },
-    "samefile.html": {
-      "last_commit": {
-        "hash": "2b6a16d11e95da254dc2d5d0993f0cec56e06634",
-        "date": "2026-01-27T13:30:01+02:00",
-        "message": "Add filters and docs for samefile tool"
-      }
-    },
-    "triangles.html": {
-      "last_commit": {
-        "hash": "53648a544444ea98f3748a39b8b761ec880e54ff",
-        "date": "2026-01-08T13:33:30+02:00",
-        "message": "Add triangle evolution image approximator\n\nGenetic algorithm tool that approximates images using semi-transparent\ntriangles. Features sample images from Wikimedia Commons, live progress\ntracking, stop button, high-res PNG export, and JSON export.\n\nAlso clarifies in CLAUDE.md that sidecar .md files should be 2-3 sentences.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
-      }
-    },
-    "crt_simulator.html": {
-      "last_commit": {
-        "hash": "e6d08e7c3ce55d81adb294cf6978163ade4664bb",
-        "date": "2026-01-08T11:25:52+02:00",
-        "message": "Add CRT display simulator with phosphor grain rendering\n\nSimulates classic CRT displays with authentic RGB shadow mask pattern,\nscanlines, and luminance noise. Supports three resolution modes\n(SPECTRUM, CGA, VGA) with auto-selection based on viewport size.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
-      }
-    },
-    "christmas-screensaver-opus45.html": {
-      "last_commit": {
-        "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",
-        "date": "2025-12-18T09:03:18+02:00",
-        "message": "Claude Opus 4.5 Christmas screensaver two-prompt test"
-      }
-    },
-    "monsterbrush.html": {
-      "last_commit": {
-        "hash": "306686633875301c4b7cfdc5af23e81b9e2b3d5f",
-        "date": "2026-02-22T21:11:26+02:00",
-        "message": "Remove teeth progress bar"
-      }
-    },
-    "wordle.html": {
-      "last_commit": {
-        "hash": "351f0b016a72f78fb39b18e0d89fe9dc729f741d",
-        "date": "2025-12-28T19:53:38+02:00",
-        "message": "Wordle letter order brute forcer for the lazy"
-      }
-    },
-    "zipview-gpt52pro.html": {
-      "last_commit": {
-        "hash": "18535cf925056e4946444e777e16524f2ffa7170",
-        "date": "2025-12-16T21:43:39+02:00",
-        "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
       }
     },
     "firefighter.html": {
@@ -105,11 +14,102 @@
         "message": "Add PWA support for fullscreen mobile experience\n\n- Add web app manifest for \"Add to Home Screen\" functionality\n- Add PWA meta tags for iOS and Android\n- Use dynamic viewport height (dvh) to account for browser UI\n- Add safe area insets for notched devices\n- Request fullscreen when game starts\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
       }
     },
+    "wordle.html": {
+      "last_commit": {
+        "hash": "351f0b016a72f78fb39b18e0d89fe9dc729f741d",
+        "date": "2025-12-28T19:53:38+02:00",
+        "message": "Wordle letter order brute forcer for the lazy"
+      }
+    },
+    "triangles.html": {
+      "last_commit": {
+        "hash": "53648a544444ea98f3748a39b8b761ec880e54ff",
+        "date": "2026-01-08T13:33:30+02:00",
+        "message": "Add triangle evolution image approximator\n\nGenetic algorithm tool that approximates images using semi-transparent\ntriangles. Features sample images from Wikimedia Commons, live progress\ntracking, stop button, high-res PNG export, and JSON export.\n\nAlso clarifies in CLAUDE.md that sidecar .md files should be 2-3 sentences.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+      }
+    },
+    "rushhour.html": {
+      "last_commit": {
+        "hash": "4f8ad3d61ed235494353d2456270ac57da68e0b3",
+        "date": "2025-12-28T20:46:40+02:00",
+        "message": "Rush Hour solver, UI pimped with Claude Opus 4.5"
+      }
+    },
+    "christmas-screensaver-opus45.html": {
+      "last_commit": {
+        "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",
+        "date": "2025-12-18T09:03:18+02:00",
+        "message": "Claude Opus 4.5 Christmas screensaver two-prompt test"
+      }
+    },
+    "zipview-opus45.html": {
+      "last_commit": {
+        "hash": "18535cf925056e4946444e777e16524f2ffa7170",
+        "date": "2025-12-16T21:43:39+02:00",
+        "message": "Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet."
+      }
+    },
+    "blackjack_trainer.html": {
+      "last_commit": {
+        "hash": "868a96d54419da1a8e6a440f382b27c3714c87ab",
+        "date": "2025-12-28T13:20:23+02:00",
+        "message": "Blackjack trainer for basic strategy"
+      }
+    },
+    "zipview-gpt52pro.html": {
+      "last_commit": {
+        "hash": "bd617d039f0fdcf15a3b9298104a12ea4cdadd77",
+        "date": "2026-04-01T07:41:29+03:00",
+        "message": "Zipview zoom to clicked position"
+      }
+    },
+    "samefile.html": {
+      "last_commit": {
+        "hash": "2b6a16d11e95da254dc2d5d0993f0cec56e06634",
+        "date": "2026-01-27T13:30:01+02:00",
+        "message": "Add filters and docs for samefile tool"
+      }
+    },
+    "pianotrainer.html": {
+      "last_commit": {
+        "hash": "594cd68236c86c08329fa290929963bf4a0fc273",
+        "date": "2025-12-28T13:03:03+02:00",
+        "message": "Left/right hand piano trainer"
+      }
+    },
+    "launchpad_test.html": {
+      "last_commit": {
+        "hash": "b82b9593e6e7b19fab147594dd2df49e5cd48965",
+        "date": "2026-01-04T09:28:22+02:00",
+        "message": "Novation Launchpad Mk3 test suite and snake/blob games"
+      }
+    },
     "find_fraction.html": {
       "last_commit": {
         "hash": "a7af8d2895c54886b5efa5ebfd0cf9a6ca8dcadf",
         "date": "2025-12-28T20:09:07+02:00",
         "message": "Find the fraction corresponding to a decimal number"
+      }
+    },
+    "monsterbrush.html": {
+      "last_commit": {
+        "hash": "306686633875301c4b7cfdc5af23e81b9e2b3d5f",
+        "date": "2026-02-22T21:11:26+02:00",
+        "message": "Remove teeth progress bar"
+      }
+    },
+    "crt_simulator.html": {
+      "last_commit": {
+        "hash": "e6d08e7c3ce55d81adb294cf6978163ade4664bb",
+        "date": "2026-01-08T11:25:52+02:00",
+        "message": "Add CRT display simulator with phosphor grain rendering\n\nSimulates classic CRT displays with authentic RGB shadow mask pattern,\nscanlines, and luminance noise. Supports three resolution modes\n(SPECTRUM, CGA, VGA) with auto-selection based on viewport size.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+      }
+    },
+    "jokeripokeri_advisor.html": {
+      "last_commit": {
+        "hash": "2279684e6b2f281acd34b567f45db692334c544b",
+        "date": "2025-12-29T17:30:12+02:00",
+        "message": "Jokeripokeri advisor tool with image upload capability w. Google API key"
       }
     }
   }

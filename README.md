@@ -21,6 +21,15 @@
 
 ## Tools
 
+### [zipview-gpt52pro](zipview-gpt52pro.html)
+
+This ZIP Image Viewer decompresses archives entirely in the browser with fflate, lazily creating thumbnails as it filters supported image extensions, and it exposes a sticky top bar once content loads.  Grid tiles overlay names, file sizes, and thumb placeholders while a fullscreen viewer supports fit/1:1 toggling, pointer-lock panning, and keyboard navigation between images.  Drop hints, drag-over styling, and a reset button keep interactions discoverable, so it behaves like a polished photo review utility without ever uploading your files.
+
+> last updated: 2026-04-01 07:41:29
+> Zipview zoom to clicked position
+>
+> [view commit](https://github.com/jokkebk/tools/commit/bd617d039f0fdcf15a3b9298104a12ea4cdadd77)
+
 ### [monsterbrush](monsterbrush.html)
 
 > last updated: 2026-02-22 21:11:26
@@ -176,15 +185,6 @@ Nordic Christmas Night layers WebGL aurora ribbons, a scene canvas, and a snow c
 ### [zipview-opus45](zipview-opus45.html)
 
 Drop a ZIP file that contains JPEG/PNG/GIF/WebP images anywhere on the page and the client decompresses it with fflate, filters to supported extensions, and populates a responsive thumbnail grid.  Each thumbnail lazily loads a blob URL, and clicking one opens a fullscreen viewer that supports fit and pointer-locked 1:1 navigation plus keyboard or wheel-based image stepping.  The app keeps your ZIP processing local, shows an extractor spinner while indexing contents, and overlays contextual tips for zooming and panning.
-
-> last updated: 2025-12-16 21:43:39
-> Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet.
->
-> [view commit](https://github.com/jokkebk/tools/commit/18535cf925056e4946444e777e16524f2ffa7170)
-
-### [zipview-gpt52pro](zipview-gpt52pro.html)
-
-This ZIP Image Viewer decompresses archives entirely in the browser with fflate, lazily creating thumbnails as it filters supported image extensions, and it exposes a sticky top bar once content loads.  Grid tiles overlay names, file sizes, and thumb placeholders while a fullscreen viewer supports fit/1:1 toggling, pointer-lock panning, and keyboard navigation between images.  Drop hints, drag-over styling, and a reset button keep interactions discoverable, so it behaves like a polished photo review utility without ever uploading your files.
 
 > last updated: 2025-12-16 21:43:39
 > Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet.
