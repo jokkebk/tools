@@ -435,10 +435,14 @@
     });
 
     // Viewer left click: go deeper (fit -> 1:1). Viewer right click: go back.
-    elViewer.addEventListener("click", () => {
+    elViewer.addEventListener("click", (e) => {
       if (state.viewerIndex == null) return;
       if (state.viewerMode === "fit") {
-        setViewerMode("one");
+        // Capture where the user clicked relative to the displayed image
+        const imgRect = elViewerImg.getBoundingClientRect();
+        const relX = clamp((e.clientX - imgRect.left) / imgRect.width, 0, 1);
+        const relY = clamp((e.clientY - imgRect.top) / imgRect.height, 0, 1);
+        setViewerMode("one", { relX, relY, clientX: e.clientX, clientY: e.clientY });
         capturePointerForPan(); // use the same click gesture that triggered zoom
       }
       // If already 1:1, do nothing (right-click is "back")
@@ -697,7 +701,7 @@
       setViewerMode("fit");
     }
 
-    function setViewerMode(mode) {
+    function setViewerMode(mode, clickInfo) {
       state.viewerMode = mode;
 
       elViewerScroll.classList.toggle("fit", mode === "fit");
@@ -713,8 +717,16 @@
 
       if (mode === "one") {
         requestAnimationFrame(() => {
-          elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
-          elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
+          if (clickInfo) {
+            // Scroll so the clicked point in the image stays under the cursor
+            const imgW = elViewerImg.naturalWidth;
+            const imgH = elViewerImg.naturalHeight;
+            elViewerScroll.scrollLeft = Math.max(0, clickInfo.relX * imgW - clickInfo.clientX);
+            elViewerScroll.scrollTop = Math.max(0, clickInfo.relY * imgH - clickInfo.clientY);
+          } else {
+            elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
+            elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
+          }
         });
       }
     }
