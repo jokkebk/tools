@@ -24,12 +24,12 @@
 
 ### [wordle-ocr](wordle-ocr.html)
 
-Wordle Screenshot OCR reads a pasted or uploaded Wordle screenshot with Tesseract.js, then shows the recognized letters in an editable tile grid that preserves gray, yellow, and green colors.  Correct letters inline with the keyboard, tap tiles to cycle colors, and expand each known-letter location pattern into the first 100 brute-force fills.  It intentionally avoids dictionary matching so the final word recognition stays up to your vocabulary.
+Wordle Screenshot OCR reads a pasted or uploaded Wordle screenshot with Tesseract.js, then shows the recognized letters in an editable tile grid that preserves gray, yellow, and green colors.  Correct letters inline with the keyboard, tap tiles to cycle colors, and optionally inspect the cleaned row/tile images sent to OCR.  It intentionally avoids dictionary matching while expanding known-letter location patterns into the first 100 brute-force fills.
 
-> last updated: 2026-06-06 08:11:44
-> Add Wordle screenshot OCR tool
+> last updated: 2026-06-06 08:28:00
+> Add OCR debug viewer and row-level recognition
 >
-> [view commit](https://github.com/jokkebk/tools/commit/b61eada2d4afc6173cf98bc1b2bf729ae509d90d)
+> [view commit](https://github.com/jokkebk/tools/commit/05d632efc000767d000f1080bd0f656aa631f552)
 
 ### [zipview-gpt52pro](zipview-gpt52pro.html)
 

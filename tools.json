@@ -79,9 +79,9 @@
     },
     "wordle-ocr.html": {
       "last_commit": {
-        "hash": "b61eada2d4afc6173cf98bc1b2bf729ae509d90d",
-        "date": "2026-06-06T08:11:44+03:00",
-        "message": "Add Wordle screenshot OCR tool"
+        "hash": "05d632efc000767d000f1080bd0f656aa631f552",
+        "date": "2026-06-06T08:28:00+03:00",
+        "message": "Add OCR debug viewer and row-level recognition"
       }
     },
     "jokeripokeri_trainer.html": {
