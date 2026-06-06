@@ -330,6 +330,43 @@
       margin-top: 10px;
     }
 
+    .debug-panel {
+      display: none;
+    }
+
+    .debug-panel.active {
+      display: block;
+    }
+
+    .debug-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .debug-item {
+      border: 1px solid var(--line);
+      background: #f8fafb;
+      padding: 8px;
+    }
+
+    .debug-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .debug-item img {
+      display: block;
+      width: 100%;
+      image-rendering: pixelated;
+      background: #fff;
+      border: 1px solid #e1e7eb;
+    }
+
     .error {
       color: #9d2020;
     }
@@ -379,6 +416,7 @@
         <input id="imageInput" type="file" accept="image/*">
         <button id="sampleRowsBtn" class="secondary" type="button">Manual Grid</button>
         <button id="clearBtn" class="quiet" type="button">Clear</button>
+        <button id="debugToggleBtn" class="quiet" type="button" disabled>Show OCR Input</button>
         <div id="pasteTarget" class="paste-target" tabindex="0">Paste an image here on desktop</div>
       </div>
       <div id="status" class="status"></div>
@@ -393,6 +431,11 @@
         <button id="addRowBtn" class="quiet" type="button">Add Row</button>
       </div>
       <div id="board" class="board"></div>
+    </section>
+
+    <section id="debugPanel" class="surface debug-panel">
+      <h2 class="section-title">Cleaned OCR Input</h2>
+      <div id="debugList" class="debug-list"></div>
     </section>
 
     <section class="surface">
@@ -415,21 +458,28 @@
     const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     const TILE_STATES = ['gray', 'yellow', 'green'];
     const MAX_CANDIDATES = 100;
+    const PSM_SINGLE_CHAR = '10';
+    const PSM_SINGLE_WORD = '8';
+    const PSM_SINGLE_LINE = '7';
     const PALETTES = {
       green: [[106, 170, 100], [83, 141, 78], [58, 163, 95]],
       yellow: [[201, 180, 88], [181, 159, 59], [215, 184, 72]],
       gray: [[120, 124, 126], [58, 58, 60], [129, 131, 132]]
     };
+    const TEMPLATE_SIZE = 36;
 
     const imageInput = document.getElementById('imageInput');
     const pasteTarget = document.getElementById('pasteTarget');
     const sampleRowsBtn = document.getElementById('sampleRowsBtn');
     const clearBtn = document.getElementById('clearBtn');
     const addRowBtn = document.getElementById('addRowBtn');
+    const debugToggleBtn = document.getElementById('debugToggleBtn');
     const statusEl = document.getElementById('status');
     const previewWrap = document.getElementById('previewWrap');
     const previewImage = document.getElementById('previewImage');
     const boardEl = document.getElementById('board');
+    const debugPanel = document.getElementById('debugPanel');
+    const debugList = document.getElementById('debugList');
     const patternsEl = document.getElementById('patterns');
     const expandedEl = document.getElementById('expanded');
     const excludedLettersEl = document.getElementById('excludedLetters');
@@ -439,6 +489,8 @@
     let rows = createEmptyRows(6);
     let activePatternKey = '';
     let ocrWorker = null;
+    let letterTemplates = null;
+    let debugItems = [];
 
     imageInput.addEventListener('change', event => {
       const file = event.target.files[0];
@@ -464,6 +516,8 @@
     sampleRowsBtn.addEventListener('click', () => {
       rows = createEmptyRows(6);
       activePatternKey = '';
+      debugItems = [];
+      renderDebugPanel();
       renderAll();
       focusTile(0, 0);
       setStatus('Manual grid ready. Type letters and tap tiles to cycle colors.');
@@ -472,9 +526,16 @@
     clearBtn.addEventListener('click', () => {
       rows = createEmptyRows(6);
       activePatternKey = '';
+      debugItems = [];
+      renderDebugPanel();
       previewWrap.classList.remove('active');
       setStatus('');
       renderAll();
+    });
+
+    debugToggleBtn.addEventListener('click', () => {
+      debugPanel.classList.toggle('active');
+      debugToggleBtn.textContent = debugPanel.classList.contains('active') ? 'Hide OCR Input' : 'Show OCR Input';
     });
 
     addRowBtn.addEventListener('click', () => {
@@ -521,6 +582,8 @@
           throw new Error('No colored Wordle tiles found. Try a tighter screenshot or use Manual Grid.');
         }
 
+        debugItems = [];
+        renderDebugPanel();
         rows = tiles.map(row => row.map(tile => ({ letter: '', state: tile.state, box: tile.box })));
         renderAll();
 
@@ -530,9 +593,18 @@
         const total = tiles.reduce((sum, row) => sum + row.length, 0);
 
         for (let rowIndex = 0; rowIndex < tiles.length; rowIndex++) {
+          const rowText = await recognizeRow(worker, tiles[rowIndex], rowIndex);
+          if (rowText.length === 5) {
+            for (let colIndex = 0; colIndex < 5; colIndex++) {
+              rows[rowIndex][colIndex].letter = rowText[colIndex];
+            }
+            renderAll();
+          }
+
           for (let colIndex = 0; colIndex < tiles[rowIndex].length; colIndex++) {
             const tile = tiles[rowIndex][colIndex];
-            rows[rowIndex][colIndex].letter = await recognizeTile(worker, tile.box);
+            const tileLetter = await recognizeTile(worker, tile.box, rowIndex, colIndex);
+            if (tileLetter && rowText.length !== 5) rows[rowIndex][colIndex].letter = tileLetter;
             done++;
             setStatus(`OCR ${done}/${total} tiles...`);
             renderAll();
@@ -547,6 +619,39 @@
         console.error(error);
         setStatus(error.message, true);
       }
+    }
+
+    function renderDebugPanel() {
+      debugToggleBtn.disabled = debugItems.length === 0;
+      debugList.innerHTML = '';
+
+      if (!debugItems.length) {
+        debugPanel.classList.remove('active');
+        debugToggleBtn.textContent = 'Show OCR Input';
+        return;
+      }
+
+      debugItems.forEach(item => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'debug-item';
+
+        const label = document.createElement('div');
+        label.className = 'debug-label';
+        label.textContent = item.label;
+        wrapper.appendChild(label);
+
+        const image = document.createElement('img');
+        image.src = item.src;
+        image.alt = item.label;
+        wrapper.appendChild(image);
+
+        debugList.appendChild(wrapper);
+      });
+    }
+
+    function addDebugCanvas(label, canvas) {
+      debugItems.push({ label, src: canvas.toDataURL('image/png') });
+      renderDebugPanel();
     }
 
     function loadImage(file) {
@@ -812,7 +917,7 @@
       });
       await ocrWorker.setParameters({
         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        tessedit_pageseg_mode: '10'
+        tessedit_pageseg_mode: PSM_SINGLE_CHAR
       });
       return ocrWorker;
     }
@@ -854,22 +959,166 @@
       });
     }
 
-    async function recognizeTile(worker, box) {
+    async function recognizeRow(worker, rowTiles, rowIndex) {
+      const canvas = buildRowOcrCanvas(rowTiles);
+      addDebugCanvas(`Row ${rowIndex + 1}`, canvas);
+
+      let best = '';
+      for (const pageMode of [PSM_SINGLE_WORD, PSM_SINGLE_LINE]) {
+        await worker.setParameters({
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+          tessedit_pageseg_mode: pageMode
+        });
+
+        const result = await worker.recognize(canvas, {}, { text: true });
+        const word = normalizeOcrWord(result.data.text);
+        if (word.length === 5) return word;
+        if (word.length > best.length) best = word;
+      }
+
+      return best;
+    }
+
+    function buildRowOcrCanvas(rowTiles) {
+      const tileCanvases = rowTiles.map(tile => buildOcrCanvas(tile.box));
+      const tileSize = 160;
+      const gap = 18;
+      const sidePad = 24;
+      const output = document.createElement('canvas');
+      output.width = sidePad * 2 + tileCanvases.length * tileSize + (tileCanvases.length - 1) * gap;
+      output.height = 220;
+      const ctx = output.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, output.width, output.height);
+
+      tileCanvases.forEach((tileCanvas, index) => {
+        const x = sidePad + index * (tileSize + gap);
+        ctx.drawImage(tileCanvas, 0, 0, tileCanvas.width, tileCanvas.height, x, 30, tileSize, tileSize);
+      });
+
+      return output;
+    }
+
+    async function recognizeTile(worker, box, rowIndex, colIndex) {
+      const canvas = buildOcrCanvas(box);
+      const templateGuess = guessLetterFromCanvas(canvas);
+      addDebugCanvas(`R${rowIndex + 1} C${colIndex + 1}${templateGuess ? ` -> ${templateGuess.letter} ${Math.round(templateGuess.score * 100)}%` : ''}`, canvas);
+
+      await worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        tessedit_pageseg_mode: PSM_SINGLE_CHAR
+      });
+
+      const result = await worker.recognize(canvas, {}, { text: true });
+      const ocrLetter = normalizeOcrLetter(result.data.text);
+
+      if (templateGuess && templateGuess.score >= 0.38) return templateGuess.letter;
+      return ocrLetter || (templateGuess ? templateGuess.letter : '');
+    }
+
+    function buildOcrCanvas(box) {
+      const source = document.createElement('canvas');
+      source.width = box.width;
+      source.height = box.height;
+      const sourceCtx = source.getContext('2d', { willReadFrequently: true });
+      sourceCtx.drawImage(workCanvas, box.left, box.top, box.width, box.height, 0, 0, box.width, box.height);
+
+      const image = sourceCtx.getImageData(0, 0, source.width, source.height);
+      const mask = new Uint8Array(source.width * source.height);
+      let left = source.width;
+      let right = -1;
+      let top = source.height;
+      let bottom = -1;
+
+      for (let y = 0; y < source.height; y++) {
+        for (let x = 0; x < source.width; x++) {
+          const index = (y * source.width + x) * 4;
+          const r = image.data[index];
+          const g = image.data[index + 1];
+          const b = image.data[index + 2];
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          const isLetter = max > 175 && min > 145 && max - min < 70;
+
+          if (!isLetter) continue;
+          const point = y * source.width + x;
+          mask[point] = 1;
+          if (x < left) left = x;
+          if (x > right) right = x;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+        }
+      }
+
+      if (right < left || bottom < top) {
+        return buildFallbackOcrCanvas(box);
+      }
+
+      const letterWidth = right - left + 1;
+      const letterHeight = bottom - top + 1;
+      const pad = Math.ceil(Math.max(letterWidth, letterHeight) * 0.18);
+      const cropLeft = Math.max(0, left - pad);
+      const cropTop = Math.max(0, top - pad);
+      const cropRight = Math.min(source.width - 1, right + pad);
+      const cropBottom = Math.min(source.height - 1, bottom + pad);
+      const cropWidth = cropRight - cropLeft + 1;
+      const cropHeight = cropBottom - cropTop + 1;
+
+      const output = document.createElement('canvas');
+      output.width = 220;
+      output.height = 220;
+      const ctx = output.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, output.width, output.height);
+
+      const scale = Math.min(170 / cropWidth, 170 / cropHeight);
+      const drawWidth = Math.round(cropWidth * scale);
+      const drawHeight = Math.round(cropHeight * scale);
+      const offsetX = Math.round((output.width - drawWidth) / 2);
+      const offsetY = Math.round((output.height - drawHeight) / 2);
+
+      const glyph = document.createElement('canvas');
+      glyph.width = cropWidth;
+      glyph.height = cropHeight;
+      const glyphCtx = glyph.getContext('2d');
+      const glyphImage = glyphCtx.createImageData(cropWidth, cropHeight);
+
+      for (let y = 0; y < cropHeight; y++) {
+        for (let x = 0; x < cropWidth; x++) {
+          const sourceX = cropLeft + x;
+          const sourceY = cropTop + y;
+          const sourcePoint = sourceY * source.width + sourceX;
+          const targetIndex = (y * cropWidth + x) * 4;
+          const value = mask[sourcePoint] ? 0 : 255;
+          glyphImage.data[targetIndex] = value;
+          glyphImage.data[targetIndex + 1] = value;
+          glyphImage.data[targetIndex + 2] = value;
+          glyphImage.data[targetIndex + 3] = 255;
+        }
+      }
+
+      glyphCtx.putImageData(glyphImage, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(glyph, 0, 0, cropWidth, cropHeight, offsetX, offsetY, drawWidth, drawHeight);
+      return output;
+    }
+
+    function buildFallbackOcrCanvas(box) {
       const canvas = document.createElement('canvas');
-      const size = 140;
+      const size = 220;
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(workCanvas, box.left, box.top, box.width, box.height, 12, 12, size - 24, size - 24);
+      ctx.drawImage(workCanvas, box.left, box.top, box.width, box.height, 20, 20, size - 40, size - 40);
 
       const image = ctx.getImageData(0, 0, size, size);
       for (let i = 0; i < image.data.length; i += 4) {
         const r = image.data[i];
         const g = image.data[i + 1];
         const b = image.data[i + 2];
-        const isLetter = Math.min(r, g, b) > 165 && Math.max(r, g, b) - Math.min(r, g, b) < 55;
+        const isLetter = Math.min(r, g, b) > 150 && Math.max(r, g, b) - Math.min(r, g, b) < 80;
         const value = isLetter ? 0 : 255;
         image.data[i] = value;
         image.data[i + 1] = value;
@@ -877,17 +1126,151 @@
         image.data[i + 3] = 255;
       }
       ctx.putImageData(image, 0, 0);
+      return canvas;
+    }
 
-      const result = await worker.recognize(canvas);
-      return normalizeOcrLetter(result.data.text);
+    function guessLetterFromCanvas(canvas) {
+      const mask = normalizedMaskFromCanvas(canvas);
+      if (!mask) return null;
+      const templates = getLetterTemplates();
+      let best = null;
+
+      for (const template of templates) {
+        const score = maskSimilarity(mask, template.mask);
+        if (!best || score > best.score) best = { letter: template.letter, score };
+      }
+
+      return best;
+    }
+
+    function getLetterTemplates() {
+      if (letterTemplates) return letterTemplates;
+      const fonts = [
+        '900 168px Arial, Helvetica, sans-serif',
+        '800 170px Helvetica, Arial, sans-serif',
+        '900 164px Arial Black, Arial, sans-serif',
+        '900 174px system-ui, sans-serif'
+      ];
+
+      letterTemplates = [];
+      ALPHABET.forEach(letter => {
+        fonts.forEach(font => {
+          const mask = normalizedMaskFromCanvas(renderTemplateLetter(letter, font));
+          if (mask) letterTemplates.push({ letter, mask });
+        });
+      });
+
+      const plainI = normalizedMaskFromCanvas(renderPlainITemplate());
+      if (plainI) letterTemplates.push({ letter: 'I', mask: plainI });
+      return letterTemplates;
+    }
+
+    function renderTemplateLetter(letter, font) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 220;
+      canvas.height = 220;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000';
+      ctx.font = font;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, canvas.width / 2, canvas.height / 2 + 8);
+      return canvas;
+    }
+
+    function renderPlainITemplate() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 220;
+      canvas.height = 220;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(92, 36, 36, 148);
+      return canvas;
+    }
+
+    function normalizedMaskFromCanvas(canvas) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let left = canvas.width;
+      let right = -1;
+      let top = canvas.height;
+      let bottom = -1;
+      const sourceMask = new Uint8Array(canvas.width * canvas.height);
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const index = (y * canvas.width + x) * 4;
+          const r = image.data[index];
+          const g = image.data[index + 1];
+          const b = image.data[index + 2];
+          if ((r + g + b) / 3 >= 128) continue;
+
+          sourceMask[y * canvas.width + x] = 1;
+          if (x < left) left = x;
+          if (x > right) right = x;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+        }
+      }
+
+      if (right < left || bottom < top) return null;
+
+      const width = right - left + 1;
+      const height = bottom - top + 1;
+      const size = Math.max(width, height);
+      const offsetX = Math.floor((size - width) / 2);
+      const offsetY = Math.floor((size - height) / 2);
+      const normalized = new Uint8Array(TEMPLATE_SIZE * TEMPLATE_SIZE);
+
+      for (let y = 0; y < TEMPLATE_SIZE; y++) {
+        for (let x = 0; x < TEMPLATE_SIZE; x++) {
+          const squareX = Math.floor((x + 0.5) * size / TEMPLATE_SIZE);
+          const squareY = Math.floor((y + 0.5) * size / TEMPLATE_SIZE);
+          const sourceX = left + squareX - offsetX;
+          const sourceY = top + squareY - offsetY;
+          if (sourceX < left || sourceX > right || sourceY < top || sourceY > bottom) continue;
+          normalized[y * TEMPLATE_SIZE + x] = sourceMask[sourceY * canvas.width + sourceX];
+        }
+      }
+
+      return normalized;
+    }
+
+    function maskSimilarity(a, b) {
+      let intersection = 0;
+      let union = 0;
+
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] && b[i]) intersection++;
+        if (a[i] || b[i]) union++;
+      }
+
+      return union ? intersection / union : 0;
     }
 
     function normalizeOcrLetter(text) {
-      const cleaned = (text || '').toUpperCase().replace(/[^A-Z]/g, '');
       const substitutions = { '0': 'O', '1': 'I', '5': 'S' };
+      const raw = (text || '').toUpperCase().replace(/[^A-Z015]/g, '');
+      const normalized = [...raw].map(char => substitutions[char] || char).join('');
+      const cleaned = normalized.replace(/[^A-Z]/g, '');
       if (cleaned[0]) return cleaned[0];
-      const fallback = (text || '').toUpperCase().replace(/[^A-Z015]/g, '')[0];
-      return substitutions[fallback] || '';
+      return '';
+    }
+
+    function normalizeOcrWord(text) {
+      const substitutions = { '0': 'O', '1': 'I', '5': 'S' };
+      return (text || '')
+        .toUpperCase()
+        .replace(/[^A-Z015]/g, '')
+        .split('')
+        .map(char => substitutions[char] || char)
+        .join('')
+        .replace(/[^A-Z]/g, '')
+        .slice(0, 5);
     }
 
     function renderAll() {
