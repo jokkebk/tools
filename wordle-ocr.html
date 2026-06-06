@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Wordle Screenshot OCR</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #101418;
+      --panel: #ffffff;
+      --ink: #14171a;
+      --muted: #5f6b75;
+      --line: #d9e0e6;
+      --accent: #147c72;
+      --gray: #787c7e;
+      --yellow: #c9b458;
+      --green: #6aaa64;
+      --blank: #f3f5f6;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    main {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      color: #fff;
+      padding: 10px 0 18px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: clamp(1.45rem, 4vw, 2.1rem);
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #b8c2cc;
+      font-size: 0.95rem;
+    }
+
+    .surface {
+      background: var(--panel);
+      border: 1px solid #edf0f2;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .top-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    button,
+    .file-button {
+      min-height: 42px;
+      border: 0;
+      background: var(--accent);
+      color: #fff;
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    button.secondary {
+      background: #26313a;
+    }
+
+    button.quiet {
+      background: #e7ecef;
+      color: #1f2930;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .paste-target {
+      flex: 1 1 220px;
+      min-height: 42px;
+      border: 1px dashed #9aa7b2;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 9px 12px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    .status {
+      margin-top: 12px;
+      min-height: 1.3em;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .preview-wrap {
+      display: none;
+      margin-top: 12px;
+      background: #0b0f12;
+      padding: 8px;
+    }
+
+    .preview-wrap.active {
+      display: block;
+    }
+
+    .preview-wrap img {
+      display: block;
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      color: #2a333a;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .grid-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .board {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .word-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(44px, 58px));
+      gap: 7px;
+      justify-content: center;
+    }
+
+    .tile {
+      width: 100%;
+      aspect-ratio: 1;
+      border: 2px solid #cfd6dc;
+      background: var(--blank);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.08s ease, border-color 0.12s ease;
+    }
+
+    .tile:focus-within {
+      outline: 3px solid rgba(20, 124, 114, 0.28);
+      outline-offset: 2px;
+    }
+
+    .tile.gray {
+      background: var(--gray);
+      border-color: var(--gray);
+    }
+
+    .tile.yellow {
+      background: var(--yellow);
+      border-color: var(--yellow);
+    }
+
+    .tile.green {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .tile input {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #fff;
+      text-align: center;
+      font: 800 1.45rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      text-transform: uppercase;
+      caret-color: #fff;
+    }
+
+    .tile.empty input {
+      color: #111820;
+      caret-color: #111820;
+    }
+
+    .solver-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .letters-line {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .letters-line strong {
+      color: #1f2930;
+    }
+
+    .patterns {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pattern-row {
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--line);
+      background: #f8fafb;
+    }
+
+    .pattern-row.active {
+      border-color: var(--accent);
+      box-shadow: inset 4px 0 0 var(--accent);
+    }
+
+    .expand {
+      min-width: 42px;
+      padding: 0;
+      font-size: 1.3rem;
+    }
+
+    .mini-word {
+      display: grid;
+      grid-template-columns: repeat(5, 32px);
+      gap: 4px;
+      justify-content: start;
+    }
+
+    .mini-tile {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #cfd6dc;
+      background: #fff;
+      color: #111820;
+      font-weight: 800;
+    }
+
+    .mini-tile.blank {
+      color: #9aa7b2;
+      background: #eef2f4;
+    }
+
+    .count {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .expanded {
+      min-height: 120px;
+      border: 1px solid var(--line);
+      background: #f8fafb;
+      padding: 10px;
+    }
+
+    .expanded-empty {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .word-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .candidate {
+      background: #fff;
+      border: 1px solid #dde4e9;
+      padding: 7px 8px;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.86rem;
+      margin-top: 10px;
+    }
+
+    .error {
+      color: #9d2020;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      main {
+        padding: 12px;
+      }
+
+      .surface {
+        padding: 14px;
+      }
+
+      .solver-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .word-row {
+        grid-template-columns: repeat(5, minmax(42px, 54px));
+        gap: 6px;
+      }
+
+      .pattern-row {
+        grid-template-columns: 38px 1fr;
+      }
+
+      .pattern-row .count {
+        grid-column: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Wordle Screenshot OCR</h1>
+      <p class="subtitle">Upload a screenshot, correct the tiles, then expand known-letter patterns.</p>
+    </header>
+
+    <section class="surface">
+      <div class="top-actions">
+        <label class="file-button" for="imageInput">Upload Screenshot</label>
+        <input id="imageInput" type="file" accept="image/*">
+        <button id="sampleRowsBtn" class="secondary" type="button">Manual Grid</button>
+        <button id="clearBtn" class="quiet" type="button">Clear</button>
+        <div id="pasteTarget" class="paste-target" tabindex="0">Paste an image here on desktop</div>
+      </div>
+      <div id="status" class="status"></div>
+      <div id="previewWrap" class="preview-wrap">
+        <img id="previewImage" alt="Uploaded Wordle screenshot preview">
+      </div>
+    </section>
+
+    <section class="surface">
+      <div class="grid-toolbar">
+        <h2 class="section-title">Recognized Tiles</h2>
+        <button id="addRowBtn" class="quiet" type="button">Add Row</button>
+      </div>
+      <div id="board" class="board"></div>
+    </section>
+
+    <section class="surface">
+      <h2 class="section-title">Known Letter Locations</h2>
+      <div class="solver-layout">
+        <div>
+          <p id="excludedLetters" class="letters-line"></p>
+          <div id="patterns" class="patterns"></div>
+        </div>
+        <div id="expanded" class="expanded">
+          <div class="expanded-empty">Choose a pattern with the arrow to list the first 100 brute-force fills.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <canvas id="workCanvas"></canvas>
+
+  <script>
+    const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const TILE_STATES = ['gray', 'yellow', 'green'];
+    const MAX_CANDIDATES = 100;
+    const PALETTES = {
+      green: [[106, 170, 100], [83, 141, 78], [58, 163, 95]],
+      yellow: [[201, 180, 88], [181, 159, 59], [215, 184, 72]],
+      gray: [[120, 124, 126], [58, 58, 60], [129, 131, 132]]
+    };
+
+    const imageInput = document.getElementById('imageInput');
+    const pasteTarget = document.getElementById('pasteTarget');
+    const sampleRowsBtn = document.getElementById('sampleRowsBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const addRowBtn = document.getElementById('addRowBtn');
+    const statusEl = document.getElementById('status');
+    const previewWrap = document.getElementById('previewWrap');
+    const previewImage = document.getElementById('previewImage');
+    const boardEl = document.getElementById('board');
+    const patternsEl = document.getElementById('patterns');
+    const expandedEl = document.getElementById('expanded');
+    const excludedLettersEl = document.getElementById('excludedLetters');
+    const workCanvas = document.getElementById('workCanvas');
+    const workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
+
+    let rows = createEmptyRows(6);
+    let activePatternKey = '';
+    let ocrWorker = null;
+
+    imageInput.addEventListener('change', event => {
+      const file = event.target.files[0];
+      if (file) handleImageFile(file);
+      imageInput.value = '';
+    });
+
+    pasteTarget.addEventListener('paste', event => {
+      const file = getImageFromClipboard(event.clipboardData);
+      if (!file) return;
+      event.preventDefault();
+      handleImageFile(file);
+    });
+
+    document.addEventListener('paste', event => {
+      if (event.target && ['INPUT', 'TEXTAREA'].includes(event.target.tagName)) return;
+      const file = getImageFromClipboard(event.clipboardData);
+      if (!file) return;
+      event.preventDefault();
+      handleImageFile(file);
+    });
+
+    sampleRowsBtn.addEventListener('click', () => {
+      rows = createEmptyRows(6);
+      activePatternKey = '';
+      renderAll();
+      focusTile(0, 0);
+      setStatus('Manual grid ready. Type letters and tap tiles to cycle colors.');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      rows = createEmptyRows(6);
+      activePatternKey = '';
+      previewWrap.classList.remove('active');
+      setStatus('');
+      renderAll();
+    });
+
+    addRowBtn.addEventListener('click', () => {
+      rows.push(createEmptyRow());
+      renderAll();
+      focusTile(rows.length - 1, 0);
+    });
+
+    renderAll();
+
+    function createEmptyRows(count) {
+      return Array.from({ length: count }, createEmptyRow);
+    }
+
+    function createEmptyRow() {
+      return Array.from({ length: 5 }, () => ({ letter: '', state: 'gray' }));
+    }
+
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.classList.toggle('error', isError);
+    }
+
+    function getImageFromClipboard(clipboardData) {
+      if (!clipboardData) return null;
+      for (const item of clipboardData.items || []) {
+        if (item.type && item.type.startsWith('image/')) return item.getAsFile();
+      }
+      return null;
+    }
+
+    async function handleImageFile(file) {
+      try {
+        setStatus('Loading image...');
+        previewImage.src = URL.createObjectURL(file);
+        previewWrap.classList.add('active');
+
+        const image = await loadImage(file);
+        drawImageForProcessing(image);
+
+        setStatus('Detecting Wordle tiles...');
+        const tiles = detectTiles();
+        if (!tiles.length) {
+          throw new Error('No colored Wordle tiles found. Try a tighter screenshot or use Manual Grid.');
+        }
+
+        rows = tiles.map(row => row.map(tile => ({ letter: '', state: tile.state, box: tile.box })));
+        renderAll();
+
+        setStatus(`Found ${tiles.length} row${tiles.length === 1 ? '' : 's'}. Loading OCR...`);
+        const worker = await getOcrWorker();
+        let done = 0;
+        const total = tiles.reduce((sum, row) => sum + row.length, 0);
+
+        for (let rowIndex = 0; rowIndex < tiles.length; rowIndex++) {
+          for (let colIndex = 0; colIndex < tiles[rowIndex].length; colIndex++) {
+            const tile = tiles[rowIndex][colIndex];
+            rows[rowIndex][colIndex].letter = await recognizeTile(worker, tile.box);
+            done++;
+            setStatus(`OCR ${done}/${total} tiles...`);
+            renderAll();
+          }
+        }
+
+        rows = rows.map(row => row.map(tile => ({ letter: tile.letter, state: tile.state })));
+        activePatternKey = '';
+        renderAll();
+        setStatus('OCR complete. Correct any letters or colors directly in the grid.');
+      } catch (error) {
+        console.error(error);
+        setStatus(error.message, true);
+      }
+    }
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Could not load image.'));
+        image.src = URL.createObjectURL(file);
+      });
+    }
+
+    function drawImageForProcessing(image) {
+      const maxSide = 1400;
+      const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+      workCanvas.width = Math.round(image.naturalWidth * scale);
+      workCanvas.height = Math.round(image.naturalHeight * scale);
+      workCtx.clearRect(0, 0, workCanvas.width, workCanvas.height);
+      workCtx.drawImage(image, 0, 0, workCanvas.width, workCanvas.height);
+    }
+
+    function detectTiles() {
+      const width = workCanvas.width;
+      const height = workCanvas.height;
+      const image = workCtx.getImageData(0, 0, width, height);
+      const mask = new Uint8Array(width * height);
+      const stateVotes = new Uint8Array(width * height);
+
+      for (let i = 0, p = 0; i < image.data.length; i += 4, p++) {
+        const state = classifyPixel(image.data[i], image.data[i + 1], image.data[i + 2]);
+        if (!state) continue;
+        mask[p] = 1;
+        stateVotes[p] = TILE_STATES.indexOf(state) + 1;
+      }
+
+      const components = collectComponents(mask, stateVotes, width, height)
+        .filter(component => {
+          const boxWidth = component.right - component.left + 1;
+          const boxHeight = component.bottom - component.top + 1;
+          const aspect = boxWidth / boxHeight;
+          const fill = component.area / (boxWidth * boxHeight);
+          return boxWidth >= 24 && boxHeight >= 24 && aspect >= 0.68 && aspect <= 1.32 && fill >= 0.28;
+        })
+        .map(component => {
+          const boxWidth = component.right - component.left + 1;
+          const boxHeight = component.bottom - component.top + 1;
+          return {
+            box: {
+              left: component.left,
+              top: component.top,
+              width: boxWidth,
+              height: boxHeight
+            },
+            centerX: component.left + boxWidth / 2,
+            centerY: component.top + boxHeight / 2,
+            size: (boxWidth + boxHeight) / 2,
+            state: dominantState(component.counts)
+          };
+        })
+        .sort((a, b) => a.centerY - b.centerY || a.centerX - b.centerX);
+
+      return groupTilesIntoRows(components);
+    }
+
+    function classifyPixel(r, g, b) {
+      let bestState = '';
+      let bestDistance = Infinity;
+
+      for (const [state, palettes] of Object.entries(PALETTES)) {
+        for (const palette of palettes) {
+          const distance = colorDistance([r, g, b], palette);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestState = state;
+          }
+        }
+      }
+
+      if (bestDistance <= 78) return bestState;
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const saturation = max === 0 ? 0 : (max - min) / max;
+      const hue = rgbToHue(r, g, b);
+
+      if (saturation > 0.22 && hue >= 72 && hue <= 92 && max > 120) return 'yellow';
+      if (saturation > 0.18 && hue >= 92 && hue <= 145 && max > 85) return 'green';
+      if (saturation < 0.12 && max >= 45 && max <= 155) return 'gray';
+      return '';
+    }
+
+    function colorDistance(a, b) {
+      return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    }
+
+    function rgbToHue(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+      if (delta === 0) return 0;
+      let hue;
+      if (max === r) hue = ((g - b) / delta) % 6;
+      else if (max === g) hue = (b - r) / delta + 2;
+      else hue = (r - g) / delta + 4;
+      return (hue * 60 + 360) % 360;
+    }
+
+    function collectComponents(mask, stateVotes, width, height) {
+      const visited = new Uint8Array(mask.length);
+      const queue = [];
+      const components = [];
+
+      for (let start = 0; start < mask.length; start++) {
+        if (!mask[start] || visited[start]) continue;
+
+        let head = 0;
+        queue.length = 0;
+        queue.push(start);
+        visited[start] = 1;
+
+        let left = width;
+        let right = 0;
+        let top = height;
+        let bottom = 0;
+        let area = 0;
+        const counts = [0, 0, 0];
+
+        while (head < queue.length) {
+          const point = queue[head++];
+          const x = point % width;
+          const y = Math.floor(point / width);
+
+          area++;
+          if (x < left) left = x;
+          if (x > right) right = x;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+
+          const vote = stateVotes[point] - 1;
+          if (vote >= 0) counts[vote]++;
+
+          addNeighbor(point - 1, x > 0);
+          addNeighbor(point + 1, x < width - 1);
+          addNeighbor(point - width, y > 0);
+          addNeighbor(point + width, y < height - 1);
+        }
+
+        components.push({ left, right, top, bottom, area, counts });
+      }
+
+      function addNeighbor(index, valid) {
+        if (!valid || visited[index] || !mask[index]) return;
+        visited[index] = 1;
+        queue.push(index);
+      }
+
+      return components;
+    }
+
+    function dominantState(counts) {
+      let bestIndex = 0;
+      for (let i = 1; i < counts.length; i++) {
+        if (counts[i] > counts[bestIndex]) bestIndex = i;
+      }
+      return TILE_STATES[bestIndex];
+    }
+
+    function groupTilesIntoRows(components) {
+      if (!components.length) return [];
+      const medianSize = median(components.map(component => component.size));
+      const rowTolerance = medianSize * 0.55;
+      const rowGroups = [];
+
+      for (const component of components) {
+        let group = rowGroups.find(candidate => Math.abs(candidate.centerY - component.centerY) <= rowTolerance);
+        if (!group) {
+          group = { centerY: component.centerY, tiles: [] };
+          rowGroups.push(group);
+        }
+        group.tiles.push(component);
+        group.centerY = group.tiles.reduce((sum, tile) => sum + tile.centerY, 0) / group.tiles.length;
+      }
+
+      return rowGroups
+        .map(group => group.tiles.sort((a, b) => a.centerX - b.centerX))
+        .filter(group => group.length >= 5)
+        .map(group => chooseBestFive(group, medianSize))
+        .filter(group => group.length === 5)
+        .sort((a, b) => a[0].centerY - b[0].centerY)
+        .slice(0, 6)
+        .map(group => group.map(tile => ({
+          state: sampleTileState(tile.box) || tile.state,
+          box: expandBox(tile.box, 0.12)
+        })));
+    }
+
+    function chooseBestFive(group, medianSize) {
+      if (group.length === 5) return group;
+      let best = group.slice(0, 5);
+      let bestScore = Infinity;
+
+      for (let start = 0; start <= group.length - 5; start++) {
+        const candidate = group.slice(start, start + 5);
+        const gaps = [];
+        for (let i = 1; i < candidate.length; i++) {
+          gaps.push(candidate[i].centerX - candidate[i - 1].centerX);
+        }
+        const gapMedian = median(gaps);
+        const score = gaps.reduce((sum, gap) => sum + Math.abs(gap - gapMedian), 0)
+          + candidate.reduce((sum, tile) => sum + Math.abs(tile.size - medianSize), 0);
+        if (score < bestScore) {
+          bestScore = score;
+          best = candidate;
+        }
+      }
+      return best;
+    }
+
+    function expandBox(box, amount) {
+      const padX = box.width * amount;
+      const padY = box.height * amount;
+      const left = Math.max(0, Math.round(box.left - padX));
+      const top = Math.max(0, Math.round(box.top - padY));
+      const right = Math.min(workCanvas.width, Math.round(box.left + box.width + padX));
+      const bottom = Math.min(workCanvas.height, Math.round(box.top + box.height + padY));
+      return { left, top, width: right - left, height: bottom - top };
+    }
+
+    function sampleTileState(box) {
+      const image = workCtx.getImageData(box.left, box.top, box.width, box.height);
+      const counts = { gray: 0, yellow: 0, green: 0 };
+
+      for (let y = Math.floor(box.height * 0.18); y < box.height * 0.82; y += 2) {
+        for (let x = Math.floor(box.width * 0.18); x < box.width * 0.82; x += 2) {
+          const index = (y * box.width + x) * 4;
+          const state = classifyPixel(image.data[index], image.data[index + 1], image.data[index + 2]);
+          if (state) counts[state]++;
+        }
+      }
+
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][1] ? Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] : '';
+    }
+
+    function median(values) {
+      const sorted = [...values].sort((a, b) => a - b);
+      return sorted[Math.floor(sorted.length / 2)] || 0;
+    }
+
+    async function getOcrWorker() {
+      if (ocrWorker) return ocrWorker;
+      ocrWorker = await Tesseract.createWorker('eng', 1, {
+        logger: message => {
+          if (message.status) {
+            const progress = message.progress ? ` ${Math.round(message.progress * 100)}%` : '';
+            setStatus(`${message.status}${progress}`);
+          }
+        }
+      });
+      await ocrWorker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        tessedit_pageseg_mode: '10'
+      });
+      return ocrWorker;
+    }
+
+    async function recognizeTile(worker, box) {
+      const canvas = document.createElement('canvas');
+      const size = 140;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(workCanvas, box.left, box.top, box.width, box.height, 12, 12, size - 24, size - 24);
+
+      const image = ctx.getImageData(0, 0, size, size);
+      for (let i = 0; i < image.data.length; i += 4) {
+        const r = image.data[i];
+        const g = image.data[i + 1];
+        const b = image.data[i + 2];
+        const isLetter = Math.min(r, g, b) > 165 && Math.max(r, g, b) - Math.min(r, g, b) < 55;
+        const value = isLetter ? 0 : 255;
+        image.data[i] = value;
+        image.data[i + 1] = value;
+        image.data[i + 2] = value;
+        image.data[i + 3] = 255;
+      }
+      ctx.putImageData(image, 0, 0);
+
+      const result = await worker.recognize(canvas);
+      return normalizeOcrLetter(result.data.text);
+    }
+
+    function normalizeOcrLetter(text) {
+      const cleaned = (text || '').toUpperCase().replace(/[^A-Z]/g, '');
+      const substitutions = { '0': 'O', '1': 'I', '5': 'S' };
+      if (cleaned[0]) return cleaned[0];
+      const fallback = (text || '').toUpperCase().replace(/[^A-Z015]/g, '')[0];
+      return substitutions[fallback] || '';
+    }
+
+    function renderAll() {
+      renderBoard();
+      renderSolver();
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      rows.forEach((row, rowIndex) => {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'word-row';
+
+        row.forEach((tile, colIndex) => {
+          const tileEl = document.createElement('div');
+          tileEl.className = `tile ${tile.state} ${tile.letter ? '' : 'empty'}`;
+          tileEl.addEventListener('click', () => {
+            cycleTileState(rowIndex, colIndex);
+            focusTile(rowIndex, colIndex);
+          });
+
+          const input = document.createElement('input');
+          input.value = tile.letter;
+          input.maxLength = 1;
+          input.inputMode = 'text';
+          input.autocapitalize = 'characters';
+          input.autocomplete = 'off';
+          input.spellcheck = false;
+          input.setAttribute('aria-label', `Row ${rowIndex + 1}, tile ${colIndex + 1}`);
+          input.dataset.row = rowIndex;
+          input.dataset.col = colIndex;
+
+          input.addEventListener('input', event => {
+            const letter = event.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(-1);
+            rows[rowIndex][colIndex].letter = letter;
+            event.target.value = letter;
+            renderSolver();
+            if (letter) focusNextTile(rowIndex, colIndex);
+          });
+
+          input.addEventListener('keydown', event => {
+            if (event.key === 'Backspace' && !rows[rowIndex][colIndex].letter) {
+              event.preventDefault();
+              focusPreviousTile(rowIndex, colIndex);
+            }
+          });
+
+          tileEl.appendChild(input);
+          rowEl.appendChild(tileEl);
+        });
+
+        boardEl.appendChild(rowEl);
+      });
+    }
+
+    function cycleTileState(rowIndex, colIndex) {
+      const tile = rows[rowIndex][colIndex];
+      const index = TILE_STATES.indexOf(tile.state);
+      tile.state = TILE_STATES[(index + 1) % TILE_STATES.length];
+      renderAll();
+    }
+
+    function focusTile(rowIndex, colIndex) {
+      requestAnimationFrame(() => {
+        const input = boardEl.querySelector(`input[data-row="${rowIndex}"][data-col="${colIndex}"]`);
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      });
+    }
+
+    function focusNextTile(rowIndex, colIndex) {
+      const nextCol = colIndex + 1;
+      if (nextCol < 5) focusTile(rowIndex, nextCol);
+      else if (rowIndex + 1 < rows.length) focusTile(rowIndex + 1, 0);
+    }
+
+    function focusPreviousTile(rowIndex, colIndex) {
+      const previousCol = colIndex - 1;
+      if (previousCol >= 0) focusTile(rowIndex, previousCol);
+      else if (rowIndex > 0) focusTile(rowIndex - 1, 4);
+    }
+
+    function renderSolver() {
+      const constraints = buildConstraints();
+      const excluded = [...constraints.excluded].sort().join(' ');
+      excludedLettersEl.innerHTML = excluded
+        ? `<strong>Excluded:</strong> ${escapeHtml(excluded)}`
+        : '<strong>Excluded:</strong> none yet';
+
+      const patterns = generatePatterns(constraints, 250);
+      patternsEl.innerHTML = '';
+
+      if (!patterns.length) {
+        patternsEl.innerHTML = '<div class="expanded-empty">No known yellow or green letters yet.</div>';
+        expandedEl.innerHTML = '<div class="expanded-empty">Enter or OCR at least one yellow or green tile to generate patterns.</div>';
+        activePatternKey = '';
+        return;
+      }
+
+      if (activePatternKey && !patterns.some(pattern => pattern.key === activePatternKey)) {
+        activePatternKey = '';
+        expandedEl.innerHTML = '<div class="expanded-empty">Choose a pattern with the arrow to list the first 100 brute-force fills.</div>';
+      }
+
+      patterns.forEach(pattern => {
+        const row = document.createElement('div');
+        row.className = `pattern-row ${pattern.key === activePatternKey ? 'active' : ''}`;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'expand';
+        button.textContent = '>';
+        button.setAttribute('aria-label', `Expand ${pattern.word}`);
+        button.addEventListener('click', () => {
+          activePatternKey = pattern.key;
+          renderSolver();
+          renderExpansion(pattern, constraints);
+        });
+
+        row.appendChild(button);
+        row.appendChild(renderMiniWord(pattern.slots));
+
+        const count = document.createElement('div');
+        count.className = 'count';
+        count.textContent = `${pattern.blankCount} blank${pattern.blankCount === 1 ? '' : 's'}`;
+        row.appendChild(count);
+
+        patternsEl.appendChild(row);
+      });
+    }
+
+    function renderMiniWord(slots) {
+      const word = document.createElement('div');
+      word.className = 'mini-word';
+      slots.forEach(letter => {
+        const tile = document.createElement('span');
+        tile.className = `mini-tile ${letter ? '' : 'blank'}`;
+        tile.textContent = letter || '_';
+        word.appendChild(tile);
+      });
+      return word;
+    }
+
+    function renderExpansion(pattern, constraints) {
+      const candidates = expandPattern(pattern, constraints);
+      const fullCount = countPossibleExpansions(pattern, constraints);
+      const capped = fullCount > MAX_CANDIDATES;
+
+      expandedEl.innerHTML = '';
+      const title = document.createElement('div');
+      title.className = 'letters-line';
+      title.innerHTML = `<strong>${escapeHtml(pattern.word)}</strong> -> ${candidates.length}${capped ? '+' : ''} shown`;
+      expandedEl.appendChild(title);
+
+      const list = document.createElement('div');
+      list.className = 'word-list';
+      candidates.forEach(candidate => {
+        const item = document.createElement('div');
+        item.className = 'candidate';
+        item.textContent = candidate;
+        list.appendChild(item);
+      });
+      expandedEl.appendChild(list);
+
+      if (capped) {
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.textContent = `Stopped after the first ${MAX_CANDIDATES} entries.`;
+        expandedEl.appendChild(note);
+      }
+    }
+
+    function buildConstraints() {
+      const green = Array(5).fill('');
+      const yellowForbidden = new Map();
+      const knownRowCounts = [];
+      const knownLetters = new Set();
+      const grayLetters = new Set();
+
+      rows.forEach(row => {
+        const rowCounts = new Map();
+        row.forEach((tile, index) => {
+          const letter = tile.letter.toUpperCase();
+          if (!letter) return;
+
+          if (tile.state === 'green') {
+            green[index] = letter;
+            rowCounts.set(letter, (rowCounts.get(letter) || 0) + 1);
+            knownLetters.add(letter);
+          } else if (tile.state === 'yellow') {
+            if (!yellowForbidden.has(letter)) yellowForbidden.set(letter, new Set());
+            yellowForbidden.get(letter).add(index);
+            rowCounts.set(letter, (rowCounts.get(letter) || 0) + 1);
+            knownLetters.add(letter);
+          } else {
+            grayLetters.add(letter);
+          }
+        });
+        if (rowCounts.size) knownRowCounts.push(rowCounts);
+      });
+
+      const minCounts = new Map();
+      knownRowCounts.forEach(rowCounts => {
+        rowCounts.forEach((count, letter) => {
+          minCounts.set(letter, Math.max(minCounts.get(letter) || 0, count));
+        });
+      });
+
+      const excluded = new Set([...grayLetters].filter(letter => !knownLetters.has(letter)));
+      return { green, yellowForbidden, minCounts, knownLetters, excluded };
+    }
+
+    function generatePatterns(constraints, limit) {
+      if (!constraints.minCounts.size) return [];
+
+      const slots = Array(5).fill('');
+      for (let index = 0; index < 5; index++) {
+        if (constraints.green[index]) slots[index] = constraints.green[index];
+      }
+
+      const remaining = [];
+      for (const [letter, count] of constraints.minCounts.entries()) {
+        const fixedCount = slots.filter(slot => slot === letter).length;
+        const extra = Math.max(0, count - fixedCount);
+        for (let i = 0; i < extra; i++) remaining.push(letter);
+      }
+
+      const seen = new Set();
+      const patterns = [];
+
+      function place(index) {
+        if (patterns.length >= limit) return;
+        if (index >= remaining.length) {
+          const key = slots.map(letter => letter || '_').join('');
+          if (!seen.has(key) && patternValid(slots, constraints)) {
+            seen.add(key);
+            patterns.push({
+              slots: [...slots],
+              key,
+              word: key,
+              blankCount: slots.filter(slot => !slot).length
+            });
+          }
+          return;
+        }
+
+        const letter = remaining[index];
+        const forbidden = constraints.yellowForbidden.get(letter) || new Set();
+        for (let position = 0; position < 5; position++) {
+          if (slots[position] || forbidden.has(position)) continue;
+          slots[position] = letter;
+          place(index + 1);
+          slots[position] = '';
+        }
+      }
+
+      place(0);
+      return patterns.sort((a, b) => a.word.localeCompare(b.word));
+    }
+
+    function patternValid(slots, constraints) {
+      for (let index = 0; index < 5; index++) {
+        if (constraints.green[index] && slots[index] !== constraints.green[index]) return false;
+      }
+
+      for (const [letter, forbidden] of constraints.yellowForbidden.entries()) {
+        for (const position of forbidden) {
+          if (slots[position] === letter) return false;
+        }
+      }
+
+      return true;
+    }
+
+    function expandPattern(pattern, constraints) {
+      const allowed = ALPHABET.filter(letter => !constraints.excluded.has(letter));
+      const results = [];
+      const seen = new Set();
+      const slots = [...pattern.slots];
+
+      function fill(position) {
+        if (results.length >= MAX_CANDIDATES) return;
+        if (position === 5) {
+          const word = slots.join('');
+          if (!seen.has(word)) {
+            seen.add(word);
+            results.push(word);
+          }
+          return;
+        }
+
+        if (slots[position]) {
+          fill(position + 1);
+          return;
+        }
+
+        for (const letter of allowed) {
+          slots[position] = letter;
+          fill(position + 1);
+          slots[position] = '';
+          if (results.length >= MAX_CANDIDATES) return;
+        }
+      }
+
+      fill(0);
+      return results;
+    }
+
+    function countPossibleExpansions(pattern, constraints) {
+      const allowedCount = ALPHABET.filter(letter => !constraints.excluded.has(letter)).length;
+      return Math.pow(allowedCount, pattern.blankCount);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>
