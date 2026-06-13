@@ -2,6 +2,7 @@
 
 ## Alphabetical Index
 
+* [aquarium](aquarium.html)
 * [aquarium_gpt55](aquarium_gpt55.html)
 * [blackjack_trainer](blackjack_trainer.html)
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
@@ -22,6 +23,22 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [aquarium](aquarium.html)
+
+A photorealistic kelp-forest aquarium rendered in real time with Three.js (WebGL). Volumetric god rays fan down from the surface, animated caustics ripple across a sculpted seafloor, and dozens of fish across five species school with boid flocking while kelp sways in the current. A collapsible control panel adjusts fish count, water quality, lighting model, kelp density, and bubbles, with a live FPS readout; drag to orbit, scroll to dive, and the scene fills any window size.
+
+> last updated: 2026-06-13 08:46:01
+> Add photorealistic kelp-forest aquarium simulator
+> 
+> Three.js/WebGL scene with volumetric god rays, animated seafloor
+> caustics, swaying kelp, boid-flocking fish across five species, and a
+> collapsible control panel (fish count, quality, lighting, kelp density,
+> bubbles). Orbit/zoom camera, responsive to window size.
+> 
+> Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+>
+> [view commit](https://github.com/jokkebk/tools/commit/5d2348dd7168212d78000e399a0704fb5e70dd60)
 
 ### [aquarium_gpt55](aquarium_gpt55.html)
 
