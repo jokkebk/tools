@@ -2,6 +2,7 @@
 
 ## Alphabetical Index
 
+* [aquarium_gpt55](aquarium_gpt55.html)
 * [blackjack_trainer](blackjack_trainer.html)
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [crt_simulator](crt_simulator.html)
@@ -21,6 +22,15 @@
 * [zipview-opus45](zipview-opus45.html)
 
 ## Tools
+
+### [aquarium_gpt55](aquarium_gpt55.html)
+
+Photorealistic aquarium simulator inspired by a sunlit kelp-tank view, with procedural Three.js fish schools, moving kelp, bubbles, caustics, rocks, depth haze, and animated light shafts. A collapsible control panel adjusts fish population, water clarity, kelp density, current speed, sunlight, bubbles, shadows, and display info while the scene automatically fits the browser window.
+
+> last updated: 2026-06-13 08:43:17
+> Add photorealistic aquarium simulator
+>
+> [view commit](https://github.com/jokkebk/tools/commit/20c9c608490225a5fda78cc6eddc381396f91d16)
 
 ### [wordle-ocr](wordle-ocr.html)
 
