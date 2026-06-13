@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aquarium — Photorealistic Kelp Forest</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #04141c; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ---- Control panel ---- */
+  #ui {
+    position: fixed;
+    top: 18px; right: 18px;
+    width: 250px;
+    color: #e8f4f8;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    background: rgba(8, 18, 26, 0.55);
+    border: 1px solid rgba(150, 200, 220, 0.18);
+    border-radius: 10px;
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+    user-select: none;
+    overflow: hidden;
+    transition: width .25s ease;
+    z-index: 10;
+  }
+  #ui .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 15px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+  }
+  #ui .head .chev { transition: transform .25s ease; opacity: .7; font-size: 11px; }
+  #ui.collapsed .body { display: none; }
+  #ui.collapsed .chev { transform: rotate(-90deg); }
+  #ui .body { padding: 4px 15px 15px; }
+
+  .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 0;
+    border-top: 1px solid rgba(150, 200, 220, 0.08);
+  }
+  .row:first-child { border-top: none; }
+  .row .lbl { opacity: .78; }
+  .row .val { font-weight: 600; opacity: .95; }
+  .cyc { cursor: pointer; padding: 2px 8px; border-radius: 5px; transition: background .15s; }
+  .cyc:hover { background: rgba(120,190,220,0.16); }
+
+  .info-block { transition: opacity .2s, max-height .25s; overflow: hidden; }
+  .info-block.hidden { opacity: 0; max-height: 0 !important; padding: 0; }
+
+  /* fish slider */
+  .sliderrow { flex-wrap: wrap; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 3px; margin-top: 9px;
+    background: rgba(150,200,220,0.25); border-radius: 3px; outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: #4db6e8; cursor: pointer; box-shadow: 0 0 6px rgba(77,182,232,0.8);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; border: none;
+    background: #4db6e8; cursor: pointer;
+  }
+
+  /* toggle */
+  .toggle {
+    position: relative; width: 38px; height: 20px;
+    background: rgba(120,140,150,0.35); border-radius: 20px; cursor: pointer;
+    transition: background .2s;
+  }
+  .toggle::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: transform .2s;
+  }
+  .toggle.on { background: #2da4e8; }
+  .toggle.on::after { transform: translateX(18px); }
+
+  .reset {
+    margin-top: 13px; width: 100%; padding: 9px;
+    background: rgba(150,200,220,0.06);
+    border: 1px solid rgba(150, 200, 220, 0.25);
+    border-radius: 7px; color: #e8f4f8;
+    font-family: inherit; font-size: 12px; letter-spacing: 0.14em;
+    cursor: pointer; transition: background .15s;
+  }
+  .reset:hover { background: rgba(120,190,220,0.18); }
+
+  #hint {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    color: rgba(220,240,250,0.45); font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 11px; letter-spacing: 0.12em; z-index: 5; pointer-events: none;
+    transition: opacity 1s;
+  }
+  #loader {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #04141c; color: #bfe3ef; z-index: 50;
+    font-family: "Helvetica Neue", Arial, sans-serif; letter-spacing: 0.25em; font-size: 13px;
+    transition: opacity .6s;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="ui">
+  <div class="head" id="uiHead">
+    <span>AQUARIUM</span><span class="chev">▾</span>
+  </div>
+  <div class="body">
+    <div class="info-block" id="infoBlock">
+      <div class="row"><span class="lbl">FPS</span><span class="val" id="fps">—</span></div>
+      <div class="row"><span class="lbl">FISH</span><span class="val" id="fishCount">150</span></div>
+    </div>
+    <div class="row sliderrow">
+      <input type="range" id="fishSlider" min="0" max="320" value="150">
+    </div>
+    <div class="row"><span class="lbl">WATER QUALITY</span><span class="val cyc" id="qualityCyc">HIGH</span></div>
+    <div class="row"><span class="lbl">LIGHTING</span><span class="val cyc" id="lightCyc">REALISTIC</span></div>
+    <div class="row"><span class="lbl">KELP DENSITY</span><span class="val cyc" id="kelpCyc">HIGH</span></div>
+    <div class="row"><span class="lbl">ENABLE BUBBLES</span><div class="toggle on" id="bubbleTog"></div></div>
+    <div class="row"><span class="lbl">SHOW INFO</span><div class="toggle on" id="infoTog"></div></div>
+    <button class="reset" id="resetBtn">RESET</button>
+  </div>
+</div>
+
+<div id="hint">drag to look around · scroll to dive</div>
+<div id="loader">SUBMERGING…</div>
+<script>
+  window.addEventListener('error', e => {
+    const l = document.getElementById('loader');
+    if (l) { l.style.whiteSpace='pre-wrap'; l.style.fontSize='12px'; l.style.color='#ff8a8a'; l.style.letterSpacing='0'; l.style.padding='30px';
+      l.textContent = 'ERROR: ' + e.message + '\n' + (e.filename||'') + ':' + (e.lineno||''); }
+  });
+  window.addEventListener('unhandledrejection', e => {
+    const l = document.getElementById('loader');
+    if (l) { l.style.color='#ff8a8a'; l.style.fontSize='12px'; l.style.letterSpacing='0'; l.style.padding='30px';
+      l.textContent = 'REJECT: ' + ((e.reason && e.reason.message) || e.reason); }
+  });
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =========================================================================
+   STATE / CONFIG
+   ========================================================================= */
+const settings = {
+  fish: 150,
+  quality: 'HIGH',      // LOW | MEDIUM | HIGH
+  lighting: 'REALISTIC',// FLAT | SOFT | REALISTIC
+  kelp: 'HIGH',         // LOW | MEDIUM | HIGH
+  bubbles: true,
+};
+const KELP_COUNT = { LOW: 18, MEDIUM: 36, HIGH: 64 };
+const QUALITY_PR  = { LOW: 1, MEDIUM: 1.35, HIGH: Math.min(window.devicePixelRatio, 2) };
+
+// world dimensions
+const W = { x: 60, y: 46, zBack: -42, zFront: 18 };
+
+/* =========================================================================
+   RENDERER / SCENE / CAMERA
+   ========================================================================= */
+const container = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(QUALITY_PR[settings.quality]);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = makeGradientTexture();
+scene.fog = new THREE.FogExp2(0x0d3f50, 0.0145);
+
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 400);
+camera.position.set(0, 17, 52);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 19, -4);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 8;
+controls.maxDistance = 90;
+controls.maxPolarAngle = Math.PI * 0.92;
+controls.minPolarAngle = Math.PI * 0.12;
+controls.enablePan = false;
+controls.rotateSpeed = 0.5;
+controls.zoomSpeed = 0.7;
+
+/* =========================================================================
+   LIGHTING
+   ========================================================================= */
+const hemi = new THREE.HemisphereLight(0x9fe6ff, 0x06303a, 0.9);
+scene.add(hemi);
+
+const ambient = new THREE.AmbientLight(0x2b6a7a, 0.5);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xcdf3ff, 2.1);
+sun.position.set(18, 90, 26);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 10;
+sun.shadow.camera.far = 220;
+sun.shadow.camera.left = -80;
+sun.shadow.camera.right = 80;
+sun.shadow.camera.top = 80;
+sun.shadow.camera.bottom = -80;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.04;
+scene.add(sun);
+scene.add(sun.target);
+sun.target.position.set(0, 8, -6);
+
+/* =========================================================================
+   SEAFLOOR + CAUSTICS  (custom shader)
+   ========================================================================= */
+const floorUniforms = THREE.UniformsUtils.merge([
+  THREE.UniformsLib.fog,
+  {
+    uTime: { value: 0 },
+    uCaustic: { value: 1.0 },
+  },
+]);
+const floorMat = new THREE.ShaderMaterial({
+  uniforms: floorUniforms,
+  fog: true,
+  lights: false,
+  vertexShader: `
+    varying vec2 vUv; varying vec3 vWorld;
+    #include <fog_pars_vertex>
+    void main(){
+      vUv = uv * 40.0;
+      vec4 wp = modelMatrix * vec4(position,1.0);
+      vWorld = wp.xyz;
+      vec4 mvPosition = viewMatrix * wp;
+      gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }`,
+  fragmentShader: `
+    precision highp float;
+    varying vec2 vUv; varying vec3 vWorld;
+    uniform float uTime; uniform float uCaustic;
+    #include <fog_pars_fragment>
+
+    // value noise
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+    float noise(vec2 p){
+      vec2 i=floor(p), f=fract(p);
+      float a=hash(i), b=hash(i+vec2(1,0)), c=hash(i+vec2(0,1)), d=hash(i+vec2(1,1));
+      vec2 u=f*f*(3.0-2.0*f);
+      return mix(mix(a,b,u.x), mix(c,d,u.x), u.y);
+    }
+    float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p*=2.0; a*=0.5;} return v; }
+
+    // classic animated caustics
+    float caustic(vec2 uv){
+      vec2 p = mod(uv*0.7, 6.2831853) - 250.0;
+      vec2 i = vec2(p);
+      float c = 1.0; float inten = 0.0045; float t = uTime * 0.42;
+      for (int n = 0; n < 5; n++){
+        float tt = t * (1.0 - (3.5/float(n+1)));
+        i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));
+        c += 1.0/length(vec2(p.x/(sin(i.x+tt)/inten), p.y/(cos(i.y+tt)/inten)));
+      }
+      c /= 5.0; c = 1.17 - pow(c, 1.4);
+      return pow(abs(c), 7.0);
+    }
+    void main(){
+      float s = fbm(vUv*0.5);
+      vec3 sand = mix(vec3(0.06,0.16,0.17), vec3(0.13,0.27,0.27), s);
+      sand += fbm(vUv*3.0)*0.05;
+      float ca = caustic(vUv*0.45) * uCaustic;
+      vec3 caCol = vec3(0.5, 0.95, 1.0) * ca * 2.1;
+      // brighter near camera / shallower, dimmer with depth into the scene
+      float depthFade = clamp((vWorld.z+60.0)/80.0, 0.25, 1.0);
+      vec3 col = sand*1.15 + caCol*depthFade;
+      col = mix(col, vec3(0.04,0.20,0.26), 0.15);
+      gl_FragColor = vec4(col, 1.0);
+      #include <fog_fragment>
+    }`,
+});
+const floorGeo = new THREE.PlaneGeometry(260, 220, 80, 60);
+// gently roll the floor
+const fp = floorGeo.attributes.position;
+for (let i = 0; i < fp.count; i++) {
+  const x = fp.getX(i), y = fp.getY(i);
+  fp.setZ(i, Math.sin(x*0.05)*1.4 + Math.cos(y*0.06)*1.6 + Math.sin(x*0.13+y*0.1)*0.7);
+}
+floorGeo.computeVertexNormals();
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI/2;
+floor.position.y = 0;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// shadow-catcher overlay so rock/fish shadows read on the shader floor
+const shadowMat = new THREE.ShadowMaterial({ opacity: 0.32 });
+const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(260,220), shadowMat);
+shadowFloor.rotation.x = -Math.PI/2;
+shadowFloor.position.y = 0.05;
+shadowFloor.receiveShadow = true;
+scene.add(shadowFloor);
+
+/* =========================================================================
+   ROCKS
+   ========================================================================= */
+const rockMat = new THREE.MeshStandardMaterial({ color: 0x223434, roughness: 0.95, metalness: 0.0 });
+const mossMat = new THREE.MeshStandardMaterial({ color: 0x2c5230, roughness: 1.0 });
+function makeRock(x, z, s) {
+  const g = new THREE.IcosahedronGeometry(s, 2);
+  const p = g.attributes.position;
+  for (let i=0;i<p.count;i++){
+    const v = new THREE.Vector3().fromBufferAttribute(p, i);
+    const n = (Math.sin(v.x*2.1)*Math.cos(v.y*1.7)*Math.sin(v.z*2.3));
+    v.multiplyScalar(1 + n*0.22 + (Math.random()-0.5)*0.12);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, Math.random()>0.5?rockMat:mossMat);
+  m.position.set(x, s*0.45, z);
+  m.scale.y = 0.7 + Math.random()*0.3;
+  m.rotation.y = Math.random()*Math.PI;
+  m.castShadow = true; m.receiveShadow = true;
+  scene.add(m);
+}
+const rockSpots = [[-44,-26,9],[42,-30,11],[-30,8,5],[26,4,6],[0,-34,8],[-52,-8,7],[50,-6,6],[14,-20,4],[-16,-12,3.5]];
+rockSpots.forEach(([x,z,s])=>makeRock(x,z,s));
+
+/* =========================================================================
+   KELP  (custom swaying shader)
+   ========================================================================= */
+const kelpGroup = new THREE.Group();
+scene.add(kelpGroup);
+
+const kelpVert = `
+  uniform float uTime; uniform float uPhase; uniform float uAmp; uniform float uHeight;
+  varying vec2 vUv; varying float vSide;
+  void main(){
+    vUv = uv;
+    vSide = position.x;
+    vec3 pos = position;
+    float h = uv.y;                     // 0 base -> 1 tip
+    float t = uTime*0.6 + uPhase;
+    // taper width toward the tip
+    pos.x *= mix(1.0, 0.35, h);
+    // sway grows with height
+    float bend = h*h;
+    pos.x += sin(t + h*3.0) * uAmp * bend;
+    pos.z += cos(t*0.8 + h*2.3) * uAmp * 0.7 * bend;
+    pos.x += sin(t*2.3 + h*8.0) * 0.12 * bend;  // ripple
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+  }`;
+const kelpFrag = `
+  precision highp float;
+  varying vec2 vUv; varying float vSide;
+  uniform float uHue;
+  void main(){
+    // vertical gradient: dark holdfast -> golden green blade
+    vec3 base = vec3(0.10,0.20,0.07);
+    vec3 mid  = vec3(0.45,0.52,0.10);
+    vec3 tip  = vec3(0.78,0.74,0.18);
+    vec3 col = mix(base, mid, smoothstep(0.0,0.5,vUv.y));
+    col = mix(col, tip, smoothstep(0.5,1.0,vUv.y));
+    col *= mix(vec3(0.9,1.0,0.9), vec3(1.05,1.0,0.6), uHue);
+    // blade midrib shading
+    float rib = smoothstep(0.5, 0.0, abs(vUv.x-0.5));
+    col *= 0.7 + 0.45*rib;
+    // ambient occlusion at base
+    col *= 0.45 + 0.55*vUv.y;
+    float alpha = 0.92 - 0.15*(1.0-rib);
+    gl_FragColor = vec4(col, alpha);
+  }`;
+
+const kelpGeoCache = new THREE.PlaneGeometry(1, 1, 1, 22);
+// shift origin to bottom (geometry spans y:0..1)
+kelpGeoCache.translate(0, 0.5, 0);
+
+function buildKelp(density) {
+  while (kelpGroup.children.length) {
+    const c = kelpGroup.children.pop();
+    c.material.dispose();
+  }
+  const n = KELP_COUNT[density];
+  for (let i=0;i<n;i++){
+    // bias toward sides + back, keep a viewing lane near front-center
+    let x, z, tries=0;
+    do {
+      x = (Math.random()-0.5) * (W.x*2 + 24);
+      z = THREE.MathUtils.lerp(W.zBack-8, W.zFront, Math.random());
+      tries++;
+    } while (tries<6 && Math.abs(x)<14 && z>2);
+
+    const h = 22 + Math.random()*22;
+    const w = 1.6 + Math.random()*1.6;
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uPhase: { value: Math.random()*Math.PI*2 },
+        uAmp: { value: 1.6 + Math.random()*1.8 },
+        uHeight: { value: h },
+        uHue: { value: Math.random() },
+      },
+      vertexShader: kelpVert, fragmentShader: kelpFrag,
+      side: THREE.DoubleSide, transparent: true, depthWrite: true,
+    });
+    const m = new THREE.Mesh(kelpGeoCache, mat);
+    m.scale.set(w, h, 1);
+    m.position.set(x, 0, z);
+    m.rotation.y = Math.random()*Math.PI;
+    kelpGroup.add(m);
+
+    // second crossed blade-cluster for fullness
+    if (Math.random() > 0.4) {
+      const m2 = m.clone();
+      m2.material = mat.clone();
+      m2.material.uniforms.uPhase.value = Math.random()*Math.PI*2;
+      m2.rotation.y += Math.PI/2 + (Math.random()-0.5);
+      m2.scale.x *= 0.85;
+      kelpGroup.add(m2);
+    }
+  }
+}
+buildKelp(settings.kelp);
+
+/* =========================================================================
+   FISH  (procedural geometry + boids)
+   ========================================================================= */
+const fishGroup = new THREE.Group();
+scene.add(fishGroup);
+
+// shared geometries
+const bodyGeo = new THREE.SphereGeometry(1, 16, 12);
+bodyGeo.scale(0.55, 0.42, 1.05);          // elongated along +z (head)
+const tailGeo = makeTailGeo();
+const finGeo  = makeTailGeo(); finGeo.scale(0.5,0.5,0.5);
+
+function makeTailGeo() {
+  // forked tail in XY plane, then orient so length runs along -z
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(-0.85, 0.55);
+  shape.lineTo(-0.62, 0.0);
+  shape.lineTo(-0.85, -0.55);
+  shape.lineTo(0, 0);
+  const g = new THREE.ShapeGeometry(shape);
+  g.rotateY(-Math.PI/2);   // X -> Z  (tail now extends toward -z)
+  return g;
+}
+
+const SPECIES = [
+  { name:'cardinal', color:0xff6a2b, emissive:0x3a1200, size:0.7, rough:0.45, metal:0.2, weight:5 },
+  { name:'silver',   color:0xb9c6cc, emissive:0x0a1418, size:1.5, rough:0.25, metal:0.6, weight:3 },
+  { name:'goldgar',  color:0xe8a23a, emissive:0x2a1500, size:1.2, rough:0.4,  metal:0.3, weight:2 },
+  { name:'bluetang', color:0x2f6bd6, emissive:0x05122a, size:0.95,rough:0.35, metal:0.35,weight:2 },
+  { name:'damsel',   color:0x12c0c8, emissive:0x012022, size:0.6, rough:0.4,  metal:0.3, weight:3 },
+];
+const speciesMat = SPECIES.map(s => new THREE.MeshStandardMaterial({
+  color: s.color, emissive: s.emissive, roughness: s.rough, metalness: s.metal,
+  side: THREE.DoubleSide, flatShading: false,
+}));
+
+const fish = [];   // {group, tail, vel, phase, freq, sp}
+
+function pickSpecies() {
+  const total = SPECIES.reduce((a,s)=>a+s.weight,0);
+  let r = Math.random()*total;
+  for (let i=0;i<SPECIES.length;i++){ r -= SPECIES[i].weight; if (r<=0) return i; }
+  return 0;
+}
+
+function makeOneFish(spIdx) {
+  const sp = SPECIES[spIdx];
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(bodyGeo, speciesMat[spIdx]);
+  body.castShadow = true;
+  g.add(body);
+
+  // tail (pivot group at body rear)
+  const tailPivot = new THREE.Group();
+  tailPivot.position.z = -0.95;
+  const tail = new THREE.Mesh(tailGeo, speciesMat[spIdx]);
+  tail.castShadow = true;
+  tailPivot.add(tail);
+  g.add(tailPivot);
+
+  // dorsal fin
+  const dorsal = new THREE.Mesh(finGeo, speciesMat[spIdx]);
+  dorsal.rotation.z = Math.PI/2;
+  dorsal.position.set(0, 0.42, -0.1);
+  dorsal.scale.set(0.7,0.7,0.7);
+  g.add(dorsal);
+
+  const s = sp.size * (0.8 + Math.random()*0.5);
+  g.scale.setScalar(s);
+  g.position.set(
+    (Math.random()-0.5)*W.x*1.4,
+    8 + Math.random()*26,
+    THREE.MathUtils.lerp(W.zBack, W.zFront, Math.random())
+  );
+  fishGroup.add(g);
+
+  const vel = new THREE.Vector3(Math.random()-0.5, (Math.random()-0.5)*0.3, Math.random()-0.5)
+    .normalize().multiplyScalar(4 + Math.random()*3);
+  return { group:g, tail:tailPivot, vel, phase:Math.random()*99, freq:8+Math.random()*5, sp:spIdx, size:s };
+}
+
+function setFishCount(target) {
+  target = Math.round(target);
+  while (fish.length < target) fish.push(makeOneFish(pickSpecies()));
+  while (fish.length > target) {
+    const f = fish.pop();
+    fishGroup.remove(f.group);
+  }
+  applyShadowQuality();
+}
+setFishCount(settings.fish);
+
+// boids params
+const boid = {
+  perception: 9, sep: 5,
+  wSep: 1.7, wAli: 0.9, wCoh: 0.7, wBounds: 2.2, wCurrent: 0.25,
+  maxSpeed: 9, minSpeed: 3.2, maxForce: 6,
+};
+const center = new THREE.Vector3(0, 20, -8);
+const bounds = new THREE.Vector3(W.x+6, 16, 30);
+
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(),
+      _d = new THREE.Vector3(), _steer = new THREE.Vector3(), _tmp = new THREE.Vector3();
+
+function updateBoids(dt, time) {
+  const n = fish.length;
+  for (let i=0;i<n;i++){
+    const f = fish[i];
+    const p = f.group.position;
+    _a.set(0,0,0); _b.set(0,0,0); _c.set(0,0,0);
+    let cntA=0, cntC=0;
+    for (let j=0;j<n;j++){
+      if (i===j) continue;
+      const o = fish[j];
+      const dsq = p.distanceToSquared(o.group.position);
+      if (dsq > boid.perception*boid.perception) continue;
+      const d = Math.sqrt(dsq) || 0.0001;
+      // separation
+      if (d < boid.sep) {
+        _tmp.copy(p).sub(o.group.position).multiplyScalar(1/(d*d));
+        _a.add(_tmp);
+      }
+      // alignment + cohesion (same-ish species align tighter)
+      _b.add(o.vel); cntA++;
+      _c.add(o.group.position); cntC++;
+    }
+    _steer.set(0,0,0);
+    if (_a.lengthSq()>0) _steer.add(_a.normalize().multiplyScalar(boid.wSep));
+    if (cntA>0){ _b.divideScalar(cntA).sub(f.vel); _steer.add(_b.multiplyScalar(boid.wAli*0.1)); }
+    if (cntC>0){ _c.divideScalar(cntC).sub(p); _steer.add(_c.multiplyScalar(boid.wCoh*0.02)); }
+
+    // soft bounds (ellipsoid around center)
+    _d.copy(p).sub(center);
+    const ex = _d.x/bounds.x, ey = _d.y/bounds.y, ez = _d.z/bounds.z;
+    const r = ex*ex+ey*ey+ez*ez;
+    if (r > 0.8) {
+      _tmp.set(_d.x/(bounds.x*bounds.x), _d.y/(bounds.y*bounds.y), _d.z/(bounds.z*bounds.z))
+        .multiplyScalar(-1).normalize().multiplyScalar(boid.wBounds * (r-0.8) * 6);
+      _steer.add(_tmp);
+    }
+    // gentle drifting current + wander
+    _steer.x += Math.sin(time*0.2 + f.phase)*boid.wCurrent;
+    _steer.y += Math.sin(time*0.5 + f.phase*1.7)*boid.wCurrent*0.5;
+    _steer.z += Math.cos(time*0.18 + f.phase)*boid.wCurrent;
+
+    // integrate
+    if (_steer.lengthSq() > boid.maxForce*boid.maxForce) _steer.setLength(boid.maxForce);
+    f.vel.addScaledVector(_steer, dt);
+    const spd = f.vel.length();
+    if (spd > boid.maxSpeed) f.vel.setLength(boid.maxSpeed);
+    else if (spd < boid.minSpeed) f.vel.setLength(boid.minSpeed);
+    p.addScaledVector(f.vel, dt);
+
+    // orient (local +z is the head)
+    _tmp.copy(p).add(f.vel);
+    f.group.lookAt(_tmp);
+    // tail wiggle scales with speed
+    const wig = THREE.MathUtils.clamp(f.vel.length()/boid.maxSpeed, 0.2, 1);
+    f.tail.rotation.y = Math.sin(time*f.freq + f.phase) * 0.55 * wig;
+    // subtle body roll into turns
+    f.group.rotation.z += Math.sin(time*f.freq*0.5 + f.phase)*0.02;
+  }
+}
+
+/* =========================================================================
+   GOD RAYS  (additive light shafts)
+   ========================================================================= */
+const rayGroup = new THREE.Group();
+scene.add(rayGroup);
+const rayUniformsList = [];
+const rayMatProto = {
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);} `,
+  fragmentShader: `
+    precision highp float; varying vec2 vUv;
+    uniform float uTime; uniform vec3 uColor; uniform float uSeed; uniform float uIntensity;
+    void main(){
+      float top = pow(vUv.y, 1.4);                       // bright near surface
+      float edge = smoothstep(0.0,0.18,vUv.x)*smoothstep(0.0,0.18,1.0-vUv.x);
+      float flick = 0.75 + 0.25*sin(uTime*0.6 + uSeed*6.28 + vUv.x*4.0);
+      float a = top*edge*flick*uIntensity;
+      gl_FragColor = vec4(uColor, a);
+    }`,
+};
+function buildRays(count, intensity) {
+  while (rayGroup.children.length) { const c=rayGroup.children.pop(); c.material.dispose(); }
+  rayUniformsList.length = 0;
+  for (let i=0;i<count;i++){
+    const u = {
+      uTime:{value:0}, uColor:{value:new THREE.Color(0xcdf4ff)},
+      uSeed:{value:Math.random()}, uIntensity:{value:intensity*(0.5+Math.random()*0.8)},
+    };
+    const mat = new THREE.ShaderMaterial({
+      uniforms:u, vertexShader:rayMatProto.vertexShader, fragmentShader:rayMatProto.fragmentShader,
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, fog:false,
+    });
+    const w = 3 + Math.random()*5;
+    const geo = new THREE.PlaneGeometry(w, 78);
+    const m = new THREE.Mesh(geo, mat);
+    const px = (Math.random()-0.5)*120;
+    m.position.set(px, 34, THREE.MathUtils.lerp(-55, 0, Math.random()));
+    // fan the shafts out from a high light source
+    m.rotation.z = THREE.MathUtils.clamp(-px*0.0055, -0.42, 0.42) + (Math.random()-0.5)*0.08;
+    m.rotation.y = (Math.random()-0.5)*0.5;
+    rayGroup.add(m);
+    rayUniformsList.push({ u, mesh:m, baseX:m.position.x, drift:0.15+Math.random()*0.3 });
+  }
+}
+buildRays(16, 0.32);
+
+/* =========================================================================
+   BUBBLES + MARINE SNOW  (points)
+   ========================================================================= */
+const circleTex = makeCircleTexture();
+
+// bubbles
+const BUB = 320;
+const bubGeo = new THREE.BufferGeometry();
+const bubPos = new Float32Array(BUB*3);
+const bubData = [];
+for (let i=0;i<BUB;i++){
+  resetBubble(i, true);
+}
+bubGeo.setAttribute('position', new THREE.BufferAttribute(bubPos, 3));
+const bubMat = new THREE.PointsMaterial({
+  size: 0.6, map: circleTex, transparent: true, opacity: 0.5,
+  depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true, color: 0xddf6ff,
+});
+const bubbles = new THREE.Points(bubGeo, bubMat);
+scene.add(bubbles);
+function resetBubble(i, anywhere) {
+  const x = (Math.random()-0.5)*W.x*2;
+  const z = THREE.MathUtils.lerp(W.zBack, W.zFront, Math.random());
+  const y = anywhere ? Math.random()*W.y : Math.random()*4;
+  bubPos[i*3]=x; bubPos[i*3+1]=y; bubPos[i*3+2]=z;
+  bubData[i] = { speed: 3+Math.random()*5, wob: Math.random()*99, amp: 0.4+Math.random()*0.8, x };
+}
+
+// marine snow
+const SNOW = 700;
+const snowGeo = new THREE.BufferGeometry();
+const snowPos = new Float32Array(SNOW*3);
+const snowVel = [];
+for (let i=0;i<SNOW;i++){
+  snowPos[i*3]=(Math.random()-0.5)*W.x*2.4;
+  snowPos[i*3+1]=Math.random()*W.y;
+  snowPos[i*3+2]=THREE.MathUtils.lerp(W.zBack-10, W.zFront+6, Math.random());
+  snowVel.push({ vx:(Math.random()-0.5)*0.3, vy:-(0.1+Math.random()*0.3), ph:Math.random()*99 });
+}
+snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos,3));
+const snowMat = new THREE.PointsMaterial({
+  size:0.16, map:circleTex, transparent:true, opacity:0.35,
+  depthWrite:false, sizeAttenuation:true, color:0xcfeaf0,
+});
+const snow = new THREE.Points(snowGeo, snowMat);
+scene.add(snow);
+
+/* =========================================================================
+   POST-PROCESSING
+   ========================================================================= */
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.42, 0.55, 0.9);
+composer.addPass(bloom);
+
+// underwater color grade + vignette
+const gradePass = new ShaderPass({
+  uniforms: {
+    tDiffuse:{value:null}, uTime:{value:0}, uVignette:{value:0.9}, uTint:{value:new THREE.Color(0x6fd0e0)},
+  },
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0);} `,
+  fragmentShader:`
+    precision highp float; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float uTime; uniform float uVignette; uniform vec3 uTint;
+    void main(){
+      vec2 uv = vUv;
+      // gentle caustic light wobble on whole image
+      uv.x += sin(uv.y*16.0 + uTime*0.7)*0.0009;
+      vec3 c = texture2D(tDiffuse, uv).rgb;
+      // subtle blue-green tint in shadows
+      c = mix(c, c*uTint, 0.10);
+      // vignette
+      float d = distance(vUv, vec2(0.5));
+      c *= smoothstep(0.95, uVignette*0.45, d);
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+});
+composer.addPass(gradePass);
+
+/* =========================================================================
+   QUALITY / LIGHTING APPLICATION
+   ========================================================================= */
+function applyQuality() {
+  renderer.setPixelRatio(QUALITY_PR[settings.quality]);
+  const on = settings.quality !== 'LOW';
+  bloom.enabled = on;
+  gradePass.enabled = true;
+  buildRays(settings.quality==='HIGH'?16:(settings.quality==='MEDIUM'?11:6),
+            settings.quality==='LOW'?0.26:0.32);
+  applyShadowQuality();
+  onResize();
+}
+function applyLighting() {
+  if (settings.lighting === 'FLAT') {
+    sun.castShadow = false; sun.intensity = 1.3; ambient.intensity = 0.95; hemi.intensity = 1.2;
+    floorUniforms.uCaustic.value = 0.35;
+  } else if (settings.lighting === 'SOFT') {
+    sun.castShadow = false; sun.intensity = 1.8; ambient.intensity = 0.6; hemi.intensity = 1.0;
+    floorUniforms.uCaustic.value = 0.8;
+  } else { // REALISTIC
+    sun.castShadow = settings.quality !== 'LOW';
+    sun.intensity = 2.2; ambient.intensity = 0.62; hemi.intensity = 1.15;
+    floorUniforms.uCaustic.value = 1.0;
+  }
+  applyShadowQuality();
+}
+function applyShadowQuality() {
+  const realistic = settings.lighting === 'REALISTIC' && settings.quality !== 'LOW';
+  renderer.shadowMap.enabled = realistic;
+  sun.castShadow = realistic;
+  // big schools casting shadows is costly: only cast on HIGH
+  const fishShadow = realistic && settings.quality === 'HIGH';
+  fish.forEach(f => f.group.traverse(o => { if (o.isMesh) o.castShadow = fishShadow; }));
+}
+
+/* =========================================================================
+   UI WIRING
+   ========================================================================= */
+const $ = id => document.getElementById(id);
+$('uiHead').onclick = () => $('ui').classList.toggle('collapsed');
+
+$('fishSlider').addEventListener('input', e => {
+  settings.fish = +e.target.value;
+  $('fishCount').textContent = settings.fish;
+  setFishCount(settings.fish);
+});
+function cycler(elId, key, values, after) {
+  $(elId).onclick = () => {
+    const i = values.indexOf(settings[key]);
+    settings[key] = values[(i+1)%values.length];
+    $(elId).textContent = settings[key];
+    after && after();
+  };
+}
+cycler('qualityCyc','quality',['LOW','MEDIUM','HIGH'], applyQuality);
+cycler('lightCyc','lighting',['FLAT','SOFT','REALISTIC'], applyLighting);
+cycler('kelpCyc','kelp',['LOW','MEDIUM','HIGH'], ()=>buildKelp(settings.kelp));
+
+$('bubbleTog').onclick = () => {
+  settings.bubbles = !settings.bubbles;
+  $('bubbleTog').classList.toggle('on', settings.bubbles);
+  bubbles.visible = settings.bubbles;
+};
+$('infoTog').onclick = () => {
+  const on = !$('infoTog').classList.contains('on');
+  $('infoTog').classList.toggle('on', on);
+  $('infoBlock').classList.toggle('hidden', !on);
+};
+$('resetBtn').onclick = () => {
+  settings.fish=150; settings.quality='HIGH'; settings.lighting='REALISTIC'; settings.kelp='HIGH'; settings.bubbles=true;
+  $('fishSlider').value=150; $('fishCount').textContent='150';
+  $('qualityCyc').textContent='HIGH'; $('lightCyc').textContent='REALISTIC'; $('kelpCyc').textContent='HIGH';
+  $('bubbleTog').classList.add('on'); $('infoTog').classList.add('on'); $('infoBlock').classList.remove('hidden');
+  bubbles.visible=true;
+  setFishCount(150); buildKelp('HIGH'); applyQuality(); applyLighting();
+  camera.position.set(0,17,52); controls.target.set(0,19,-4);
+};
+
+applyLighting();
+
+/* =========================================================================
+   HELPERS
+   ========================================================================= */
+function makeGradientTexture() {
+  const c = document.createElement('canvas'); c.width=16; c.height=256;
+  const g = c.getContext('2d').createLinearGradient(0,0,0,256);
+  g.addColorStop(0.0,'#aee9f5');
+  g.addColorStop(0.25,'#4fb6cf');
+  g.addColorStop(0.55,'#15708a');
+  g.addColorStop(0.85,'#083f52');
+  g.addColorStop(1.0,'#04222e');
+  const ctx = c.getContext('2d'); ctx.fillStyle=g; ctx.fillRect(0,0,16,256);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function makeCircleTexture() {
+  const c = document.createElement('canvas'); c.width=c.height=64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(32,32,0,32,32,32);
+  g.addColorStop(0,'rgba(255,255,255,1)');
+  g.addColorStop(0.4,'rgba(255,255,255,0.5)');
+  g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(32,32,32,0,Math.PI*2); ctx.fill();
+  return new THREE.CanvasTexture(c);
+}
+
+/* =========================================================================
+   RESIZE
+   ========================================================================= */
+function onResize() {
+  const w = innerWidth, h = innerHeight;
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.setSize(w,h);
+  composer.setSize(w,h);
+  bloom.setSize(w,h);
+}
+addEventListener('resize', onResize);
+
+/* =========================================================================
+   ANIMATE
+   ========================================================================= */
+const clock = new THREE.Clock();
+let fpsAcc = 0, fpsFrames = 0, fpsTimer = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // shaders
+  floorUniforms.uTime.value = t;
+  for (const m of kelpGroup.children) m.material.uniforms.uTime.value = t;
+  for (const r of rayUniformsList) {
+    r.u.uTime.value = t;
+    r.mesh.position.x = r.baseX + Math.sin(t*r.drift)*3;
+  }
+  gradePass.uniforms.uTime.value = t;
+
+  // fish
+  updateBoids(dt, t);
+
+  // bubbles
+  if (settings.bubbles) {
+    for (let i=0;i<BUB;i++){
+      const d = bubData[i];
+      bubPos[i*3+1] += d.speed*dt;
+      bubPos[i*3] = d.x + Math.sin(t*1.5 + d.wob)*d.amp;
+      if (bubPos[i*3+1] > W.y) resetBubble(i, false);
+    }
+    bubGeo.attributes.position.needsUpdate = true;
+  }
+  // snow
+  for (let i=0;i<SNOW;i++){
+    const v = snowVel[i];
+    snowPos[i*3]   += Math.sin(t*0.3+v.ph)*0.02 + v.vx*dt;
+    snowPos[i*3+1] += v.vy*dt;
+    if (snowPos[i*3+1] < 0.5) snowPos[i*3+1] = W.y;
+  }
+  snowGeo.attributes.position.needsUpdate = true;
+
+  controls.update();
+  composer.render();
+
+  // fps
+  fpsFrames++; fpsTimer += dt;
+  if (fpsTimer >= 0.5) {
+    $('fps').textContent = Math.round(fpsFrames/fpsTimer);
+    fpsFrames=0; fpsTimer=0;
+  }
+}
+
+// kick off after first frame
+applyQuality();
+animate();
+setTimeout(()=>{ const l=$('loader'); l.style.opacity=0; setTimeout(()=>l.remove(),700); }, 500);
+setTimeout(()=>{ const h=$('hint'); if(h) h.style.opacity=0; }, 6000);
+</script>
+</body>
+</html>
