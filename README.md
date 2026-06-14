@@ -24,30 +24,23 @@
 
 ## Tools
 
+### [aquarium_gpt55](aquarium_gpt55.html)
+
+Photorealistic aquarium simulator inspired by a sunlit kelp-tank view, with procedural Three.js fish schools, patterned fish materials, leafy moving kelp, bubbles, caustics, textured sand, rocks, depth haze, and animated light shafts. A collapsible control panel adjusts fish population, water clarity, kelp density, current speed, sunlight, bubbles, shadow depth, depth of field, and display info while the scene automatically fits the browser window.
+
+> last updated: 2026-06-14 10:52:07
+> Aquarium updates
+>
+> [view commit](https://github.com/jokkebk/tools/commit/bb81f677c52f82b3cc3d2972af1e76299c59fcbb)
+
 ### [aquarium](aquarium.html)
 
 A photorealistic kelp-forest aquarium rendered in real time with Three.js (WebGL). Volumetric god rays fan down from the surface, animated caustics ripple across a sculpted seafloor, and dozens of fish across five species school with boid flocking while kelp sways in the current. A collapsible control panel adjusts fish count, water quality, lighting model, kelp density, and bubbles, with a live FPS readout; drag to orbit, scroll to dive, and the scene fills any window size.
 
-> last updated: 2026-06-13 08:46:01
-> Add photorealistic kelp-forest aquarium simulator
-> 
-> Three.js/WebGL scene with volumetric god rays, animated seafloor
-> caustics, swaying kelp, boid-flocking fish across five species, and a
-> collapsible control panel (fish count, quality, lighting, kelp density,
-> bubbles). Orbit/zoom camera, responsive to window size.
-> 
-> Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+> last updated: 2026-06-14 10:52:07
+> Aquarium updates
 >
-> [view commit](https://github.com/jokkebk/tools/commit/5d2348dd7168212d78000e399a0704fb5e70dd60)
-
-### [aquarium_gpt55](aquarium_gpt55.html)
-
-Photorealistic aquarium simulator inspired by a sunlit kelp-tank view, with procedural Three.js fish schools, moving kelp, bubbles, caustics, rocks, depth haze, and animated light shafts. A collapsible control panel adjusts fish population, water clarity, kelp density, current speed, sunlight, bubbles, shadows, and display info while the scene automatically fits the browser window.
-
-> last updated: 2026-06-13 08:43:17
-> Add photorealistic aquarium simulator
->
-> [view commit](https://github.com/jokkebk/tools/commit/20c9c608490225a5fda78cc6eddc381396f91d16)
+> [view commit](https://github.com/jokkebk/tools/commit/bb81f677c52f82b3cc3d2972af1e76299c59fcbb)
 
 ### [wordle-ocr](wordle-ocr.html)
 

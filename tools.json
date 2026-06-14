@@ -107,16 +107,16 @@
     },
     "aquarium_gpt55.html": {
       "last_commit": {
-        "hash": "20c9c608490225a5fda78cc6eddc381396f91d16",
-        "date": "2026-06-13T08:43:17+03:00",
-        "message": "Add photorealistic aquarium simulator"
+        "hash": "bb81f677c52f82b3cc3d2972af1e76299c59fcbb",
+        "date": "2026-06-14T10:52:07+03:00",
+        "message": "Aquarium updates"
       }
     },
     "aquarium.html": {
       "last_commit": {
-        "hash": "5d2348dd7168212d78000e399a0704fb5e70dd60",
-        "date": "2026-06-13T08:46:01+03:00",
-        "message": "Add photorealistic kelp-forest aquarium simulator\n\nThree.js/WebGL scene with volumetric god rays, animated seafloor\ncaustics, swaying kelp, boid-flocking fish across five species, and a\ncollapsible control panel (fish count, quality, lighting, kelp density,\nbubbles). Orbit/zoom camera, responsive to window size.\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+        "hash": "bb81f677c52f82b3cc3d2972af1e76299c59fcbb",
+        "date": "2026-06-14T10:52:07+03:00",
+        "message": "Aquarium updates"
       }
     },
     "firefighter.html": {
