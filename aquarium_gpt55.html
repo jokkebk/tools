@@ -405,6 +405,11 @@
         <output id="shadowDepthOut">72%</output>
         <input id="shadowDepth" data-setting="shadowDepth" type="range" min="0" max="100" value="72" step="1">
       </label>
+      <label class="control">
+        <span>Depth of Field</span>
+        <output id="dofStrengthOut">32%</output>
+        <input id="dofStrength" data-setting="dofStrength" type="range" min="0" max="100" value="32" step="1">
+      </label>
       <div class="toggle-row">
         <span>Enable Bubbles</span>
         <label class="switch">
@@ -434,18 +439,22 @@
   </div>
 </section>
 
-<div class="info-strip" id="infoStrip">150 fish | high clarity | realistic light | high kelp | 66% bubbles</div>
+<div class="info-strip" id="infoStrip">150 fish | high clarity | realistic light | high kelp | 32% DOF | 66% bubbles</div>
 
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
   }
 }
 </script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
 <script type="module">
 import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 
 const canvas = document.getElementById("scene");
 const hud = document.getElementById("hud");
@@ -463,6 +472,7 @@ const defaults = {
   sunlight: 84,
   bubbleRate: 66,
   shadowDepth: 72,
+  dofStrength: 32,
   bubbles: true,
   schooling: true,
   showInfo: true,
@@ -477,7 +487,8 @@ const outputs = {
   current: document.getElementById("currentOut"),
   sunlight: document.getElementById("sunlightOut"),
   bubbleRate: document.getElementById("bubbleRateOut"),
-  shadowDepth: document.getElementById("shadowDepthOut")
+  shadowDepth: document.getElementById("shadowDepthOut"),
+  dofStrength: document.getElementById("dofStrengthOut")
 };
 
 const readouts = {
@@ -507,6 +518,18 @@ scene.fog = new THREE.FogExp2(0x0a5f72, 0.018);
 const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 180);
 camera.position.set(0, 5.4, 23);
 
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camera);
+const bokehPass = new BokehPass(scene, camera, {
+  focus: 42,
+  aperture: 0.00011,
+  maxblur: 0.006,
+  width: window.innerWidth,
+  height: window.innerHeight
+});
+composer.addPass(renderPass);
+composer.addPass(bokehPass);
+
 const clock = new THREE.Clock();
 let elapsed = 0;
 let lastFrame = performance.now();
@@ -521,6 +544,7 @@ const kelpMaterials = [];
 const veilMaterials = [];
 const fish = [];
 const fishMaterials = new Map();
+const fishTextureCache = new Map();
 const rayMaterials = [];
 
 const hemi = new THREE.HemisphereLight(0x9df4ff, 0x081211, 1.05);
@@ -594,14 +618,162 @@ function makeNoiseTexture(size, palette, alpha = 255) {
   return texture;
 }
 
-const sandTexture = makeNoiseTexture(256, [
-  [16, 41, 37],
-  [28, 66, 58],
-  [48, 88, 76],
-  [93, 105, 87],
-  [151, 143, 105]
-]);
+function makeSandTextures(size = 512) {
+  const colorCanvas = document.createElement("canvas");
+  const bumpCanvas = document.createElement("canvas");
+  colorCanvas.width = bumpCanvas.width = size;
+  colorCanvas.height = bumpCanvas.height = size;
+  const ctx = colorCanvas.getContext("2d");
+  const bump = bumpCanvas.getContext("2d");
+  const image = ctx.createImageData(size, size);
+  const bumpImage = bump.createImageData(size, size);
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const idx = (y * size + x) * 4;
+      const ripple = Math.sin((x * 0.095) + Math.sin(y * 0.036) * 2.1) * 0.5 + 0.5;
+      const cross = Math.sin((x + y) * 0.028) * 0.5 + 0.5;
+      const grain = rand();
+      const shell = rand() > 0.992 ? randomBetween(38, 92) : 0;
+      const shade = 0.44 + ripple * 0.2 + cross * 0.08 + grain * 0.14 + shell / 255;
+      const wet = 1 - Math.min(1, y / size * 0.72 + 0.08);
+      image.data[idx] = Math.min(255, 28 + shade * 118 + shell * 0.35);
+      image.data[idx + 1] = Math.min(255, 58 + shade * 102 + wet * 18 + shell * 0.25);
+      image.data[idx + 2] = Math.min(255, 51 + shade * 78 + wet * 22);
+      image.data[idx + 3] = 255;
+
+      const bumpValue = Math.min(255, 82 + ripple * 92 + grain * 44 + shell);
+      bumpImage.data[idx] = bumpValue;
+      bumpImage.data[idx + 1] = bumpValue;
+      bumpImage.data[idx + 2] = bumpValue;
+      bumpImage.data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(image, 0, 0);
+  bump.putImageData(bumpImage, 0, 0);
+
+  const colorTexture = new THREE.CanvasTexture(colorCanvas);
+  const bumpTexture = new THREE.CanvasTexture(bumpCanvas);
+  [colorTexture, bumpTexture].forEach((texture) => {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+  });
+  return { color: colorTexture, bump: bumpTexture };
+}
+
+const sandMaps = makeSandTextures();
+const sandTexture = sandMaps.color;
 sandTexture.repeat.set(9, 11);
+const sandBumpTexture = sandMaps.bump;
+sandBumpTexture.repeat.set(9, 11);
+
+const algaeTexture = makeNoiseTexture(256, [
+  [6, 20, 14],
+  [13, 44, 24],
+  [26, 71, 36],
+  [40, 95, 48],
+  [83, 110, 58]
+]);
+algaeTexture.repeat.set(6, 6);
+
+function makeFishTexture(species) {
+  const key = `${species.name}-${species.color}-${species.pattern || "plain"}`;
+  if (fishTextureCache.has(key)) return fishTextureCache.get(key);
+
+  const width = 256;
+  const height = 128;
+  const textureCanvas = document.createElement("canvas");
+  textureCanvas.width = width;
+  textureCanvas.height = height;
+  const ctx = textureCanvas.getContext("2d");
+  const base = new THREE.Color(species.color);
+  const belly = new THREE.Color(species.belly);
+  const accent = new THREE.Color(species.accent);
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, `#${base.clone().multiplyScalar(1.28).getHexString()}`);
+  gradient.addColorStop(0.48, `#${base.getHexString()}`);
+  gradient.addColorStop(0.72, `#${belly.clone().multiplyScalar(1.05).getHexString()}`);
+  gradient.addColorStop(1, `#${belly.clone().multiplyScalar(0.72).getHexString()}`);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 0.28;
+  for (let y = 12; y < height - 8; y += 11) {
+    for (let x = (y % 22) ? 7 : -4; x < width + 12; x += 18) {
+      ctx.beginPath();
+      ctx.arc(x, y, 8, Math.PI * 0.08, Math.PI * 1.12);
+      ctx.strokeStyle = "rgba(255,255,255,0.46)";
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x + 2, y + 1, 5, Math.PI * 0.08, Math.PI * 1.1);
+      ctx.strokeStyle = "rgba(0,0,0,0.20)";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+  }
+
+  ctx.globalAlpha = 0.38;
+  ctx.strokeStyle = `#${accent.clone().multiplyScalar(0.92).getHexString()}`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(8, height * 0.46);
+  for (let x = 8; x < width - 8; x += 22) {
+    ctx.quadraticCurveTo(x + 10, height * (0.41 + Math.sin(x * 0.06) * 0.035), x + 22, height * 0.46);
+  }
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.55;
+  if (species.pattern === "spots") {
+    ctx.fillStyle = `#${accent.getHexString()}`;
+    for (let i = 0; i < 36; i++) {
+      const x = randomBetween(width * 0.08, width * 0.93);
+      const y = randomBetween(height * 0.18, height * 0.72);
+      const r = randomBetween(2.4, 7.5);
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 1.35, r, rand() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (species.pattern === "bars" || species.stripes > 0) {
+    ctx.fillStyle = `#${accent.getHexString()}`;
+    const count = Math.max(3, species.stripes + 2);
+    for (let i = 0; i < count; i++) {
+      const x = THREE.MathUtils.lerp(width * 0.18, width * 0.84, i / Math.max(1, count - 1));
+      ctx.save();
+      ctx.translate(x, height * 0.46);
+      ctx.rotate(randomBetween(-0.18, 0.18));
+      ctx.fillRect(-3.5, -height * 0.38, randomBetween(5, 10), height * 0.78);
+      ctx.restore();
+    }
+  } else if (species.pattern === "flash") {
+    const flash = ctx.createLinearGradient(0, 0, width, 0);
+    flash.addColorStop(0, "rgba(255,255,255,0)");
+    flash.addColorStop(0.46, "rgba(255,255,255,0.55)");
+    flash.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = flash;
+    ctx.fillRect(0, 12, width, height * 0.42);
+  }
+
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  for (let i = 0; i < 5; i++) {
+    ctx.fillRect(0, 10 + i * 18, width, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  texture.needsUpdate = true;
+  fishTextureCache.set(key, texture);
+  return texture;
+}
 
 const rockTexture = makeNoiseTexture(256, [
   [8, 16, 18],
@@ -625,22 +797,31 @@ const kelpTopColors = [
   new THREE.Color(0xe0be5a)
 ];
 
+function seabedHeight(x, worldZ) {
+  const localZ = worldZ + 21;
+  const ridge = Math.sin(x * 0.18) * 0.35 + Math.cos(localZ * 0.12) * 0.28 + Math.sin((x + localZ) * 0.09) * 0.24;
+  const basin = -0.9 * Math.exp(-((x * x) / 700 + ((localZ + 8) * (localZ + 8)) / 780));
+  return -8.2 + ridge + basin;
+}
+
 function createSeabed() {
   const floorGeometry = new THREE.PlaneGeometry(96, 120, 110, 120);
   floorGeometry.rotateX(-Math.PI / 2);
   const pos = floorGeometry.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
-    const z = pos.getZ(i);
-    const ridge = Math.sin(x * 0.18) * 0.35 + Math.cos(z * 0.12) * 0.28 + Math.sin((x + z) * 0.09) * 0.24;
-    const basin = -0.9 * Math.exp(-((x * x) / 700 + ((z + 8) * (z + 8)) / 780));
-    pos.setY(i, -8.2 + ridge + basin + (rand() - 0.5) * 0.18);
+    const worldZ = pos.getZ(i) - 21;
+    pos.setY(i, seabedHeight(x, worldZ) + (rand() - 0.5) * 0.18);
   }
   floorGeometry.computeVertexNormals();
 
   const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x7a816d,
+    color: 0x9a9a77,
     map: sandTexture,
+    bumpMap: sandBumpTexture,
+    bumpScale: 0.23,
+    emissive: 0x0a211c,
+    emissiveIntensity: 0.16,
     roughness: 0.92,
     metalness: 0.02
   });
@@ -649,6 +830,63 @@ function createSeabed() {
   floor.position.z = -21;
   floor.receiveShadow = true;
   root.add(floor);
+}
+
+function createSeabedDetails() {
+  const pebbleMaterial = new THREE.MeshStandardMaterial({
+    color: 0x68766d,
+    map: rockTexture,
+    roughness: 0.94,
+    metalness: 0.02
+  });
+  const pebbleGeometry = new THREE.IcosahedronGeometry(1, 1);
+  const pebbles = new THREE.InstancedMesh(pebbleGeometry, pebbleMaterial, 320);
+  const matrix = new THREE.Matrix4();
+  const quat = new THREE.Quaternion();
+  const scale = new THREE.Vector3();
+  const pos = new THREE.Vector3();
+  const euler = new THREE.Euler();
+
+  for (let i = 0; i < 320; i++) {
+    const x = randomBetween(-45, 45);
+    const z = randomBetween(-76, 25);
+    const y = seabedHeight(x, z) + randomBetween(0.02, 0.22);
+    pos.set(x, y, z);
+    euler.set(randomBetween(0, 1.2), randomBetween(0, Math.PI), randomBetween(0, 1.2));
+    quat.setFromEuler(euler);
+    const pebbleSize = randomBetween(0.06, 0.36) * (z > -12 ? 1.35 : 0.9);
+    scale.set(pebbleSize * randomBetween(1.0, 2.7), pebbleSize * randomBetween(0.35, 0.9), pebbleSize * randomBetween(0.8, 1.8));
+    matrix.compose(pos, quat, scale);
+    pebbles.setMatrixAt(i, matrix);
+  }
+  pebbles.castShadow = true;
+  pebbles.receiveShadow = true;
+  root.add(pebbles);
+
+  const grassGeometry = new THREE.PlaneGeometry(1, 1, 2, 8);
+  grassGeometry.translate(0, 0.5, 0);
+  const grassMaterials = [
+    createKelpMaterial(new THREE.Color(0x223c1c), new THREE.Color(0x749f38), rand() * Math.PI * 2, 0.8),
+    createKelpMaterial(new THREE.Color(0x314b18), new THREE.Color(0xa4a642), rand() * Math.PI * 2, 0.9)
+  ];
+
+  for (let t = 0; t < 64; t++) {
+    const tuft = new THREE.Group();
+    const x = randomBetween(-42, 42);
+    const z = randomBetween(-62, 16);
+    tuft.position.set(x, seabedHeight(x, z) + 0.02, z);
+    tuft.rotation.y = rand() * Math.PI * 2;
+    const blades = Math.floor(randomBetween(3, 8));
+    for (let b = 0; b < blades; b++) {
+      const blade = new THREE.Mesh(grassGeometry, choose(grassMaterials));
+      blade.position.set(randomBetween(-0.28, 0.28), 0, randomBetween(-0.28, 0.28));
+      blade.rotation.y = randomBetween(-1.1, 1.1);
+      blade.rotation.z = randomBetween(-0.38, 0.38);
+      blade.scale.set(randomBetween(0.12, 0.32), randomBetween(0.9, 2.8), 1);
+      tuft.add(blade);
+    }
+    root.add(tuft);
+  }
 }
 
 function createBackdrop() {
@@ -675,12 +913,25 @@ function createBackdrop() {
       float grain(vec2 p) {
         return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
       }
+      float softColumn(float x, float center, float width) {
+        return smoothstep(width, 0.0, abs(x - center));
+      }
       void main() {
         vec3 color = mix(bottomColor, midColor, smoothstep(0.0, 0.58, vUv.y));
         color = mix(color, topColor, smoothstep(0.58, 1.0, vUv.y));
         float bloom = exp(-distance(vUv, vec2(0.52, 1.02)) * 3.2) * 0.42;
-        float textureNoise = (grain(vUv * 180.0 + time * 0.03) - 0.5) * 0.035;
-        gl_FragColor = vec4(color + bloom + textureNoise, 1.0);
+        float columns = 0.0;
+        columns += softColumn(vUv.x, 0.16 + sin(time * 0.02) * 0.015, 0.022);
+        columns += softColumn(vUv.x, 0.38 + sin(time * 0.017 + 1.3) * 0.012, 0.018);
+        columns += softColumn(vUv.x, 0.63 + sin(time * 0.013 + 2.1) * 0.012, 0.025);
+        columns += softColumn(vUv.x, 0.82 + sin(time * 0.019 + 0.7) * 0.016, 0.020);
+        columns *= smoothstep(0.04, 0.9, vUv.y);
+        float distantRock = smoothstep(0.23, 0.18, vUv.y + sin(vUv.x * 22.0) * 0.035);
+        float particulate = grain(vUv * 260.0 + time * 0.018) * 0.035;
+        float textureNoise = (grain(vUv * 180.0 + time * 0.03) - 0.5) * 0.045;
+        color = mix(color, vec3(0.015, 0.07, 0.08), distantRock * 0.42);
+        color += columns * vec3(0.025, 0.13, 0.10);
+        gl_FragColor = vec4(color + bloom + textureNoise + particulate, 1.0);
       }
     `,
     depthWrite: false,
@@ -690,6 +941,27 @@ function createBackdrop() {
   wall.position.set(0, 10, -70);
   wall.userData.material = material;
   scene.add(wall);
+}
+
+function createBackgroundKelpSilhouettes() {
+  const geometry = new THREE.PlaneGeometry(1, 1, 3, 14);
+  geometry.translate(0, 0.5, 0);
+  for (let i = 0; i < 42; i++) {
+    const material = createKelpMaterial(
+      new THREE.Color(0x173427),
+      new THREE.Color(0x2d5a31),
+      randomBetween(0, Math.PI * 2),
+      randomBetween(0.25, 0.7)
+    );
+    material.uniforms.current.value = 0.42;
+    const blade = new THREE.Mesh(geometry, material);
+    blade.position.set(randomBetween(-48, 48), randomBetween(-8.6, -7.8), randomBetween(-68, -48));
+    blade.scale.set(randomBetween(0.38, 0.96), randomBetween(12, 27), 1);
+    blade.rotation.y = randomBetween(-0.8, 0.8);
+    blade.rotation.z = randomBetween(-0.1, 0.1);
+    blade.renderOrder = 0;
+    scene.add(blade);
+  }
 }
 
 function createCaustics() {
@@ -980,14 +1252,18 @@ function createKelpMaterial(baseColor, topColor, phase, sway) {
       varying float vLight;
       void main() {
         float center = abs(vUv.x - 0.5);
-        float bladeWidth = 0.10 + sin(vUv.y * 3.14159265) * 0.39;
+        float serration = sin(vUv.y * 55.0) * 0.018 + sin(vUv.y * 91.0 + vUv.x * 10.0) * 0.009;
+        float bladeWidth = 0.07 + sin(vUv.y * 3.14159265) * 0.38 + serration;
         if (center > bladeWidth) discard;
         float rib = smoothstep(0.04, 0.0, center);
+        float veins = 0.0;
+        veins += smoothstep(0.012, 0.0, abs(center - (0.13 + sin(vUv.y * 18.0) * 0.02))) * 0.35;
+        veins += smoothstep(0.012, 0.0, abs(center - (0.24 + cos(vUv.y * 16.0) * 0.02))) * 0.22;
         float edge = smoothstep(bladeWidth, bladeWidth - 0.07, center);
         vec3 color = mix(baseColor, topColor, smoothstep(0.08, 1.0, vUv.y));
-        color += rib * vec3(0.08, 0.08, 0.02);
-        color *= vLight;
-        float alpha = (0.40 + 0.28 * vUv.y) * edge;
+        color += (rib + veins) * vec3(0.10, 0.10, 0.025);
+        color *= vLight * (0.88 + edge * 0.18);
+        float alpha = (0.42 + 0.34 * vUv.y) * edge;
         gl_FragColor = vec4(color, alpha);
       }
     `,
@@ -1002,6 +1278,8 @@ function createKelpMaterial(baseColor, topColor, phase, sway) {
 function createKelpForest() {
   const bladeGeometry = new THREE.PlaneGeometry(1, 1, 4, 18);
   bladeGeometry.translate(0, 0.5, 0);
+  const leafGeometry = new THREE.PlaneGeometry(1, 1, 4, 10);
+  leafGeometry.translate(0, 0.5, 0);
   const stemMaterial = new THREE.MeshStandardMaterial({
     color: 0x35451d,
     roughness: 0.82,
@@ -1042,6 +1320,24 @@ function createKelpForest() {
       blade.receiveShadow = true;
       group.add(blade);
 
+      const leaves = Math.floor(randomBetween(5, 12));
+      for (let l = 0; l < leaves; l++) {
+        const side = l % 2 === 0 ? 1 : -1;
+        const level = THREE.MathUtils.lerp(0.16, 0.86, (l + rand() * 0.55) / leaves);
+        const leaf = new THREE.Mesh(leafGeometry, material);
+        leaf.position.set(
+          blade.position.x + side * randomBetween(0.08, 0.24),
+          h * level,
+          blade.position.z + randomBetween(-0.08, 0.08)
+        );
+        leaf.rotation.y = blade.rotation.y + randomBetween(-0.35, 0.35);
+        leaf.rotation.z = side * randomBetween(0.62, 1.12) + randomBetween(-0.12, 0.12);
+        leaf.scale.set(randomBetween(0.38, 0.92) * w, randomBetween(1.0, 2.7) * (z > -14 ? 1.2 : 0.9), 1);
+        leaf.castShadow = true;
+        leaf.receiveShadow = true;
+        group.add(leaf);
+      }
+
       if (s < 2) {
         const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.06, h * 0.94, 6), stemMaterial);
         stem.position.copy(blade.position);
@@ -1061,6 +1357,7 @@ function createKelpForest() {
 const bodyGeometry = new THREE.SphereGeometry(1, 22, 14);
 const eyeGeometry = new THREE.SphereGeometry(0.08, 8, 6);
 const stripeGeometry = new THREE.BoxGeometry(0.055, 1.25, 0.08);
+const glintGeometry = new THREE.PlaneGeometry(1, 0.16, 1, 1);
 const finShape = new THREE.BufferGeometry();
 finShape.setAttribute("position", new THREE.BufferAttribute(new Float32Array([
   -0.2, 0.0, 0,
@@ -1094,7 +1391,8 @@ const fishTypes = [
     depth: 0.16,
     scale: [0.72, 1.18],
     metallic: 0.34,
-    stripes: 0
+    stripes: 0,
+    pattern: "flash"
   },
   {
     name: "gold barb",
@@ -1107,7 +1405,8 @@ const fishTypes = [
     depth: 0.18,
     scale: [0.75, 1.1],
     metallic: 0.06,
-    stripes: 0
+    stripes: 0,
+    pattern: "spots"
   },
   {
     name: "blue tang",
@@ -1120,7 +1419,8 @@ const fishTypes = [
     depth: 0.15,
     scale: [0.82, 1.22],
     metallic: 0.08,
-    stripes: 1
+    stripes: 1,
+    pattern: "bars"
   },
   {
     name: "zebra tetra",
@@ -1133,7 +1433,8 @@ const fishTypes = [
     depth: 0.13,
     scale: [0.7, 1.0],
     metallic: 0.14,
-    stripes: 4
+    stripes: 4,
+    pattern: "bars"
   },
   {
     name: "amber angel",
@@ -1147,15 +1448,60 @@ const fishTypes = [
     scale: [0.78, 1.12],
     metallic: 0.04,
     stripes: 2,
-    tallFins: true
+    tallFins: true,
+    trailingFins: true,
+    pattern: "bars"
+  },
+  {
+    name: "opal wrasse",
+    color: 0x48a57e,
+    belly: 0xd5d383,
+    fin: 0x62d5c7,
+    accent: 0xa34a89,
+    length: 1.16,
+    height: 0.34,
+    depth: 0.15,
+    scale: [0.7, 1.05],
+    metallic: 0.16,
+    stripes: 0,
+    pattern: "spots"
+  },
+  {
+    name: "ruby cardinal",
+    color: 0xbd352d,
+    belly: 0xf0b88b,
+    fin: 0xe09155,
+    accent: 0x24120e,
+    length: 0.74,
+    height: 0.48,
+    depth: 0.14,
+    scale: [0.72, 1.08],
+    metallic: 0.08,
+    stripes: 3,
+    pattern: "bars",
+    forkedTail: true
   }
 ];
 
 function materialFor(key, color, options = {}) {
-  const cacheKey = `${key}-${color}-${JSON.stringify(options)}`;
+  const cacheKey = [
+    key,
+    color,
+    options.roughness ?? 0.34,
+    options.metalness ?? 0.1,
+    options.transparent ?? false,
+    options.opacity ?? 1,
+    options.side ?? THREE.FrontSide,
+    options.map?.uuid ?? "",
+    options.bumpMap?.uuid ?? "",
+    options.bumpScale ?? 0
+  ].join("-");
   if (!fishMaterials.has(cacheKey)) {
     fishMaterials.set(cacheKey, new THREE.MeshStandardMaterial({
       color,
+      map: options.map ?? null,
+      bumpMap: options.bumpMap ?? null,
+      bumpScale: options.bumpScale ?? 0,
       roughness: options.roughness ?? 0.34,
       metalness: options.metalness ?? 0.1,
       envMapIntensity: 0.7,
@@ -1170,10 +1516,12 @@ function materialFor(key, color, options = {}) {
 function createFish(species, rank) {
   const group = new THREE.Group();
   const size = randomBetween(species.scale[0], species.scale[1]) * (rank < 18 ? randomBetween(1.2, 1.75) : 1);
-  const bodyMat = materialFor(species.name, species.color, { metalness: species.metallic, roughness: 0.3 });
+  const fishTexture = makeFishTexture(species);
+  const bodyMat = materialFor(species.name, 0xffffff, { map: fishTexture, bumpMap: fishTexture, bumpScale: 0.012, metalness: species.metallic, roughness: 0.28 });
   const bellyMat = materialFor(`${species.name}-belly`, species.belly, { metalness: species.metallic * 0.8, roughness: 0.38 });
   const finMat = materialFor(`${species.name}-fin`, species.fin, { roughness: 0.42, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
   const stripeMat = materialFor(`${species.name}-stripe`, species.accent, { roughness: 0.55 });
+  const glintMat = materialFor(`${species.name}-glint`, 0xeaffff, { roughness: 0.18, metalness: 0.08, transparent: true, opacity: 0.34, side: THREE.DoubleSide });
   const eyeMat = materialFor("eye", 0x020405, { roughness: 0.22 });
 
   const body = new THREE.Mesh(bodyGeometry, bodyMat);
@@ -1190,7 +1538,7 @@ function createFish(species, rank) {
 
   const tail = new THREE.Mesh(tailGeometry, finMat);
   tail.position.set(-species.length * 0.88 * size, 0, 0);
-  tail.scale.set(size * 1.05, size * species.height * 1.45, 1);
+  tail.scale.set(size * (species.forkedTail ? 1.32 : 1.05), size * species.height * (species.forkedTail ? 1.9 : 1.45), 1);
   tail.castShadow = rank < 38;
   group.add(tail);
 
@@ -1216,6 +1564,26 @@ function createFish(species, rank) {
   rightFin.position.z *= -1;
   rightFin.rotation.y *= -1;
   group.add(rightFin);
+
+  const glint = new THREE.Mesh(glintGeometry, glintMat);
+  glint.position.set(0.08 * size, species.height * 0.28 * size, species.depth * 1.08 * size);
+  glint.rotation.y = -0.06;
+  glint.scale.set(species.length * 1.18 * size, size * 0.9, 1);
+  group.add(glint);
+
+  const glintBack = glint.clone();
+  glintBack.position.z *= -1;
+  glintBack.rotation.y *= -1;
+  group.add(glintBack);
+
+  if (species.trailingFins) {
+    for (let f = 0; f < 2; f++) {
+      const filament = new THREE.Mesh(new THREE.CylinderGeometry(0.012 * size, 0.006 * size, species.height * 1.7 * size, 5), finMat);
+      filament.position.set((-0.05 + f * 0.18) * size, -species.height * 0.98 * size, (f === 0 ? 1 : -1) * species.depth * 0.75 * size);
+      filament.rotation.z = randomBetween(-0.24, 0.24);
+      group.add(filament);
+    }
+  }
 
   const eyeL = new THREE.Mesh(eyeGeometry, eyeMat);
   eyeL.position.set(species.length * 0.6 * size, species.height * 0.23 * size, species.depth * 0.82 * size);
@@ -1264,11 +1632,13 @@ function createFish(species, rank) {
 function createFishSchools() {
   for (let i = 0; i < 220; i++) {
     let type;
-    if (i < 128) type = fishTypes[0];
-    else if (i < 160) type = fishTypes[1];
-    else if (i < 184) type = fishTypes[2];
-    else if (i < 204) type = fishTypes[3];
-    else type = fishTypes[4];
+    if (i < 96) type = fishTypes[0];
+    else if (i < 126) type = fishTypes[1];
+    else if (i < 152) type = fishTypes[2];
+    else if (i < 178) type = fishTypes[3];
+    else if (i < 196) type = fishTypes[4];
+    else if (i < 210) type = fishTypes[5];
+    else type = fishTypes[6];
     createFish(type, i);
   }
 }
@@ -1418,6 +1788,8 @@ function updateCameraFraming() {
 function resize() {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  composer.setSize(window.innerWidth, window.innerHeight);
   updateCameraFraming();
   if (bubbles) bubbles.material.uniforms.pixelRatio.value = Math.min(window.devicePixelRatio || 1, 2);
   if (particles) particles.material.uniforms.pixelRatio.value = Math.min(window.devicePixelRatio || 1, 2);
@@ -1431,7 +1803,9 @@ let particles;
 function initScene() {
   createBackdrop();
   createDepthVeil();
+  createBackgroundKelpSilhouettes();
   createSeabed();
+  createSeabedDetails();
   createRocks();
   createKelpForest();
   createForegroundFronds();
@@ -1457,11 +1831,12 @@ function updateOutputs() {
   outputs.sunlight.textContent = `${settings.sunlight}%`;
   outputs.bubbleRate.textContent = `${settings.bubbleRate}%`;
   outputs.shadowDepth.textContent = `${settings.shadowDepth}%`;
+  outputs.dofStrength.textContent = `${settings.dofStrength}%`;
   readouts.fish.textContent = `${settings.fishCount}`;
   readouts.water.textContent = levelLabel(settings.waterClarity);
   readouts.light.textContent = settings.sunlight >= 78 ? "Realistic" : levelLabel(settings.sunlight);
   readouts.kelp.textContent = levelLabel(settings.kelpDensity);
-  infoStrip.textContent = `${settings.fishCount} fish | ${levelLabel(settings.waterClarity).toLowerCase()} clarity | ${readouts.light.textContent.toLowerCase()} light | ${levelLabel(settings.kelpDensity).toLowerCase()} kelp | ${settings.bubbles ? `${settings.bubbleRate}% bubbles` : "bubbles off"}`;
+  infoStrip.textContent = `${settings.fishCount} fish | ${levelLabel(settings.waterClarity).toLowerCase()} clarity | ${readouts.light.textContent.toLowerCase()} light | ${levelLabel(settings.kelpDensity).toLowerCase()} kelp | ${settings.dofStrength}% DOF | ${settings.bubbles ? `${settings.bubbleRate}% bubbles` : "bubbles off"}`;
   infoStrip.classList.toggle("hidden", !settings.showInfo);
 }
 
@@ -1470,6 +1845,7 @@ function applySettings() {
   const sunAmount = settings.sunlight / 100;
   const shadowAmount = settings.shadowDepth / 100;
   const currentAmount = settings.current / 100;
+  const dofAmount = settings.dofStrength / 100;
 
   scene.fog.density = THREE.MathUtils.lerp(0.032, 0.011, clarity);
   scene.fog.color.set(clarity > 0.65 ? 0x0a6a78 : 0x07303d);
@@ -1498,6 +1874,10 @@ function applySettings() {
   });
   if (causticMaterial) causticMaterial.uniforms.intensity.value = sunAmount;
   if (surfaceMaterial) surfaceMaterial.uniforms.intensity.value = sunAmount;
+  bokehPass.enabled = settings.dofStrength > 2;
+  bokehPass.uniforms.focus.value = THREE.MathUtils.lerp(38, 48, 1 - dofAmount);
+  bokehPass.uniforms.aperture.value = THREE.MathUtils.lerp(0.00001, 0.00015, dofAmount);
+  bokehPass.uniforms.maxblur.value = THREE.MathUtils.lerp(0.0008, 0.012, dofAmount);
 
   const visibleKelp = Math.round(kelpGroups.length * settings.kelpDensity / 100);
   kelpGroups.forEach((group, index) => {
@@ -1605,7 +1985,7 @@ function animate(now) {
   root.rotation.y = Math.sin(elapsed * 0.06) * 0.025;
   camera.position.x = Math.sin(elapsed * 0.08) * 0.48;
   camera.lookAt(Math.sin(elapsed * 0.05) * 1.2, 1.4, -23);
-  renderer.render(scene, camera);
+  composer.render();
 
   fpsFrames += 1;
   fpsSampleTime += frameDt;
