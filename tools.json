@@ -121,9 +121,9 @@
     },
     "zipview.html": {
       "last_commit": {
-        "hash": "1f8740c95e42eef66459726c0f75e22357542d23",
-        "date": "2026-06-19T08:47:15+03:00",
-        "message": "Merge zipview variants"
+        "hash": "7ed47ec3bf61fecbc7fcd1b96004afb3f185b6bc",
+        "date": "2026-06-19T08:50:25+03:00",
+        "message": "Fix zipview folder drag scanning"
       }
     }
   }
