@@ -671,7 +671,7 @@
           const handle = await window.showDirectoryPicker();
           setDropStatus(`Scanning "${handle.name}"...`);
           const archives = [];
-          await collectZipsFromDirectoryHandle(handle, handle.name, archives);
+          await collectZipsFromHandle(handle, "", archives);
           await loadArchives(archives, handle.name);
           return;
         } catch (err) {
@@ -1150,6 +1150,13 @@
     async function archivesFromDataTransfer(dataTransfer) {
       const fileArchives = filesToArchives(Array.from(dataTransfer.files || []));
       const items = Array.from(dataTransfer.items || []);
+      const handleArchives = [];
+      const handles = await handlesFromDataTransferItems(items);
+
+      for (const handle of handles) {
+        await collectZipsFromHandle(handle, "", handleArchives);
+      }
+
       const entries = items
         .map((item) => getEntryFromItem(item))
         .filter(Boolean);
@@ -1161,7 +1168,23 @@
         }
       }
 
-      return dedupeArchives([...entryArchives, ...fileArchives]);
+      return dedupeArchives([...handleArchives, ...entryArchives, ...fileArchives]);
+    }
+
+    async function handlesFromDataTransferItems(items) {
+      const handles = [];
+
+      for (const item of items) {
+        if (!item || item.kind !== "file" || typeof item.getAsFileSystemHandle !== "function") continue;
+        try {
+          const handle = await item.getAsFileSystemHandle();
+          if (handle) handles.push(handle);
+        } catch {
+          // Fall through to FileSystemEntry/DataTransfer.files below.
+        }
+      }
+
+      return handles;
     }
 
     function getEntryFromItem(item) {
@@ -1182,7 +1205,7 @@
           archives.push({ name: entry.name, path, file });
         } catch {
           // Some file:// folder drops expose entries that cannot be resolved
-          // through FileSystemEntry. DataTransfer.files is merged as fallback.
+          // through FileSystemEntry. Other drag APIs are merged as fallback.
         }
         return;
       }
@@ -1216,16 +1239,24 @@
       });
     }
 
-    async function collectZipsFromDirectoryHandle(handle, parentPath, archives) {
-      for await (const [name, child] of handle.entries()) {
-        const path = `${parentPath}/${name}`;
-        if (child.kind === "file") {
-          if (!ZIP_RE.test(name)) continue;
-          const file = await child.getFile();
-          archives.push({ name, path, file });
-        } else if (child.kind === "directory") {
-          await collectZipsFromDirectoryHandle(child, path, archives);
+    async function collectZipsFromHandle(handle, parentPath, archives) {
+      const path = parentPath ? `${parentPath}/${handle.name}` : handle.name;
+
+      if (handle.kind === "file") {
+        if (!ZIP_RE.test(handle.name)) return;
+        try {
+          const file = await handle.getFile();
+          archives.push({ name: handle.name, path, file });
+        } catch {
+          // Ignore unreadable handles and keep scanning siblings.
         }
+        return;
+      }
+
+      if (handle.kind !== "directory") return;
+
+      for await (const [name, child] of handle.entries()) {
+        await collectZipsFromHandle(child, path, archives);
       }
     }
 
