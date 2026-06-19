@@ -126,7 +126,7 @@ def main():
             md_content += f"> {line}\n"
         md_content += ">\n"
 
-        if github_url:
+        if github_url and tool.get("commit_hash"):
             md_content += f"> [view commit]({github_url}/commit/{tool['commit_hash']})\n"
         
         md_content += "\n"

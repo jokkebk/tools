@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -34,12 +35,22 @@ def get_last_commit(file_path):
         return None
 
 
+def get_working_tree_details(file_path):
+    """
+    Return placeholder metadata for a new HTML file that has not been
+    committed yet. CI will replace this with real git metadata after commit.
+    """
+    stat = file_path.stat()
+    commit_date = datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat()
+    return {"hash": None, "date": commit_date, "message": "Uncommitted working tree"}
+
+
 def main():
     # Get current directory
     current_dir = Path.cwd()
 
     # Find all HTML files
-    html_files = list(current_dir.glob("*.html"))
+    html_files = sorted(current_dir.glob("*.html"))
 
     # Dictionary to store results
     results = {"pages": {}}
@@ -52,8 +63,10 @@ def main():
         # Get last commit details for this file
         last_commit = get_last_commit(html_file)
 
-        if last_commit:
-            results["pages"][file_name] = {"last_commit": last_commit}
+        if not last_commit:
+            last_commit = get_working_tree_details(html_file)
+
+        results["pages"][file_name] = {"last_commit": last_commit}
 
     # Save results to JSON file
     with open("tools.json", "w") as f:
