@@ -19,23 +19,31 @@
 * [triangles](triangles.html)
 * [wordle](wordle.html)
 * [wordle-ocr](wordle-ocr.html)
-* [zipview-gpt52pro](zipview-gpt52pro.html)
-* [zipview-opus45](zipview-opus45.html)
+* [zipview](zipview.html)
 
 ## Tools
 
-### [aquarium_gpt55](aquarium_gpt55.html)
+### [zipview](zipview.html)
 
-Photorealistic aquarium simulator inspired by a sunlit kelp-tank view, with procedural Three.js fish schools, patterned fish materials, leafy moving kelp, bubbles, caustics, textured sand, rocks, depth haze, and animated light shafts. A collapsible control panel adjusts fish population, water clarity, kelp density, current speed, sunlight, bubbles, shadow depth, depth of field, and display info while the scene automatically fits the browser window.
+Drop one or more ZIP files, or open a folder, and this browser-only ZIP Image Viewer indexes archives locally without uploading anything. It lazily decompresses the active archive with fflate, builds responsive thumbnail previews only as they scroll into view, and keeps full-size image blobs limited to the current viewer image. The fullscreen viewer supports fit and clicked-position 1:1 zoom, pointer-lock panning, wheel or keyboard image navigation, and explicit archive switching for folders with multiple ZIPs.
+
+> last updated: 2026-06-19 08:47:15
+> Merge zipview variants
+>
+> [view commit](https://github.com/jokkebk/tools/commit/1f8740c95e42eef66459726c0f75e22357542d23)
+
+### [aquarium](aquarium.html)
+
+A photorealistic kelp-forest aquarium rendered in real time with Three.js (WebGL). Volumetric god rays fan down from the surface, animated caustics ripple across a sculpted seafloor, and dozens of fish across five species school with boid flocking while kelp sways in the current. A collapsible control panel adjusts fish count, water quality, lighting model, kelp density, and bubbles, with a live FPS readout; drag to orbit, scroll to dive, and the scene fills any window size.
 
 > last updated: 2026-06-14 10:52:07
 > Aquarium updates
 >
 > [view commit](https://github.com/jokkebk/tools/commit/bb81f677c52f82b3cc3d2972af1e76299c59fcbb)
 
-### [aquarium](aquarium.html)
+### [aquarium_gpt55](aquarium_gpt55.html)
 
-A photorealistic kelp-forest aquarium rendered in real time with Three.js (WebGL). Volumetric god rays fan down from the surface, animated caustics ripple across a sculpted seafloor, and dozens of fish across five species school with boid flocking while kelp sways in the current. A collapsible control panel adjusts fish count, water quality, lighting model, kelp density, and bubbles, with a live FPS readout; drag to orbit, scroll to dive, and the scene fills any window size.
+Photorealistic aquarium simulator inspired by a sunlit kelp-tank view, with procedural Three.js fish schools, patterned fish materials, leafy moving kelp, bubbles, caustics, textured sand, rocks, depth haze, and animated light shafts. A collapsible control panel adjusts fish population, water clarity, kelp density, current speed, sunlight, bubbles, shadow depth, depth of field, and display info while the scene automatically fits the browser window.
 
 > last updated: 2026-06-14 10:52:07
 > Aquarium updates
@@ -50,15 +58,6 @@ Wordle Screenshot OCR reads a pasted or uploaded Wordle screenshot with Tesserac
 > Add OCR debug viewer and row-level recognition
 >
 > [view commit](https://github.com/jokkebk/tools/commit/05d632efc000767d000f1080bd0f656aa631f552)
-
-### [zipview-gpt52pro](zipview-gpt52pro.html)
-
-This ZIP Image Viewer decompresses archives entirely in the browser with fflate, lazily creating thumbnails as it filters supported image extensions, and it exposes a sticky top bar once content loads.  Grid tiles overlay names, file sizes, and thumb placeholders while a fullscreen viewer supports fit/1:1 toggling, pointer-lock panning, and keyboard navigation between images.  Drop hints, drag-over styling, and a reset button keep interactions discoverable, so it behaves like a polished photo review utility without ever uploading your files.
-
-> last updated: 2026-04-01 07:41:29
-> Zipview zoom to clicked position
->
-> [view commit](https://github.com/jokkebk/tools/commit/bd617d039f0fdcf15a3b9298104a12ea4cdadd77)
 
 ### [monsterbrush](monsterbrush.html)
 
@@ -211,13 +210,4 @@ Nordic Christmas Night layers WebGL aurora ribbons, a scene canvas, and a snow c
 > Claude Opus 4.5 Christmas screensaver two-prompt test
 >
 > [view commit](https://github.com/jokkebk/tools/commit/1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c)
-
-### [zipview-opus45](zipview-opus45.html)
-
-Drop a ZIP file that contains JPEG/PNG/GIF/WebP images anywhere on the page and the client decompresses it with fflate, filters to supported extensions, and populates a responsive thumbnail grid.  Each thumbnail lazily loads a blob URL, and clicking one opens a fullscreen viewer that supports fit and pointer-locked 1:1 navigation plus keyboard or wheel-based image stepping.  The app keeps your ZIP processing local, shows an extractor spinner while indexing contents, and overlays contextual tips for zooming and panning.
-
-> last updated: 2025-12-16 21:43:39
-> Claude Opus 4.5 and ChatGPT 5.2 Pro created image viewers. Polished by Claude Code w. Sonnet.
->
-> [view commit](https://github.com/jokkebk/tools/commit/18535cf925056e4946444e777e16524f2ffa7170)
 
