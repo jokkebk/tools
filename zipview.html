@@ -351,6 +351,7 @@
     }
 
     .viewer-scroll.one img {
+      display: block;
       width: auto;
       height: auto;
       max-width: none;
@@ -925,24 +926,89 @@
       elViewerScroll.classList.toggle("one", mode === "one");
 
       if (mode !== "one") safeExitPointerLock();
+      if (mode !== "one") {
+        elViewerImg.style.marginLeft = "";
+        elViewerImg.style.marginRight = "";
+        elViewerImg.style.marginTop = "";
+        elViewerImg.style.marginBottom = "";
+      }
 
       elViewerScroll.scrollTop = 0;
       elViewerScroll.scrollLeft = 0;
       updateViewerInfo();
 
       if (mode === "one") {
-        requestAnimationFrame(() => {
+        scheduleOneToOneLayout(() => {
           if (clickInfo) {
-            const imgW = elViewerImg.naturalWidth;
-            const imgH = elViewerImg.naturalHeight;
-            elViewerScroll.scrollLeft = Math.max(0, clickInfo.relX * imgW - clickInfo.clientX);
-            elViewerScroll.scrollTop = Math.max(0, clickInfo.relY * imgH - clickInfo.clientY);
+            const layout = applyOneToOneLayout();
+            const scrollerRect = elViewerScroll.getBoundingClientRect();
+            const localX = clickInfo.clientX - scrollerRect.left;
+            const localY = clickInfo.clientY - scrollerRect.top;
+            elViewerScroll.scrollLeft = clamp(
+              layout.offsetX + clickInfo.relX * layout.imgW - localX,
+              0,
+              layout.maxScrollLeft,
+            );
+            elViewerScroll.scrollTop = clamp(
+              layout.offsetY + clickInfo.relY * layout.imgH - localY,
+              0,
+              layout.maxScrollTop,
+            );
           } else {
-            elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
-            elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
+            centerOneToOneView();
           }
         });
       }
+    }
+
+    function scheduleOneToOneLayout(callback) {
+      const viewerUrl = state.viewerUrl;
+      const run = () => {
+        requestAnimationFrame(() => {
+          if (state.viewerMode !== "one" || state.viewerUrl !== viewerUrl) return;
+          callback();
+        });
+      };
+
+      if (elViewerImg.complete && elViewerImg.naturalWidth) {
+        run();
+      } else {
+        elViewerImg.addEventListener("load", run, { once: true });
+      }
+    }
+
+    function applyOneToOneLayout() {
+      const style = getComputedStyle(elViewerScroll);
+      const paddingLeft = parseFloat(style.paddingLeft) || 0;
+      const paddingRight = parseFloat(style.paddingRight) || 0;
+      const paddingTop = parseFloat(style.paddingTop) || 0;
+      const paddingBottom = parseFloat(style.paddingBottom) || 0;
+      const imgW = elViewerImg.naturalWidth || elViewerImg.width;
+      const imgH = elViewerImg.naturalHeight || elViewerImg.height;
+      const freeX = Math.max(0, elViewerScroll.clientWidth - paddingLeft - paddingRight - imgW);
+      const freeY = Math.max(0, elViewerScroll.clientHeight - paddingTop - paddingBottom - imgH);
+      const marginX = freeX / 2;
+      const marginY = freeY / 2;
+
+      elViewerImg.style.marginLeft = `${marginX}px`;
+      elViewerImg.style.marginRight = `${marginX}px`;
+      elViewerImg.style.marginTop = `${marginY}px`;
+      elViewerImg.style.marginBottom = `${marginY}px`;
+
+      return {
+        imgW,
+        imgH,
+        offsetX: paddingLeft + marginX,
+        offsetY: paddingTop + marginY,
+        maxScrollLeft: Math.max(0, elViewerScroll.scrollWidth - elViewerScroll.clientWidth),
+        maxScrollTop: Math.max(0, elViewerScroll.scrollHeight - elViewerScroll.clientHeight),
+      };
+    }
+
+    function centerOneToOneView() {
+      applyOneToOneLayout();
+      elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
+      elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
     }
 
     function capturePointerForPan() {
@@ -984,10 +1050,7 @@
       elViewerImg.src = state.viewerUrl;
 
       if (state.viewerMode === "one") {
-        requestAnimationFrame(() => {
-          elViewerScroll.scrollLeft = Math.max(0, (elViewerScroll.scrollWidth - elViewerScroll.clientWidth) / 2);
-          elViewerScroll.scrollTop = Math.max(0, (elViewerScroll.scrollHeight - elViewerScroll.clientHeight) / 2);
-        });
+        scheduleOneToOneLayout(() => centerOneToOneView());
       }
 
       updateViewerInfo();
