@@ -98,6 +98,13 @@
         "message": "Add filters and docs for samefile tool"
       }
     },
+    "scribe_dictation.html": {
+      "last_commit": {
+        "hash": "83345afba19d1639107ca1e52336b72f4ad516f8",
+        "date": "2026-07-03T14:34:34+03:00",
+        "message": "Add Scribe Finnish dictation tool"
+      }
+    },
     "triangles.html": {
       "last_commit": {
         "hash": "53648a544444ea98f3748a39b8b761ec880e54ff",

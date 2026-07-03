@@ -16,12 +16,22 @@
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
 * [samefile](samefile.html)
+* [scribe_dictation](scribe_dictation.html)
 * [triangles](triangles.html)
 * [wordle](wordle.html)
 * [wordle-ocr](wordle-ocr.html)
 * [zipview](zipview.html)
 
 ## Tools
+
+### [scribe_dictation](scribe_dictation.html)
+
+Scribe Finnish Dictation is a browser-only dictation pad for realtime Finnish speech-to-text through ElevenLabs Scribe. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, word count, text, and returned word timing data for future processing.
+
+> last updated: 2026-07-03 14:34:34
+> Add Scribe Finnish dictation tool
+>
+> [view commit](https://github.com/jokkebk/tools/commit/83345afba19d1639107ca1e52336b72f4ad516f8)
 
 ### [zipview](zipview.html)
 
