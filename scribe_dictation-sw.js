@@ -1,8 +1,9 @@
-const CACHE_NAME = "scribe-dictation-v1";
+const CACHE_NAME = "scribe-dictation-v2";
 const APP_SHELL = [
   "scribe_dictation.html",
   "scribe_dictation-manifest.json",
-  "scribe_dictation-icon.svg",
+  "scribe_dictation-icon-32.png",
+  "scribe_dictation-icon-180.png",
   "scribe_dictation-icon-192.png",
   "scribe_dictation-icon-512.png"
 ];
@@ -43,4 +44,3 @@ self.addEventListener("fetch", (event) => {
     ))
   );
 });
-
