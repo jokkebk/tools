@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6f8f72">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Scribe">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="scribe_dictation-manifest.json">
+  <link rel="icon" href="scribe_dictation-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="scribe_dictation-icon-512.png">
   <title>Scribe Finnish Dictation</title>
   <style>
     :root {
@@ -33,10 +41,11 @@
       margin: 0;
       background: var(--bg);
       color: var(--ink);
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      padding: 28px;
+      padding: max(28px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
     }
 
     button,
@@ -55,6 +64,7 @@
       padding: 0 14px;
       cursor: pointer;
       font-weight: 520;
+      touch-action: manipulation;
     }
 
     button:hover {
@@ -254,9 +264,66 @@
 
     .record-actions {
       display: grid;
-      grid-template-columns: auto auto minmax(180px, 1fr);
-      padding: 12px;
+      grid-template-columns: auto minmax(180px, 1fr);
+      gap: 16px;
+      padding: 16px;
+      align-items: center;
       background: var(--surface-soft);
+    }
+
+    .record-button {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: clamp(84px, 23vw, 116px);
+      height: clamp(84px, 23vw, 116px);
+      min-height: 0;
+      border: 0;
+      border-radius: 50%;
+      background: #c83b2f;
+      box-shadow: 0 0 0 8px rgba(200, 59, 47, 0.12), 0 10px 28px rgba(64, 52, 35, 0.18);
+      color: #fff;
+      padding: 0;
+    }
+
+    .record-button:hover {
+      background: #b93429;
+    }
+
+    .record-button::before {
+      width: 42%;
+      height: 42%;
+      border-radius: 50%;
+      background: #fff8ef;
+      content: "";
+    }
+
+    .record-button.recording {
+      background: #2c2b26;
+      box-shadow: 0 0 0 8px rgba(44, 43, 38, 0.1), 0 10px 28px rgba(64, 52, 35, 0.2);
+    }
+
+    .record-button.recording:hover {
+      background: #191814;
+    }
+
+    .record-button.recording::before {
+      width: 34%;
+      height: 34%;
+      border-radius: 4px;
+    }
+
+    .record-button:disabled {
+      opacity: 0.62;
+    }
+
+    .record-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
     }
 
     .meter-wrap {
@@ -395,7 +462,7 @@
 
     @media (max-width: 860px) {
       body {
-        padding: 12px;
+        padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
       }
 
       header {
@@ -412,15 +479,24 @@
       }
 
       .record-actions {
-        grid-template-columns: 1fr 1fr;
+        position: sticky;
+        top: max(0px, env(safe-area-inset-top));
+        z-index: 5;
+        grid-template-columns: auto 1fr;
       }
 
       .meter-wrap {
-        grid-column: 1 / -1;
+        min-width: 0;
       }
 
       .status {
         width: max-content;
+      }
+
+      input,
+      textarea,
+      select {
+        font-size: 16px;
       }
     }
   </style>
@@ -450,8 +526,9 @@
           </div>
           <div class="section-body">
             <div class="record-actions">
-              <button id="startRecording" class="primary">Start</button>
-              <button id="stopRecording" disabled>Stop</button>
+              <button id="recordToggle" class="record-button" type="button" aria-label="Start recording" title="Start recording">
+                <span class="record-label">Start recording</span>
+              </button>
               <div class="meter-wrap">
                 <div class="meter-label">
                   <span>Mic</span>
@@ -559,8 +636,7 @@
       vadPause: document.getElementById("vadPause"),
       keyterms: document.getElementById("keyterms"),
       cleanup: document.getElementById("cleanup"),
-      startRecording: document.getElementById("startRecording"),
-      stopRecording: document.getElementById("stopRecording"),
+      recordToggle: document.getElementById("recordToggle"),
       status: document.getElementById("status"),
       sessionTime: document.getElementById("sessionTime"),
       meterFill: document.getElementById("meterFill"),
@@ -590,6 +666,7 @@
     let pendingPlain = null;
     let pendingPlainTimer = null;
     let closingAfterStop = false;
+    let wakeLock = null;
 
     init();
 
@@ -600,8 +677,7 @@
       els.settingsTab.addEventListener("click", () => setActiveTab("settings"));
       els.saveKey.addEventListener("click", saveApiKey);
       els.forgetKey.addEventListener("click", forgetApiKey);
-      els.startRecording.addEventListener("click", startRecording);
-      els.stopRecording.addEventListener("click", () => stopRecording(true));
+      els.recordToggle.addEventListener("click", toggleRecording);
       els.copyTranscript.addEventListener("click", copyTranscript);
       els.saveTranscript.addEventListener("click", saveCurrentTranscript);
       els.newTranscript.addEventListener("click", newTranscript);
@@ -615,9 +691,23 @@
           closeSocket();
         }
       });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && (socket || mediaStream)) {
+          requestWakeLock();
+        }
+      });
+      registerServiceWorker();
       renderHistory();
       updateMeta();
       setActiveTab(els.apiKey.value ? "recorder" : "settings");
+    }
+
+    function toggleRecording() {
+      if (socket || mediaStream) {
+        stopRecording(true);
+      } else {
+        startRecording();
+      }
     }
 
     function saveApiKey() {
@@ -658,7 +748,7 @@
         }
 
         localStorage.setItem(API_KEY_STORAGE, apiKey);
-        setRecordingControls(true);
+        setRecordingControls(true, true);
         showStatus("Creating token", true);
         const token = await createSingleUseToken(apiKey);
 
@@ -676,6 +766,8 @@
         recordingStartedAt = Date.now();
         timerId = window.setInterval(updateTimer, 250);
         updateTimer();
+        setRecordingControls(true, false);
+        requestWakeLock();
         showStatus("Recording", true);
       } catch (error) {
         console.error(error);
@@ -699,6 +791,7 @@
       closeSocket();
       setRecordingControls(false);
       stopTimer();
+      releaseWakeLock();
       showStatus("Idle", false);
 
       if (saveWhenDone && (getTranscriptText().length > 0 || hadText)) {
@@ -778,6 +871,7 @@
           stopAudioGraph();
           setRecordingControls(false);
           stopTimer();
+          releaseWakeLock();
         }
         socket = null;
       });
@@ -1215,13 +1309,58 @@
       els.status.classList.toggle("error", Boolean(isError));
     }
 
-    function setRecordingControls(recording) {
-      els.startRecording.disabled = recording;
-      els.stopRecording.disabled = !recording;
+    function setRecordingControls(recording, busy = false) {
+      const label = recording ? "Stop recording" : "Start recording";
+      els.recordToggle.disabled = busy;
+      els.recordToggle.classList.toggle("recording", recording);
+      els.recordToggle.setAttribute("aria-label", label);
+      els.recordToggle.setAttribute("title", label);
+      els.recordToggle.querySelector(".record-label").textContent = label;
       els.apiKey.disabled = recording;
       els.vadPause.disabled = recording;
       els.keyterms.disabled = recording;
       els.cleanup.disabled = recording;
+    }
+
+    async function requestWakeLock() {
+      if (!("wakeLock" in navigator) || wakeLock) {
+        return;
+      }
+      try {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => {
+          wakeLock = null;
+        });
+      } catch (error) {
+        wakeLock = null;
+      }
+    }
+
+    async function releaseWakeLock() {
+      if (!wakeLock) {
+        return;
+      }
+      const lock = wakeLock;
+      wakeLock = null;
+      try {
+        await lock.release();
+      } catch (error) {
+        // The browser can release wake locks on its own.
+      }
+    }
+
+    function registerServiceWorker() {
+      if (!("serviceWorker" in navigator)) {
+        return;
+      }
+      if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        return;
+      }
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("scribe_dictation-sw.js").catch((error) => {
+          console.warn("Scribe service worker registration failed", error);
+        });
+      });
     }
 
     function updateTimer() {
