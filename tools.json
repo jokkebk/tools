@@ -100,9 +100,9 @@
     },
     "scribe_dictation.html": {
       "last_commit": {
-        "hash": "8f8f0588b1f1fead2953d9d417b5e1b2eb25f36a",
-        "date": "2026-07-05T09:37:05+03:00",
-        "message": "Add mobile PWA support for scribe dictation"
+        "hash": "58084b1a9faa2b973017607e363a55620db29ea2",
+        "date": "2026-07-05T10:10:51+03:00",
+        "message": "Replace Scribe SVG icon with PNG favicon set\n\nRegenerate PNG icons (512, 192, 180, 32) from scribe_dictation.png\nand use them for favicon, apple-touch-icon and PWA manifest. Remove\nthe older SVG icon."
       }
     },
     "seabed.html": {
