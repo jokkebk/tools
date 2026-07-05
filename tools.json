@@ -100,9 +100,16 @@
     },
     "scribe_dictation.html": {
       "last_commit": {
-        "hash": "83345afba19d1639107ca1e52336b72f4ad516f8",
-        "date": "2026-07-03T14:34:34+03:00",
-        "message": "Add Scribe Finnish dictation tool"
+        "hash": "af31d292acf77dee67df13f91596971f3f115fc3",
+        "date": "2026-07-05T09:17:27+03:00",
+        "message": "Seabed test, dictation improvement"
+      }
+    },
+    "seabed.html": {
+      "last_commit": {
+        "hash": "af31d292acf77dee67df13f91596971f3f115fc3",
+        "date": "2026-07-05T09:17:27+03:00",
+        "message": "Seabed test, dictation improvement"
       }
     },
     "triangles.html": {

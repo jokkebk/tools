@@ -17,6 +17,7 @@
 * [rushhour](rushhour.html)
 * [samefile](samefile.html)
 * [scribe_dictation](scribe_dictation.html)
+* [seabed](seabed.html)
 * [triangles](triangles.html)
 * [wordle](wordle.html)
 * [wordle-ocr](wordle-ocr.html)
@@ -28,10 +29,19 @@
 
 Scribe Finnish Dictation is a browser-only dictation pad for realtime Finnish speech-to-text through ElevenLabs Scribe. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, word count, text, and returned word timing data for future processing.
 
-> last updated: 2026-07-03 14:34:34
-> Add Scribe Finnish dictation tool
+> last updated: 2026-07-05 09:17:27
+> Seabed test, dictation improvement
 >
-> [view commit](https://github.com/jokkebk/tools/commit/83345afba19d1639107ca1e52336b72f4ad516f8)
+> [view commit](https://github.com/jokkebk/tools/commit/af31d292acf77dee67df13f91596971f3f115fc3)
+
+### [seabed](seabed.html)
+
+A photorealistic underwater kelp forest screensaver rendered entirely with procedural WebGL shaders — no textures or assets. Undulating sand with animated caustics, kelp blades swaying in a coherent current, crepuscular light shafts, marine snow, haze and a few fish drifting through the scene. Every window resize (or click) regenerates a brand new seabed.
+
+> last updated: 2026-07-05 09:17:27
+> Seabed test, dictation improvement
+>
+> [view commit](https://github.com/jokkebk/tools/commit/af31d292acf77dee67df13f91596971f3f115fc3)
 
 ### [zipview](zipview.html)
 
