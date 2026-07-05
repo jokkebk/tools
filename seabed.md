@@ -1,0 +1,1 @@
+A photorealistic underwater kelp forest screensaver rendered entirely with procedural WebGL shaders — no textures or assets. Undulating sand with animated caustics, kelp blades swaying in a coherent current, crepuscular light shafts, marine snow, haze and a few fish drifting through the scene. Every window resize (or click) regenerates a brand new seabed.
