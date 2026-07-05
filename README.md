@@ -29,10 +29,10 @@
 
 Scribe Finnish Dictation is a browser-only dictation pad for realtime Finnish speech-to-text through ElevenLabs Scribe. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, word count, text, and returned word timing data for future processing.
 
-> last updated: 2026-07-05 09:17:27
-> Seabed test, dictation improvement
+> last updated: 2026-07-05 09:37:05
+> Add mobile PWA support for scribe dictation
 >
-> [view commit](https://github.com/jokkebk/tools/commit/af31d292acf77dee67df13f91596971f3f115fc3)
+> [view commit](https://github.com/jokkebk/tools/commit/8f8f0588b1f1fead2953d9d417b5e1b2eb25f36a)
 
 ### [seabed](seabed.html)
 

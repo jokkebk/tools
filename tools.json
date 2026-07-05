@@ -100,9 +100,9 @@
     },
     "scribe_dictation.html": {
       "last_commit": {
-        "hash": "af31d292acf77dee67df13f91596971f3f115fc3",
-        "date": "2026-07-05T09:17:27+03:00",
-        "message": "Seabed test, dictation improvement"
+        "hash": "8f8f0588b1f1fead2953d9d417b5e1b2eb25f36a",
+        "date": "2026-07-05T09:37:05+03:00",
+        "message": "Add mobile PWA support for scribe dictation"
       }
     },
     "seabed.html": {
