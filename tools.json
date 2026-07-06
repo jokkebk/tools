@@ -100,9 +100,9 @@
     },
     "scribe_dictation.html": {
       "last_commit": {
-        "hash": "58084b1a9faa2b973017607e363a55620db29ea2",
-        "date": "2026-07-05T10:10:51+03:00",
-        "message": "Replace Scribe SVG icon with PNG favicon set\n\nRegenerate PNG icons (512, 192, 180, 32) from scribe_dictation.png\nand use them for favicon, apple-touch-icon and PWA manifest. Remove\nthe older SVG icon."
+        "hash": "207aab0fdb06a67ec12fa9c9feca96c805a0b7c0",
+        "date": "2026-07-06T11:26:24+03:00",
+        "message": "Add language toggle to Scribe dictation"
       }
     },
     "seabed.html": {

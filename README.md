@@ -27,16 +27,12 @@
 
 ### [scribe_dictation](scribe_dictation.html)
 
-Scribe Finnish Dictation is a browser-only dictation pad for realtime Finnish speech-to-text through ElevenLabs Scribe. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, word count, text, and returned word timing data for future processing.
+Scribe Dictation is a browser-only dictation pad for realtime Finnish, English, or automatic speech-to-text through ElevenLabs Scribe. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, language mode, word count, text, and returned word timing data for future processing.
 
-> last updated: 2026-07-05 10:10:51
-> Replace Scribe SVG icon with PNG favicon set
-> 
-> Regenerate PNG icons (512, 192, 180, 32) from scribe_dictation.png
-> and use them for favicon, apple-touch-icon and PWA manifest. Remove
-> the older SVG icon.
+> last updated: 2026-07-06 11:26:24
+> Add language toggle to Scribe dictation
 >
-> [view commit](https://github.com/jokkebk/tools/commit/58084b1a9faa2b973017607e363a55620db29ea2)
+> [view commit](https://github.com/jokkebk/tools/commit/207aab0fdb06a67ec12fa9c9feca96c805a0b7c0)
 
 ### [seabed](seabed.html)
 
