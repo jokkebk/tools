@@ -27,12 +27,12 @@
 
 ### [scribe_dictation](scribe_dictation.html)
 
-Scribe Dictation is a browser-only dictation pad for realtime Finnish, English, or automatic speech-to-text through ElevenLabs Scribe. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, language mode, word count, text, and returned word timing data for future processing.
+Scribe Dictation is a browser-only dictation pad for realtime Finnish, English, or automatic speech-to-text through ElevenLabs Scribe, with the UI switching between Finnish and English. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, language mode, word count, text, and returned word timing data for future processing.
 
-> last updated: 2026-07-06 11:26:24
-> Add language toggle to Scribe dictation
+> last updated: 2026-07-06 11:36:26
+> Localize Scribe language toggle UI
 >
-> [view commit](https://github.com/jokkebk/tools/commit/207aab0fdb06a67ec12fa9c9feca96c805a0b7c0)
+> [view commit](https://github.com/jokkebk/tools/commit/d100bb6a400c681687bc410ffa4df9b557bb62de)
 
 ### [seabed](seabed.html)
 

@@ -100,9 +100,9 @@
     },
     "scribe_dictation.html": {
       "last_commit": {
-        "hash": "207aab0fdb06a67ec12fa9c9feca96c805a0b7c0",
-        "date": "2026-07-06T11:26:24+03:00",
-        "message": "Add language toggle to Scribe dictation"
+        "hash": "d100bb6a400c681687bc410ffa4df9b557bb62de",
+        "date": "2026-07-06T11:36:26+03:00",
+        "message": "Localize Scribe language toggle UI"
       }
     },
     "seabed.html": {
