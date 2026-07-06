@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="fi">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -13,7 +13,7 @@
   <link rel="icon" href="scribe_dictation-icon-192.png" type="image/png" sizes="192x192">
   <link rel="icon" href="scribe_dictation-icon-512.png" type="image/png" sizes="512x512">
   <link rel="apple-touch-icon" href="scribe_dictation-icon-180.png">
-  <title>Scribe Finnish Dictation</title>
+  <title>Scribe-sanelu</title>
   <style>
     :root {
       color-scheme: light;
@@ -579,12 +579,12 @@
   <main>
     <header>
       <div>
-        <h1 id="appTitle">Scribe Finnish Dictation</h1>
-        <p id="appSubtitle" class="subtitle">Fast Finnish speech-to-text with local browser history.</p>
+        <h1 id="appTitle">Scribe-sanelu</h1>
+        <p id="appSubtitle" class="subtitle">Nopea suomenkielinen puhe tekstiksi paikallisella selainhistorialla.</p>
       </div>
       <div class="header-tools">
-        <div id="status" class="status">Idle</div>
-        <div class="language-toggle" role="group" aria-label="Transcription language">
+        <div id="status" class="status">Valmis</div>
+        <div class="language-toggle" role="group" aria-label="Litteroinnin kieli">
           <button class="active" type="button" data-language-mode="fi" aria-pressed="true">FI</button>
           <button type="button" data-language-mode="en" aria-pressed="false">EN</button>
           <button type="button" data-language-mode="auto" aria-pressed="false">Auto</button>
@@ -592,17 +592,17 @@
       </div>
     </header>
 
-    <nav class="app-tabs" aria-label="Main views">
-      <button id="recorderTab" class="tab-button" type="button" aria-controls="recorderPanel" aria-expanded="true">Recorder</button>
-      <button id="historyTab" class="tab-button" type="button" aria-controls="historyPanel" aria-expanded="false">History</button>
-      <button id="settingsTab" class="tab-button" type="button" aria-controls="settingsPanel" aria-expanded="false">Settings</button>
+    <nav class="app-tabs" aria-label="Päänäkymät">
+      <button id="recorderTab" class="tab-button" type="button" aria-controls="recorderPanel" aria-expanded="true">Tallennus</button>
+      <button id="historyTab" class="tab-button" type="button" aria-controls="historyPanel" aria-expanded="false">Historia</button>
+      <button id="settingsTab" class="tab-button" type="button" aria-controls="settingsPanel" aria-expanded="false">Asetukset</button>
     </nav>
 
     <section id="recorderPanel" class="tab-panel" aria-labelledby="recorderTab">
       <div class="workspace">
         <section class="section">
           <div class="section-head">
-            <h2>Recorder</h2>
+            <h2 id="recorderHeading">Tallennus</h2>
             <div class="meta-row">
               <span id="languageBadge" class="pill">FI</span>
               <span id="sessionTime" class="pill">00:00</span>
@@ -610,12 +610,12 @@
           </div>
           <div class="section-body">
             <div class="record-actions">
-              <button id="recordToggle" class="record-button" type="button" aria-label="Start recording" title="Start recording">
-                <span class="record-label">Start recording</span>
+              <button id="recordToggle" class="record-button" type="button" aria-label="Aloita tallennus" title="Aloita tallennus">
+                <span class="record-label">Aloita tallennus</span>
               </button>
               <div class="meter-wrap">
                 <div class="meter-label">
-                  <span>Mic</span>
+                  <span id="micLabel">Mikrofoni</span>
                   <span id="meterValue">0%</span>
                 </div>
                 <div class="meter" aria-hidden="true">
@@ -623,25 +623,25 @@
                 </div>
               </div>
             </div>
-            <div id="liveBox" class="live-box">Live text appears here while recording.</div>
+            <div id="liveBox" class="live-box">Teksti ilmestyy tähän tallennuksen aikana.</div>
           </div>
         </section>
 
         <section class="section">
           <div class="section-head">
-            <h2>Transcript</h2>
+            <h2 id="transcriptHeading">Teksti</h2>
             <div class="transcript-actions">
-              <button id="copyTranscript" class="small">Copy</button>
-              <button id="saveTranscript" class="small">Save</button>
-              <button id="newTranscript" class="small">New</button>
+              <button id="copyTranscript" class="small">Kopioi</button>
+              <button id="saveTranscript" class="small">Tallenna</button>
+              <button id="newTranscript" class="small">Uusi</button>
             </div>
           </div>
           <div class="section-body">
-            <textarea id="transcript" class="transcript" spellcheck="true" lang="fi" placeholder="Committed transcript text"></textarea>
+            <textarea id="transcript" class="transcript" spellcheck="true" lang="fi" placeholder="Valmis litteroitu teksti"></textarea>
             <div class="meta-row">
-              <span id="createdAt" class="pill">Not saved</span>
-              <span id="wordCount" class="pill">0 words</span>
-              <span id="segmentCount" class="pill">0 segments</span>
+              <span id="createdAt" class="pill">Ei tallennettu</span>
+              <span id="wordCount" class="pill">0 sanaa</span>
+              <span id="segmentCount" class="pill">0 segmenttiä</span>
             </div>
           </div>
         </section>
@@ -651,7 +651,7 @@
     <section id="historyPanel" class="tab-panel" aria-labelledby="historyTab">
       <div class="section">
         <div class="section-head">
-          <h2>History</h2>
+          <h2 id="historyHeading">Historia</h2>
         </div>
         <div id="historyList" class="history-list"></div>
       </div>
@@ -660,42 +660,42 @@
     <section id="settingsPanel" class="tab-panel" aria-labelledby="settingsTab">
       <div class="section">
         <div class="section-head">
-          <h2>Settings</h2>
+          <h2 id="settingsHeading">Asetukset</h2>
           <div class="settings-actions">
-            <button id="saveKey" class="small">Save key</button>
-            <button id="forgetKey" class="small danger">Forget</button>
+            <button id="saveKey" class="small">Tallenna avain</button>
+            <button id="forgetKey" class="small danger">Unohda</button>
           </div>
         </div>
         <div class="settings-grid">
           <label>
-            ElevenLabs API key
+            <span id="apiKeyLabel">ElevenLabs API-avain</span>
             <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk_...">
           </label>
           <label>
-            VAD pause
+            <span id="vadPauseLabel">VAD-tauko</span>
             <select id="vadPause">
-              <option value="0.8">0.8 seconds</option>
-              <option value="1.2" selected>1.2 seconds</option>
-              <option value="1.8">1.8 seconds</option>
-              <option value="2.4">2.4 seconds</option>
+              <option value="0.8">0,8 sekuntia</option>
+              <option value="1.2" selected>1,2 sekuntia</option>
+              <option value="1.8">1,8 sekuntia</option>
+              <option value="2.4">2,4 sekuntia</option>
             </select>
           </label>
         </div>
         <div class="settings-grid" style="margin-top: 10px;">
           <label>
-            Key terms
-            <input id="keyterms" type="text" spellcheck="false" placeholder="Names, projects, terms">
+            <span id="keytermsLabel">Avaintermit</span>
+            <input id="keyterms" type="text" spellcheck="false" placeholder="Nimet, projektit, termit">
           </label>
           <label>
-            Cleanup
+            <span id="cleanupLabel">Siistiminen</span>
             <select id="cleanup">
-              <option value="false" selected>Verbatim</option>
-              <option value="true">No filler words</option>
+              <option value="false" selected>Sanatarkka</option>
+              <option value="true">Ei täytesanoja</option>
             </select>
           </label>
         </div>
-        <p class="notice">
-          This static page stores the key in this browser's localStorage and uses it to create a 15-minute token. Use it only on a trusted HTTPS or localhost page.
+        <p id="settingsNotice" class="notice">
+          Tämä staattinen sivu tallentaa avaimen selaimen localStorageen ja käyttää sitä 15 minuutin tunnisteen luomiseen. Käytä sitä vain luotetulla HTTPS- tai localhost-sivulla.
         </p>
       </div>
     </section>
@@ -711,14 +711,16 @@
       fi: {
         code: "fi",
         htmlLang: "fi",
-        title: "Scribe Finnish Dictation",
-        subtitle: "Fast Finnish speech-to-text with local browser history.",
+        uiLocale: "fi",
+        title: "Scribe-sanelu",
+        subtitle: "Nopea suomenkielinen puhe tekstiksi paikallisella selainhistorialla.",
         shortLabel: "FI",
-        filenameLabel: "finnish"
+        filenameLabel: "suomi"
       },
       en: {
         code: "en",
         htmlLang: "en",
+        uiLocale: "en",
         title: "Scribe English Dictation",
         subtitle: "Fast English speech-to-text with local browser history.",
         shortLabel: "EN",
@@ -727,10 +729,141 @@
       auto: {
         code: "",
         htmlLang: "",
+        uiLocale: "en",
         title: "Scribe Auto Dictation",
         subtitle: "Automatic language detection with local browser history.",
         shortLabel: "Auto",
         filenameLabel: "auto"
+      }
+    };
+    const UI_TEXT = {
+      en: {
+        mainViews: "Main views",
+        transcriptionLanguage: "Transcription language",
+        recorder: "Recorder",
+        history: "History",
+        settings: "Settings",
+        transcript: "Transcript",
+        mic: "Mic",
+        copy: "Copy",
+        save: "Save",
+        new: "New",
+        saveKey: "Save key",
+        forget: "Forget",
+        apiKey: "ElevenLabs API key",
+        vadPause: "VAD pause",
+        keyterms: "Key terms",
+        cleanup: "Cleanup",
+        verbatim: "Verbatim",
+        noFillerWords: "No filler words",
+        seconds: "seconds",
+        transcriptPlaceholder: "Committed transcript text",
+        keytermsPlaceholder: "Names, projects, terms",
+        notice: "This static page stores the key in this browser's localStorage and uses it to create a 15-minute token. Use it only on a trusted HTTPS or localhost page.",
+        idle: "Idle",
+        enterApiKey: "Enter an API key",
+        keySaved: "Key saved",
+        keyRemoved: "Key removed",
+        stopRecordingFirst: "Stop recording first",
+        selected: "{mode} selected",
+        apiKeyMissing: "API key missing",
+        creatingToken: "Creating token",
+        openingSession: "Opening session",
+        startingMicrophone: "Starting microphone",
+        recording: "Recording",
+        couldNotStart: "Could not start",
+        finalizing: "Finalizing",
+        sessionClosed: "Session closed",
+        webSocketError: "WebSocket error",
+        liveTextIdle: "Live text appears here while recording.",
+        listeningNext: "Listening for the next sentence.",
+        listening: "Listening...",
+        draft: "Draft",
+        newDraft: "New draft",
+        nothingToSave: "Nothing to save",
+        saved: "Saved",
+        nothingToCopy: "Nothing to copy",
+        copied: "Copied",
+        downloaded: "Downloaded",
+        deleted: "Deleted",
+        loaded: "Loaded",
+        notSaved: "Not saved",
+        noSavedTranscripts: "No saved transcripts.",
+        open: "Open",
+        download: "Download",
+        delete: "Delete",
+        updatedAt: "Updated {time}",
+        startRecording: "Start recording",
+        stopRecording: "Stop recording",
+        tokenMissing: "Token response did not include a token",
+        tokenTimedOut: "WebSocket connection timed out",
+        webSocketFailed: "WebSocket connection failed",
+        words: "{count} words",
+        segments: "{count} segments"
+      },
+      fi: {
+        mainViews: "Päänäkymät",
+        transcriptionLanguage: "Litteroinnin kieli",
+        recorder: "Tallennus",
+        history: "Historia",
+        settings: "Asetukset",
+        transcript: "Teksti",
+        mic: "Mikrofoni",
+        copy: "Kopioi",
+        save: "Tallenna",
+        new: "Uusi",
+        saveKey: "Tallenna avain",
+        forget: "Unohda",
+        apiKey: "ElevenLabs API-avain",
+        vadPause: "VAD-tauko",
+        keyterms: "Avaintermit",
+        cleanup: "Siistiminen",
+        verbatim: "Sanatarkka",
+        noFillerWords: "Ei täytesanoja",
+        seconds: "sekuntia",
+        transcriptPlaceholder: "Valmis litteroitu teksti",
+        keytermsPlaceholder: "Nimet, projektit, termit",
+        notice: "Tämä staattinen sivu tallentaa avaimen selaimen localStorageen ja käyttää sitä 15 minuutin tunnisteen luomiseen. Käytä sitä vain luotetulla HTTPS- tai localhost-sivulla.",
+        idle: "Valmis",
+        enterApiKey: "Syötä API-avain",
+        keySaved: "Avain tallennettu",
+        keyRemoved: "Avain poistettu",
+        stopRecordingFirst: "Pysäytä tallennus ensin",
+        selected: "{mode} valittu",
+        apiKeyMissing: "API-avain puuttuu",
+        creatingToken: "Luodaan tunnistetta",
+        openingSession: "Avataan istuntoa",
+        startingMicrophone: "Käynnistetään mikrofonia",
+        recording: "Tallennetaan",
+        couldNotStart: "Käynnistys epäonnistui",
+        finalizing: "Viimeistellään",
+        sessionClosed: "Istunto sulkeutui",
+        webSocketError: "WebSocket-virhe",
+        liveTextIdle: "Teksti ilmestyy tähän tallennuksen aikana.",
+        listeningNext: "Kuunnellaan seuraavaa virkettä.",
+        listening: "Kuunnellaan...",
+        draft: "Luonnos",
+        newDraft: "Uusi luonnos",
+        nothingToSave: "Ei tallennettavaa",
+        saved: "Tallennettu",
+        nothingToCopy: "Ei kopioitavaa",
+        copied: "Kopioitu",
+        downloaded: "Ladattu",
+        deleted: "Poistettu",
+        loaded: "Ladattu",
+        notSaved: "Ei tallennettu",
+        noSavedTranscripts: "Ei tallennettuja tekstejä.",
+        open: "Avaa",
+        download: "Lataa",
+        delete: "Poista",
+        updatedAt: "Päivitetty {time}",
+        startRecording: "Aloita tallennus",
+        stopRecording: "Pysäytä tallennus",
+        tokenMissing: "Tunnistevastauksesta puuttui tunniste",
+        tokenTimedOut: "WebSocket-yhteys aikakatkaistiin",
+        webSocketFailed: "WebSocket-yhteys epäonnistui",
+        words: "{count} sanaa",
+        segments: "{count} segmenttiä"
       }
     };
 
@@ -738,6 +871,8 @@
       apiKey: document.getElementById("apiKey"),
       appTitle: document.getElementById("appTitle"),
       appSubtitle: document.getElementById("appSubtitle"),
+      mainTabs: document.querySelector(".app-tabs"),
+      languageToggle: document.querySelector(".language-toggle"),
       languageButtons: Array.from(document.querySelectorAll("[data-language-mode]")),
       recorderTab: document.getElementById("recorderTab"),
       settingsTab: document.getElementById("settingsTab"),
@@ -745,12 +880,22 @@
       recorderPanel: document.getElementById("recorderPanel"),
       settingsPanel: document.getElementById("settingsPanel"),
       historyPanel: document.getElementById("historyPanel"),
+      recorderHeading: document.getElementById("recorderHeading"),
+      transcriptHeading: document.getElementById("transcriptHeading"),
+      historyHeading: document.getElementById("historyHeading"),
+      settingsHeading: document.getElementById("settingsHeading"),
       saveKey: document.getElementById("saveKey"),
       forgetKey: document.getElementById("forgetKey"),
+      apiKeyLabel: document.getElementById("apiKeyLabel"),
+      vadPauseLabel: document.getElementById("vadPauseLabel"),
       vadPause: document.getElementById("vadPause"),
+      keytermsLabel: document.getElementById("keytermsLabel"),
       keyterms: document.getElementById("keyterms"),
+      cleanupLabel: document.getElementById("cleanupLabel"),
       cleanup: document.getElementById("cleanup"),
+      settingsNotice: document.getElementById("settingsNotice"),
       recordToggle: document.getElementById("recordToggle"),
+      micLabel: document.getElementById("micLabel"),
       status: document.getElementById("status"),
       languageBadge: document.getElementById("languageBadge"),
       sessionTime: document.getElementById("sessionTime"),
@@ -789,6 +934,7 @@
     function init() {
       els.apiKey.value = localStorage.getItem(API_KEY_STORAGE) || "";
       setLanguageMode(getStoredLanguageMode());
+      showStatus(t("idle"), false);
       els.languageButtons.forEach((button) => {
         button.addEventListener("click", () => setLanguageMode(button.dataset.languageMode, true));
       });
@@ -831,12 +977,65 @@
       return LANGUAGE_MODES[mode] || LANGUAGE_MODES.fi;
     }
 
+    function getUiLocale() {
+      return getLanguageModeConfig().uiLocale || "en";
+    }
+
+    function t(key, replacements = {}) {
+      const localeText = UI_TEXT[getUiLocale()] || UI_TEXT.en;
+      let text = localeText[key] || UI_TEXT.en[key] || key;
+      Object.entries(replacements).forEach(([name, value]) => {
+        text = text.replace(`{${name}}`, value);
+      });
+      return text;
+    }
+
+    function applyUiText() {
+      const config = getLanguageModeConfig();
+      document.title = config.title;
+      els.appTitle.textContent = config.title;
+      els.appSubtitle.textContent = config.subtitle;
+      els.mainTabs.setAttribute("aria-label", t("mainViews"));
+      els.languageToggle.setAttribute("aria-label", t("transcriptionLanguage"));
+      els.recorderTab.textContent = t("recorder");
+      els.historyTab.textContent = t("history");
+      els.settingsTab.textContent = t("settings");
+      els.recorderHeading.textContent = t("recorder");
+      els.transcriptHeading.textContent = t("transcript");
+      els.historyHeading.textContent = t("history");
+      els.settingsHeading.textContent = t("settings");
+      els.micLabel.textContent = t("mic");
+      els.copyTranscript.textContent = t("copy");
+      els.saveTranscript.textContent = t("save");
+      els.newTranscript.textContent = t("new");
+      els.saveKey.textContent = t("saveKey");
+      els.forgetKey.textContent = t("forget");
+      els.apiKeyLabel.textContent = t("apiKey");
+      els.vadPauseLabel.textContent = t("vadPause");
+      els.keytermsLabel.textContent = t("keyterms");
+      els.cleanupLabel.textContent = t("cleanup");
+      els.transcript.placeholder = t("transcriptPlaceholder");
+      els.keyterms.placeholder = t("keytermsPlaceholder");
+      els.settingsNotice.textContent = t("notice");
+      Array.from(els.vadPause.options).forEach((option) => {
+        option.textContent = `${String(option.value).replace(".", getUiLocale() === "fi" ? "," : ".")} ${t("seconds")}`;
+      });
+      els.cleanup.options[0].textContent = t("verbatim");
+      els.cleanup.options[1].textContent = t("noFillerWords");
+      if (!els.transcript.value.trim()) {
+        els.liveBox.textContent = t("liveTextIdle");
+      }
+      setRecordingControls(Boolean(socket || mediaStream), Boolean(els.recordToggle.disabled && !(socket || mediaStream)));
+      updateMeta();
+      renderHistory();
+    }
+
     function setLanguageMode(mode, persist = false) {
       if (!Object.prototype.hasOwnProperty.call(LANGUAGE_MODES, mode)) {
         mode = "fi";
       }
       if ((socket || mediaStream) && mode !== currentLanguageMode) {
-        showStatus("Stop recording first", true, true);
+        showStatus(t("stopRecordingFirst"), true, true);
         return;
       }
 
@@ -844,9 +1043,6 @@
       const config = getLanguageModeConfig();
       document.body.dataset.languageMode = mode;
       document.documentElement.lang = config.htmlLang || "en";
-      document.title = config.title;
-      els.appTitle.textContent = config.title;
-      els.appSubtitle.textContent = config.subtitle;
       els.transcript.lang = config.htmlLang || "";
       const themeMeta = document.querySelector('meta[name="theme-color"]');
       if (themeMeta) {
@@ -857,11 +1053,12 @@
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", String(active));
       });
+      applyUiText();
       updateLanguageBadge();
+      localStorage.setItem(LANGUAGE_STORAGE, mode);
 
       if (persist) {
-        localStorage.setItem(LANGUAGE_STORAGE, mode);
-        showStatus(`${config.shortLabel} selected`, false);
+        showStatus(t("selected", { mode: config.shortLabel }), false);
       }
     }
 
@@ -876,18 +1073,18 @@
     function saveApiKey() {
       const key = els.apiKey.value.trim();
       if (!key) {
-        showStatus("Enter an API key", false, true);
+        showStatus(t("enterApiKey"), false, true);
         return;
       }
       localStorage.setItem(API_KEY_STORAGE, key);
-      showStatus("Key saved", false);
+      showStatus(t("keySaved"), false);
       setActiveTab("recorder");
     }
 
     function forgetApiKey() {
       localStorage.removeItem(API_KEY_STORAGE);
       els.apiKey.value = "";
-      showStatus("Key removed", false);
+      showStatus(t("keyRemoved"), false);
       setActiveTab("settings");
     }
 
@@ -904,7 +1101,7 @@
       try {
         const apiKey = els.apiKey.value.trim();
         if (!apiKey) {
-          showStatus("API key missing", false, true);
+          showStatus(t("apiKeyMissing"), false, true);
           setActiveTab("settings");
           els.apiKey.focus();
           return;
@@ -912,15 +1109,15 @@
 
         localStorage.setItem(API_KEY_STORAGE, apiKey);
         setRecordingControls(true, true);
-        showStatus("Creating token", true);
+        showStatus(t("creatingToken"), true);
         const token = await createSingleUseToken(apiKey);
 
-        showStatus("Opening session", true);
+        showStatus(t("openingSession"), true);
         socket = await openScribeSocket(token);
         bindSocket(socket);
         updateLanguageBadge();
 
-        showStatus("Starting microphone", true);
+        showStatus(t("startingMicrophone"), true);
         await startAudioGraph();
 
         if (!activeId || els.transcript.value.trim()) {
@@ -932,10 +1129,10 @@
         updateTimer();
         setRecordingControls(true, false);
         requestWakeLock();
-        showStatus("Recording", true);
+        showStatus(t("recording"), true);
       } catch (error) {
         console.error(error);
-        showStatus(error.message || "Could not start", false, true);
+        showStatus(error.message || t("couldNotStart"), false, true);
         await stopRecording(false);
       }
     }
@@ -948,7 +1145,7 @@
       sendFinalCommit();
 
       if (socket && socket.readyState === WebSocket.OPEN) {
-        showStatus("Finalizing", true);
+        showStatus(t("finalizing"), true);
         await wait(900);
       }
 
@@ -956,7 +1153,7 @@
       setRecordingControls(false);
       stopTimer();
       releaseWakeLock();
-      showStatus("Idle", false);
+      showStatus(t("idle"), false);
 
       if (saveWhenDone && (getTranscriptText().length > 0 || hadText)) {
         saveCurrentTranscript();
@@ -978,7 +1175,7 @@
 
       const data = await response.json();
       if (!data.token) {
-        throw new Error("Token response did not include a token");
+        throw new Error(t("tokenMissing"));
       }
       return data.token;
     }
@@ -1005,7 +1202,7 @@
         const ws = new WebSocket(`wss://api.elevenlabs.io/v1/speech-to-text/realtime?${params.toString()}`);
         const timeoutId = window.setTimeout(() => {
           ws.close();
-          reject(new Error("WebSocket connection timed out"));
+          reject(new Error(t("tokenTimedOut")));
         }, 10000);
 
         ws.addEventListener("open", () => {
@@ -1015,7 +1212,7 @@
 
         ws.addEventListener("error", () => {
           window.clearTimeout(timeoutId);
-          reject(new Error("WebSocket connection failed"));
+          reject(new Error(t("webSocketFailed")));
         }, { once: true });
       });
     }
@@ -1034,7 +1231,7 @@
 
       ws.addEventListener("close", () => {
         if (!closingAfterStop) {
-          showStatus("Session closed", false);
+          showStatus(t("sessionClosed"), false);
           stopAudioGraph();
           setRecordingControls(false);
           stopTimer();
@@ -1044,14 +1241,14 @@
       });
 
       ws.addEventListener("error", () => {
-        showStatus("WebSocket error", false, true);
+        showStatus(t("webSocketError"), false, true);
       });
     }
 
     function handleScribeMessage(data) {
       switch (data.message_type) {
         case "session_started":
-          showStatus("Recording", true);
+          showStatus(t("recording"), true);
           break;
         case "partial_transcript":
           renderLiveText(data.text || "");
@@ -1246,13 +1443,13 @@
       }
 
       els.transcript.value = currentSegments.map((segment) => segment.text).join("\n\n");
-      els.liveBox.textContent = "Listening for the next sentence.";
+      els.liveBox.textContent = t("listeningNext");
       updateMeta();
     }
 
     function renderLiveText(text) {
       if (!text) {
-        els.liveBox.textContent = "Listening...";
+        els.liveBox.textContent = t("listening");
         return;
       }
       els.liveBox.innerHTML = `<strong>${escapeHtml(text)}</strong>`;
@@ -1263,7 +1460,7 @@
       currentSegments = [];
       currentWords = [];
       els.transcript.value = "";
-      els.createdAt.textContent = "Draft";
+      els.createdAt.textContent = t("draft");
       updateLanguageBadge();
       updateMeta();
       renderHistory();
@@ -1271,16 +1468,16 @@
 
     function newTranscript() {
       if (socket || mediaStream) {
-        showStatus("Stop recording first", true, true);
+        showStatus(t("stopRecordingFirst"), true, true);
         return;
       }
       activeId = null;
       currentSegments = [];
       currentWords = [];
       els.transcript.value = "";
-      els.liveBox.textContent = "Live text appears here while recording.";
+      els.liveBox.textContent = t("liveTextIdle");
       updateLanguageBadge();
-      showStatus("New draft", false);
+      showStatus(t("newDraft"), false);
       updateMeta();
       renderHistory();
     }
@@ -1288,7 +1485,7 @@
     function saveCurrentTranscript() {
       const text = getTranscriptText();
       if (!text) {
-        showStatus("Nothing to save", false, true);
+        showStatus(t("nothingToSave"), false, true);
         return;
       }
 
@@ -1313,7 +1510,7 @@
       }
 
       saveTranscripts();
-      showStatus("Saved", false);
+      showStatus(t("saved"), false);
       updateMeta();
       renderHistory();
     }
@@ -1321,17 +1518,17 @@
     async function copyTranscript() {
       const text = getTranscriptText();
       if (!text) {
-        showStatus("Nothing to copy", false, true);
+        showStatus(t("nothingToCopy"), false, true);
         return;
       }
 
       try {
         await navigator.clipboard.writeText(text);
-        showStatus("Copied", false);
+        showStatus(t("copied"), false);
       } catch (error) {
         els.transcript.select();
         document.execCommand("copy");
-        showStatus("Copied", false);
+        showStatus(t("copied"), false);
       }
     }
 
@@ -1345,7 +1542,7 @@
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      showStatus("Downloaded", false);
+      showStatus(t("downloaded"), false);
     }
 
     function formatFilenameTimestamp(date) {
@@ -1378,7 +1575,7 @@
       saveTranscripts();
       renderHistory();
       updateMeta();
-      showStatus("Deleted", false);
+      showStatus(t("deleted"), false);
     }
 
     function renderHistory() {
@@ -1386,7 +1583,7 @@
       if (!transcripts.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "No saved transcripts.";
+        empty.textContent = t("noSavedTranscripts");
         els.historyList.appendChild(empty);
         return;
       }
@@ -1403,12 +1600,12 @@
         const date = document.createElement("span");
         date.textContent = formatDate(item.createdAt);
         const count = document.createElement("span");
-        count.textContent = `${item.wordCount || countWords(item.text)} words`;
+        count.textContent = t("words", { count: item.wordCount || countWords(item.text) });
         top.append(date, count);
 
         const meta = document.createElement("div");
         meta.className = "history-meta";
-        meta.textContent = `Updated ${formatTime(item.updatedAt)}`;
+        meta.textContent = t("updatedAt", { time: formatTime(item.updatedAt) });
 
         const preview = document.createElement("div");
         preview.className = "history-preview";
@@ -1422,19 +1619,19 @@
         const open = document.createElement("button");
         open.className = "small";
         open.type = "button";
-        open.textContent = "Open";
+        open.textContent = t("open");
         open.addEventListener("click", () => loadTranscript(item.id));
 
         const download = document.createElement("button");
         download.className = "small";
         download.type = "button";
-        download.textContent = "Download";
+        download.textContent = t("download");
         download.addEventListener("click", () => downloadTranscript(item));
 
         const del = document.createElement("button");
         del.className = "small danger";
         del.type = "button";
-        del.textContent = "Delete";
+        del.textContent = t("delete");
         del.addEventListener("click", () => deleteTranscript(item.id));
 
         actions.append(open, download, del);
@@ -1455,9 +1652,9 @@
       currentSegments = Array.isArray(record.segments) ? record.segments : [{ text: record.text, language: getLanguageModeConfig().code || "auto", words: [] }];
       currentWords = Array.isArray(record.words) ? record.words : currentSegments.flatMap((segment) => segment.words || []);
       els.transcript.value = record.text || "";
-      els.liveBox.textContent = "Live text appears here while recording.";
+      els.liveBox.textContent = t("liveTextIdle");
       updateLanguageBadge(currentSegments.at(-1)?.language);
-      showStatus("Loaded", false);
+      showStatus(t("loaded"), false);
       setActiveTab("recorder");
       updateMeta();
       renderHistory();
@@ -1476,9 +1673,9 @@
     function updateMeta() {
       const text = getTranscriptText();
       const record = transcripts.find((item) => item.id === activeId);
-      els.createdAt.textContent = record ? formatDate(record.createdAt) : (activeId ? "Draft" : "Not saved");
-      els.wordCount.textContent = `${countWords(text)} words`;
-      els.segmentCount.textContent = `${currentSegments.length} segments`;
+      els.createdAt.textContent = record ? formatDate(record.createdAt) : (activeId ? t("draft") : t("notSaved"));
+      els.wordCount.textContent = t("words", { count: countWords(text) });
+      els.segmentCount.textContent = t("segments", { count: currentSegments.length });
     }
 
     function updateLanguageBadge(detectedLanguage = "") {
@@ -1510,7 +1707,7 @@
     }
 
     function setRecordingControls(recording, busy = false) {
-      const label = recording ? "Stop recording" : "Start recording";
+      const label = recording ? t("stopRecording") : t("startRecording");
       els.recordToggle.disabled = busy;
       els.recordToggle.classList.toggle("recording", recording);
       els.recordToggle.setAttribute("aria-label", label);
