@@ -100,9 +100,9 @@
     },
     "scribe_dictation.html": {
       "last_commit": {
-        "hash": "d100bb6a400c681687bc410ffa4df9b557bb62de",
-        "date": "2026-07-06T11:36:26+03:00",
-        "message": "Localize Scribe language toggle UI"
+        "hash": "6f2a14f791c36c7396ae597f26283c72773cafa0",
+        "date": "2026-07-06T22:31:53+03:00",
+        "message": "Fix Scribe service worker HTML caching"
       }
     },
     "seabed.html": {
