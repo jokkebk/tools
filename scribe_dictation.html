@@ -1757,7 +1757,7 @@
         return;
       }
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("scribe_dictation-sw.js").catch((error) => {
+        navigator.serviceWorker.register("scribe_dictation-sw.js", { updateViaCache: "none" }).catch((error) => {
           console.warn("Scribe service worker registration failed", error);
         });
       });

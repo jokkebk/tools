@@ -1,6 +1,5 @@
-const CACHE_NAME = "scribe-dictation-v2";
+const CACHE_NAME = "scribe-dictation-v3";
 const APP_SHELL = [
-  "scribe_dictation.html",
   "scribe_dictation-manifest.json",
   "scribe_dictation-icon-32.png",
   "scribe_dictation-icon-180.png",
@@ -29,6 +28,19 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== location.origin || event.request.method !== "GET") {
+    return;
+  }
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
     return;
   }
 
