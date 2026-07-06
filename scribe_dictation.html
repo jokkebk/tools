@@ -33,6 +33,32 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
+    body[data-language-mode="en"] {
+      --bg: #edf2f6;
+      --surface: #f8fbfd;
+      --surface-soft: #dfe9ef;
+      --ink: #20252a;
+      --muted: #5f6972;
+      --line: rgba(31, 48, 62, 0.14);
+      --line-strong: rgba(31, 48, 62, 0.24);
+      --accent: #3f78a8;
+      --accent-soft: #dcecf7;
+      --accent-ink: #102333;
+    }
+
+    body[data-language-mode="auto"] {
+      --bg: #f2eef6;
+      --surface: #fbf8fd;
+      --surface-soft: #e9e0ef;
+      --ink: #28232c;
+      --muted: #6e6476;
+      --line: rgba(48, 36, 58, 0.14);
+      --line-strong: rgba(48, 36, 58, 0.24);
+      --accent: #7b699f;
+      --accent-soft: #ebe5f3;
+      --accent-ink: #1e1729;
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -167,6 +193,48 @@
       color: var(--muted);
       font-size: 0.9rem;
       white-space: nowrap;
+    }
+
+    .header-tools {
+      display: grid;
+      justify-items: end;
+      gap: 10px;
+    }
+
+    .language-toggle {
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(58px, 1fr));
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 247, 0.42);
+    }
+
+    .language-toggle button {
+      min-height: 34px;
+      border: 0;
+      border-radius: 0;
+      border-right: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      padding: 0 12px;
+      font-size: 0.86rem;
+      font-weight: 520;
+    }
+
+    .language-toggle button:last-child {
+      border-right: 0;
+    }
+
+    .language-toggle button:hover {
+      background: rgba(64, 52, 35, 0.07);
+      color: var(--ink);
+    }
+
+    .language-toggle button.active {
+      background: var(--accent);
+      color: #fffdf7;
+      font-weight: 760;
     }
 
     .status::before {
@@ -476,6 +544,10 @@
         align-items: start;
       }
 
+      .header-tools {
+        justify-items: start;
+      }
+
       .settings-grid {
         grid-template-columns: 1fr;
       }
@@ -507,10 +579,17 @@
   <main>
     <header>
       <div>
-        <h1>Scribe Finnish Dictation</h1>
-        <p class="subtitle">Fast Finnish speech-to-text with local browser history.</p>
+        <h1 id="appTitle">Scribe Finnish Dictation</h1>
+        <p id="appSubtitle" class="subtitle">Fast Finnish speech-to-text with local browser history.</p>
       </div>
-      <div id="status" class="status">Idle</div>
+      <div class="header-tools">
+        <div id="status" class="status">Idle</div>
+        <div class="language-toggle" role="group" aria-label="Transcription language">
+          <button class="active" type="button" data-language-mode="fi" aria-pressed="true">FI</button>
+          <button type="button" data-language-mode="en" aria-pressed="false">EN</button>
+          <button type="button" data-language-mode="auto" aria-pressed="false">Auto</button>
+        </div>
+      </div>
     </header>
 
     <nav class="app-tabs" aria-label="Main views">
@@ -524,7 +603,10 @@
         <section class="section">
           <div class="section-head">
             <h2>Recorder</h2>
-            <div id="sessionTime" class="pill">00:00</div>
+            <div class="meta-row">
+              <span id="languageBadge" class="pill">FI</span>
+              <span id="sessionTime" class="pill">00:00</span>
+            </div>
           </div>
           <div class="section-body">
             <div class="record-actions">
@@ -622,11 +704,41 @@
   <script>
     const API_KEY_STORAGE = "scribe_realtime_api_key";
     const TRANSCRIPTS_STORAGE = "scribe_realtime_transcripts_v1";
+    const LANGUAGE_STORAGE = "scribe_realtime_language_v1";
     const MODEL_ID = "scribe_v2_realtime";
     const TARGET_SAMPLE_RATE = 16000;
+    const LANGUAGE_MODES = {
+      fi: {
+        code: "fi",
+        htmlLang: "fi",
+        title: "Scribe Finnish Dictation",
+        subtitle: "Fast Finnish speech-to-text with local browser history.",
+        shortLabel: "FI",
+        filenameLabel: "finnish"
+      },
+      en: {
+        code: "en",
+        htmlLang: "en",
+        title: "Scribe English Dictation",
+        subtitle: "Fast English speech-to-text with local browser history.",
+        shortLabel: "EN",
+        filenameLabel: "english"
+      },
+      auto: {
+        code: "",
+        htmlLang: "",
+        title: "Scribe Auto Dictation",
+        subtitle: "Automatic language detection with local browser history.",
+        shortLabel: "Auto",
+        filenameLabel: "auto"
+      }
+    };
 
     const els = {
       apiKey: document.getElementById("apiKey"),
+      appTitle: document.getElementById("appTitle"),
+      appSubtitle: document.getElementById("appSubtitle"),
+      languageButtons: Array.from(document.querySelectorAll("[data-language-mode]")),
       recorderTab: document.getElementById("recorderTab"),
       settingsTab: document.getElementById("settingsTab"),
       historyTab: document.getElementById("historyTab"),
@@ -640,6 +752,7 @@
       cleanup: document.getElementById("cleanup"),
       recordToggle: document.getElementById("recordToggle"),
       status: document.getElementById("status"),
+      languageBadge: document.getElementById("languageBadge"),
       sessionTime: document.getElementById("sessionTime"),
       meterFill: document.getElementById("meterFill"),
       meterValue: document.getElementById("meterValue"),
@@ -665,6 +778,7 @@
     let timerId = null;
     let currentSegments = [];
     let currentWords = [];
+    let currentLanguageMode = "fi";
     let pendingPlain = null;
     let pendingPlainTimer = null;
     let closingAfterStop = false;
@@ -674,6 +788,10 @@
 
     function init() {
       els.apiKey.value = localStorage.getItem(API_KEY_STORAGE) || "";
+      setLanguageMode(getStoredLanguageMode());
+      els.languageButtons.forEach((button) => {
+        button.addEventListener("click", () => setLanguageMode(button.dataset.languageMode, true));
+      });
       els.recorderTab.addEventListener("click", () => setActiveTab("recorder"));
       els.historyTab.addEventListener("click", () => setActiveTab("history"));
       els.settingsTab.addEventListener("click", () => setActiveTab("settings"));
@@ -702,6 +820,49 @@
       renderHistory();
       updateMeta();
       setActiveTab(els.apiKey.value ? "recorder" : "settings");
+    }
+
+    function getStoredLanguageMode() {
+      const stored = localStorage.getItem(LANGUAGE_STORAGE);
+      return Object.prototype.hasOwnProperty.call(LANGUAGE_MODES, stored) ? stored : "fi";
+    }
+
+    function getLanguageModeConfig(mode = currentLanguageMode) {
+      return LANGUAGE_MODES[mode] || LANGUAGE_MODES.fi;
+    }
+
+    function setLanguageMode(mode, persist = false) {
+      if (!Object.prototype.hasOwnProperty.call(LANGUAGE_MODES, mode)) {
+        mode = "fi";
+      }
+      if ((socket || mediaStream) && mode !== currentLanguageMode) {
+        showStatus("Stop recording first", true, true);
+        return;
+      }
+
+      currentLanguageMode = mode;
+      const config = getLanguageModeConfig();
+      document.body.dataset.languageMode = mode;
+      document.documentElement.lang = config.htmlLang || "en";
+      document.title = config.title;
+      els.appTitle.textContent = config.title;
+      els.appSubtitle.textContent = config.subtitle;
+      els.transcript.lang = config.htmlLang || "";
+      const themeMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeMeta) {
+        themeMeta.setAttribute("content", getComputedStyle(document.body).getPropertyValue("--accent").trim());
+      }
+      els.languageButtons.forEach((button) => {
+        const active = button.dataset.languageMode === mode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      updateLanguageBadge();
+
+      if (persist) {
+        localStorage.setItem(LANGUAGE_STORAGE, mode);
+        showStatus(`${config.shortLabel} selected`, false);
+      }
     }
 
     function toggleRecording() {
@@ -757,6 +918,7 @@
         showStatus("Opening session", true);
         socket = await openScribeSocket(token);
         bindSocket(socket);
+        updateLanguageBadge();
 
         showStatus("Starting microphone", true);
         await startAudioGraph();
@@ -822,10 +984,10 @@
     }
 
     function openScribeSocket(token) {
+      const languageConfig = getLanguageModeConfig();
       const params = new URLSearchParams({
         token,
         model_id: MODEL_ID,
-        language_code: "fi",
         include_timestamps: "true",
         include_language_detection: "true",
         audio_format: "pcm_16000",
@@ -833,6 +995,9 @@
         vad_silence_threshold_secs: els.vadPause.value,
         no_verbatim: els.cleanup.value
       });
+      if (languageConfig.code) {
+        params.set("language_code", languageConfig.code);
+      }
 
       parseKeyterms().forEach((term) => params.append("keyterms", term));
 
@@ -1072,9 +1237,10 @@
 
       currentSegments.push({
         text,
-        language: data.language_code || "fi",
+        language: data.language_code || getLanguageModeConfig().code || "auto",
         words: Array.isArray(data.words) ? data.words : []
       });
+      updateLanguageBadge(data.language_code);
       if (Array.isArray(data.words)) {
         currentWords.push(...data.words);
       }
@@ -1098,6 +1264,7 @@
       currentWords = [];
       els.transcript.value = "";
       els.createdAt.textContent = "Draft";
+      updateLanguageBadge();
       updateMeta();
       renderHistory();
     }
@@ -1112,6 +1279,7 @@
       currentWords = [];
       els.transcript.value = "";
       els.liveBox.textContent = "Live text appears here while recording.";
+      updateLanguageBadge();
       showStatus("New draft", false);
       updateMeta();
       renderHistory();
@@ -1130,9 +1298,10 @@
         id: activeId || makeId(),
         createdAt: existing ? existing.createdAt : now,
         updatedAt: now,
+        languageMode: currentLanguageMode,
         wordCount: countWords(text),
         text,
-        segments: currentSegments.length ? currentSegments : [{ text, language: "fi", words: currentWords }],
+        segments: currentSegments.length ? currentSegments : [{ text, language: getLanguageModeConfig().code || "auto", words: currentWords }],
         words: currentWords
       };
 
@@ -1195,7 +1364,10 @@
     function getTranscriptFilename(item) {
       const stamp = formatFilenameTimestamp(new Date(item.createdAt || Date.now()));
       const words = item.wordCount || countWords(item.text || "");
-      return `scribe-finnish-dictation-${stamp}-${words}-words.txt`;
+      const language = item.languageMode && LANGUAGE_MODES[item.languageMode]
+        ? LANGUAGE_MODES[item.languageMode].filenameLabel
+        : getLanguageModeConfig().filenameLabel;
+      return `scribe-${language}-dictation-${stamp}-${words}-words.txt`;
     }
 
     function deleteTranscript(id) {
@@ -1277,10 +1449,14 @@
         return;
       }
       activeId = record.id;
-      currentSegments = Array.isArray(record.segments) ? record.segments : [{ text: record.text, language: "fi", words: [] }];
+      if (record.languageMode && LANGUAGE_MODES[record.languageMode]) {
+        setLanguageMode(record.languageMode, true);
+      }
+      currentSegments = Array.isArray(record.segments) ? record.segments : [{ text: record.text, language: getLanguageModeConfig().code || "auto", words: [] }];
       currentWords = Array.isArray(record.words) ? record.words : currentSegments.flatMap((segment) => segment.words || []);
       els.transcript.value = record.text || "";
       els.liveBox.textContent = "Live text appears here while recording.";
+      updateLanguageBadge(currentSegments.at(-1)?.language);
       showStatus("Loaded", false);
       setActiveTab("recorder");
       updateMeta();
@@ -1291,7 +1467,7 @@
       const text = getTranscriptText();
       currentSegments = text ? text.split(/\n{2,}/).map((segment) => ({
         text: normalizeSegmentText(segment),
-        language: "fi",
+        language: getLanguageModeConfig().code || "auto",
         words: []
       })).filter((segment) => segment.text) : [];
       currentWords = [];
@@ -1303,6 +1479,28 @@
       els.createdAt.textContent = record ? formatDate(record.createdAt) : (activeId ? "Draft" : "Not saved");
       els.wordCount.textContent = `${countWords(text)} words`;
       els.segmentCount.textContent = `${currentSegments.length} segments`;
+    }
+
+    function updateLanguageBadge(detectedLanguage = "") {
+      const config = getLanguageModeConfig();
+      const detected = normalizeLanguageLabel(detectedLanguage);
+      els.languageBadge.textContent = currentLanguageMode === "auto" && detected
+        ? `Auto: ${detected}`
+        : config.shortLabel;
+    }
+
+    function normalizeLanguageLabel(language) {
+      const normalized = String(language || "").trim().toLowerCase();
+      if (!normalized || normalized === "auto") {
+        return "";
+      }
+      if (normalized.startsWith("fi")) {
+        return "FI";
+      }
+      if (normalized.startsWith("en")) {
+        return "EN";
+      }
+      return normalized.slice(0, 2).toUpperCase();
     }
 
     function showStatus(text, live, isError) {
@@ -1322,6 +1520,9 @@
       els.vadPause.disabled = recording;
       els.keyterms.disabled = recording;
       els.cleanup.disabled = recording;
+      els.languageButtons.forEach((button) => {
+        button.disabled = recording;
+      });
     }
 
     async function requestWakeLock() {

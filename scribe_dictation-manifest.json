@@ -1,7 +1,7 @@
 {
-  "name": "Scribe Finnish Dictation",
+  "name": "Scribe Dictation",
   "short_name": "Scribe",
-  "description": "Fast Finnish speech-to-text with local browser history.",
+  "description": "Fast Finnish, English, or automatic speech-to-text with local browser history.",
   "id": "scribe_dictation.html",
   "start_url": "scribe_dictation.html",
   "scope": "./",
