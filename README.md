@@ -30,10 +30,10 @@
 
 Colorfill is a small, touch-friendly image coloring app. Upload or paste a coloring page, tap regions to flood fill them, pinch to zoom and pan on an iPad, then download the finished PNG.
 
-> last updated: 2026-07-13 22:05:18
-> Add Colorfill image coloring tool
+> last updated: 2026-07-13 22:47:53
+> Fix Colorfill iPad layout
 >
-> [view commit](https://github.com/jokkebk/tools/commit/9f6ee9cd24b28173f65e209b408965b338efe489)
+> [view commit](https://github.com/jokkebk/tools/commit/45317c08a8e430f8f9e8b5afecbe6a0825af8cf7)
 
 ### [scribe_dictation](scribe_dictation.html)
 

@@ -30,9 +30,9 @@
     },
     "colorfill.html": {
       "last_commit": {
-        "hash": "9f6ee9cd24b28173f65e209b408965b338efe489",
-        "date": "2026-07-13T22:05:18+03:00",
-        "message": "Add Colorfill image coloring tool"
+        "hash": "45317c08a8e430f8f9e8b5afecbe6a0825af8cf7",
+        "date": "2026-07-13T22:47:53+03:00",
+        "message": "Fix Colorfill iPad layout"
       }
     },
     "crt_simulator.html": {
