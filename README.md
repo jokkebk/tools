@@ -6,6 +6,7 @@
 * [aquarium_gpt55](aquarium_gpt55.html)
 * [blackjack_trainer](blackjack_trainer.html)
 * [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
+* [colorfill](colorfill.html)
 * [crt_simulator](crt_simulator.html)
 * [find_fraction](find_fraction.html)
 * [firefighter](firefighter.html)
@@ -24,6 +25,15 @@
 * [zipview](zipview.html)
 
 ## Tools
+
+### [colorfill](colorfill.html)
+
+Colorfill is a small, touch-friendly image coloring app. Upload or paste a coloring page, tap regions to flood fill them, pinch to zoom and pan on an iPad, then download the finished PNG.
+
+> last updated: 2026-07-13 22:05:18
+> Add Colorfill image coloring tool
+>
+> [view commit](https://github.com/jokkebk/tools/commit/9f6ee9cd24b28173f65e209b408965b338efe489)
 
 ### [scribe_dictation](scribe_dictation.html)
 
