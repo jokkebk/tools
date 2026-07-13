@@ -12,10 +12,10 @@
   button, input { font:inherit; }
   button { border:0; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
   .app { height:100%; display:flex; flex-direction:column; }
-  .toolbar { min-height:56px; padding:8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right)); display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.88); border-bottom:1px solid #dedbd4; z-index:3; }
+  .toolbar { min-height:56px; padding:max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.88); border-bottom:1px solid #dedbd4; z-index:3; }
   .brand { font-weight:750; letter-spacing:-.04em; font-size:19px; margin-right:auto; }
   .brand span { color:var(--accent); }
-  .tool { min-width:40px; height:40px; padding:0 12px; border-radius:11px; background:#eeeae1; font-weight:650; }
+  .tool { min-width:40px; height:40px; padding:0 12px; border-radius:11px; background:#eeeae1; font-weight:650; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
   .tool:hover { background:#e4dfd5; }
   .tool.primary { background:var(--ink); color:white; }
   #file-input { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
@@ -23,6 +23,7 @@
   .canvas-wrap { position:absolute; left:0; top:0; transform-origin:0 0; box-shadow:0 9px 35px #29313d27; line-height:0; }
   canvas { display:block; max-width:none; background:white; image-rendering:auto; }
   .empty { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; padding:24px; text-align:center; }
+  .empty[hidden] { display:none; }
   .empty-card { max-width:390px; padding:25px 28px; border:1px dashed #bcb5aa; border-radius:18px; background:#fffcf8cc; color:#5a6470; }
   .empty-card strong { display:block; margin-bottom:7px; font-size:20px; color:var(--ink); }
   .hint { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); max-width:calc(100% - 120px); padding:7px 12px; border-radius:999px; background:#233142dc; color:white; font-size:13px; text-align:center; pointer-events:none; opacity:0; transition:opacity .25s; z-index:2; }
@@ -38,10 +39,12 @@
   .palette-toggle { width:52px; height:52px; border-radius:50%; background:var(--selected, #e25d45); box-shadow:0 3px 12px #29313d42; display:grid; place-items:center; color:white; font-size:21px; }
   .palette-toggle::after { content:""; width:17px; height:17px; border-radius:50%; border:2px solid currentColor; box-shadow:5px -4px 0 -5px currentColor, 5px 4px 0 -5px currentColor; }
   .palette-toggle:focus-visible, .tool:focus-visible, .swatch:focus-visible { outline:3px solid #3e8ded; outline-offset:2px; }
-  .app.fullscreen .toolbar { position:absolute; top:0; left:0; right:0; transform:translateY(-110%); transition:transform .2s; border-radius:0 0 14px 14px; }
-  .app.fullscreen .toolbar:hover, .app.fullscreen .toolbar:focus-within { transform:none; }
+  .focus-exit { display:none; position:absolute; z-index:5; left:max(14px, env(safe-area-inset-left)); bottom:max(17px, env(safe-area-inset-bottom)); min-height:44px; padding:0 14px; border-radius:22px; background:#fffffff2; box-shadow:0 3px 12px #29313d42; font-weight:700; }
+  .app.fullscreen .toolbar { display:none; }
   .app.fullscreen .stage { height:100%; }
-  @media (max-width:580px) { .tool .label { display:none; } .tool { padding:0; } .brand { font-size:17px; } }
+  .app.fullscreen .focus-exit { display:block; }
+  @media (max-width:1100px) { .tool .label { display:none; } .tool { padding:0 10px; } }
+  @media (max-width:580px) { .tool { padding:0; } .brand { font-size:17px; } }
 </style>
 </head>
 <body>
@@ -65,6 +68,7 @@
       </div>
       <button class="palette-toggle" id="palette-toggle" type="button" aria-label="Open color palette" aria-expanded="false"></button>
     </div>
+    <button class="focus-exit" id="focus-exit" type="button">× Exit full screen</button>
   </section>
 </main>
 <script>
@@ -76,6 +80,7 @@
   const empty = document.querySelector('#empty');
   const hint = document.querySelector('#hint');
   const app = document.querySelector('#app');
+  const focusExit = document.querySelector('#focus-exit');
   const palette = document.querySelector('#palette');
   const toggle = document.querySelector('#palette-toggle');
   const colors = ['#e25d45','#f29d38','#f4d447','#97c95c','#3eafad','#4e91d6','#7467ba','#c166a2','#f1a7bd','#855b43','#303640','#ffffff'];
@@ -167,11 +172,21 @@
     ctx.putImageData(image,0,0);
   }
   document.querySelector('#download-btn').addEventListener('click', () => { if (!loaded) return message('Add an image first.'); const a=document.createElement('a'); a.download='colorfill.png'; a.href=canvas.toDataURL('image/png'); a.click(); });
-  document.querySelector('#fullscreen-btn').addEventListener('click', async () => {
-    app.classList.toggle('fullscreen');
-    try { if (!document.fullscreenElement) await app.requestFullscreen?.(); else await document.exitFullscreen?.(); } catch (_) { /* iPad browser mode still uses the expanded canvas */ }
+  const isIPad = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  async function setFullscreen(enabled) {
+    app.classList.toggle('fullscreen', enabled);
+    // iPad Safari's native fullscreen chrome can cover page controls. The CSS
+    // focus view is deliberately used there; desktop browsers still get native fullscreen.
+    if (!isIPad) {
+      try {
+        if (enabled && !document.fullscreenElement) await app.requestFullscreen?.();
+        if (!enabled && document.fullscreenElement) await document.exitFullscreen?.();
+      } catch (_) { /* The focus view remains a useful fullscreen fallback. */ }
+    }
     setTimeout(fit, 50);
-  });
+  }
+  document.querySelector('#fullscreen-btn').addEventListener('click', () => setFullscreen(!app.classList.contains('fullscreen')));
+  focusExit.addEventListener('click', () => setFullscreen(false));
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) app.classList.remove('fullscreen'); setTimeout(fit, 50); });
 })();
 </script>
