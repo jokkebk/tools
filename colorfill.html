@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Colorfill</title>
+<style>
+  :root { color-scheme: light; --ink:#233142; --paper:#f7f4ee; --accent:#e25d45; }
+  * { box-sizing: border-box; }
+  html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+  body { background:var(--paper); color:var(--ink); font:15px/1.35 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  button, input { font:inherit; }
+  button { border:0; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .app { height:100%; display:flex; flex-direction:column; }
+  .toolbar { min-height:56px; padding:8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right)); display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.88); border-bottom:1px solid #dedbd4; z-index:3; }
+  .brand { font-weight:750; letter-spacing:-.04em; font-size:19px; margin-right:auto; }
+  .brand span { color:var(--accent); }
+  .tool { min-width:40px; height:40px; padding:0 12px; border-radius:11px; background:#eeeae1; font-weight:650; }
+  .tool:hover { background:#e4dfd5; }
+  .tool.primary { background:var(--ink); color:white; }
+  #file-input { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+  .stage { position:relative; flex:1; min-height:0; overflow:hidden; touch-action:none; background:radial-gradient(circle at 50% 35%, #fff 0, #f4f0e8 75%); }
+  .canvas-wrap { position:absolute; left:0; top:0; transform-origin:0 0; box-shadow:0 9px 35px #29313d27; line-height:0; }
+  canvas { display:block; max-width:none; background:white; image-rendering:auto; }
+  .empty { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; padding:24px; text-align:center; }
+  .empty-card { max-width:390px; padding:25px 28px; border:1px dashed #bcb5aa; border-radius:18px; background:#fffcf8cc; color:#5a6470; }
+  .empty-card strong { display:block; margin-bottom:7px; font-size:20px; color:var(--ink); }
+  .hint { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); max-width:calc(100% - 120px); padding:7px 12px; border-radius:999px; background:#233142dc; color:white; font-size:13px; text-align:center; pointer-events:none; opacity:0; transition:opacity .25s; z-index:2; }
+  .hint.show { opacity:1; }
+  .palette { position:absolute; right:max(14px, env(safe-area-inset-right)); bottom:max(17px, env(safe-area-inset-bottom)); z-index:4; display:flex; flex-direction:column; align-items:flex-end; gap:9px; }
+  .palette-panel { width:186px; padding:12px; border-radius:16px; background:#fffffff2; box-shadow:0 7px 25px #29313d30; backdrop-filter:blur(8px); opacity:0; transform:translateY(8px) scale(.96); pointer-events:none; transition:.18s ease; }
+  .palette.open .palette-panel { opacity:1; transform:none; pointer-events:auto; }
+  .swatches { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; }
+  .swatch { width:22px; height:22px; border-radius:50%; background:var(--color); box-shadow:inset 0 0 0 1px #0002; }
+  .swatch.selected { outline:3px solid var(--ink); outline-offset:2px; }
+  .color-row { display:flex; align-items:center; gap:8px; margin-top:12px; border-top:1px solid #e8e4dc; padding-top:10px; font-size:12px; font-weight:650; }
+  #custom-color { width:29px; height:29px; padding:1px; border:0; border-radius:8px; background:none; }
+  .palette-toggle { width:52px; height:52px; border-radius:50%; background:var(--selected, #e25d45); box-shadow:0 3px 12px #29313d42; display:grid; place-items:center; color:white; font-size:21px; }
+  .palette-toggle::after { content:""; width:17px; height:17px; border-radius:50%; border:2px solid currentColor; box-shadow:5px -4px 0 -5px currentColor, 5px 4px 0 -5px currentColor; }
+  .palette-toggle:focus-visible, .tool:focus-visible, .swatch:focus-visible { outline:3px solid #3e8ded; outline-offset:2px; }
+  .app.fullscreen .toolbar { position:absolute; top:0; left:0; right:0; transform:translateY(-110%); transition:transform .2s; border-radius:0 0 14px 14px; }
+  .app.fullscreen .toolbar:hover, .app.fullscreen .toolbar:focus-within { transform:none; }
+  .app.fullscreen .stage { height:100%; }
+  @media (max-width:580px) { .tool .label { display:none; } .tool { padding:0; } .brand { font-size:17px; } }
+</style>
+</head>
+<body>
+<main class="app" id="app">
+  <header class="toolbar" aria-label="Coloring controls">
+    <div class="brand">color<span>fill</span></div>
+    <label class="tool" for="file-input" title="Upload an image">Upload <span class="label">image</span></label>
+    <input id="file-input" type="file" accept="image/*">
+    <button class="tool" id="fit-btn" type="button" title="Fit image on screen">Fit</button>
+    <button class="tool" id="fullscreen-btn" type="button" title="Toggle fullscreen">⛶ <span class="label">Full screen</span></button>
+    <button class="tool primary" id="download-btn" type="button" title="Download your coloring">↓ <span class="label">Download</span></button>
+  </header>
+  <section class="stage" id="stage" aria-label="Image coloring area">
+    <div class="canvas-wrap" id="canvas-wrap"><canvas id="canvas"></canvas></div>
+    <div class="empty" id="empty"><div class="empty-card"><strong>Start with a picture</strong>Upload a coloring page, or paste an image from your clipboard. Tap an area to fill it, and pinch to zoom.</div></div>
+    <div class="hint" id="hint" role="status"></div>
+    <div class="palette" id="palette">
+      <div class="palette-panel" aria-label="Colors">
+        <div class="swatches" id="swatches"></div>
+        <label class="color-row">Custom color <input id="custom-color" type="color" value="#e25d45"></label>
+      </div>
+      <button class="palette-toggle" id="palette-toggle" type="button" aria-label="Open color palette" aria-expanded="false"></button>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  const canvas = document.querySelector('#canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const stage = document.querySelector('#stage');
+  const wrap = document.querySelector('#canvas-wrap');
+  const empty = document.querySelector('#empty');
+  const hint = document.querySelector('#hint');
+  const app = document.querySelector('#app');
+  const palette = document.querySelector('#palette');
+  const toggle = document.querySelector('#palette-toggle');
+  const colors = ['#e25d45','#f29d38','#f4d447','#97c95c','#3eafad','#4e91d6','#7467ba','#c166a2','#f1a7bd','#855b43','#303640','#ffffff'];
+  let selected = colors[0], loaded = false, scale = 1, panX = 0, panY = 0;
+  let pointers = new Map(), gesture = null, press = null, hintTimer;
+
+  const swatches = document.querySelector('#swatches');
+  colors.forEach(color => {
+    const b = document.createElement('button');
+    b.className = 'swatch'; b.style.setProperty('--color', color); b.dataset.color = color;
+    b.type = 'button'; b.setAttribute('aria-label', `Use ${color}`); b.addEventListener('click', () => setColor(color));
+    swatches.append(b);
+  });
+  function setColor(color) {
+    selected = color; document.querySelector('#custom-color').value = color;
+    document.documentElement.style.setProperty('--selected', color);
+    document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.color.toLowerCase() === color.toLowerCase()));
+  }
+  setColor(selected);
+  document.querySelector('#custom-color').addEventListener('input', e => setColor(e.target.value));
+  toggle.addEventListener('click', () => {
+    const open = palette.classList.toggle('open'); toggle.setAttribute('aria-expanded', open); toggle.setAttribute('aria-label', open ? 'Close color palette' : 'Open color palette');
+  });
+
+  function message(text) { hint.textContent = text; hint.classList.add('show'); clearTimeout(hintTimer); hintTimer = setTimeout(() => hint.classList.remove('show'), 1800); }
+  function applyView() { wrap.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+  function fit() {
+    if (!loaded) return;
+    const r = stage.getBoundingClientRect(), pad = 24;
+    scale = Math.min((r.width - pad * 2) / canvas.width, (r.height - pad * 2) / canvas.height, 1);
+    panX = (r.width - canvas.width * scale) / 2; panY = (r.height - canvas.height * scale) / 2; applyView();
+  }
+  function loadImage(file) {
+    if (!file || !file.type.startsWith('image/')) return message('Please choose an image file.');
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const longest = Math.max(img.naturalWidth, img.naturalHeight), factor = Math.min(1, 2800 / longest);
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * factor)); canvas.height = Math.max(1, Math.round(img.naturalHeight * factor));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(url);
+      loaded = true; empty.hidden = true; fit(); message('Tap an area to fill it.');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); message('That image could not be opened.'); };
+    img.src = url;
+  }
+  document.querySelector('#file-input').addEventListener('change', e => { loadImage(e.target.files[0]); e.target.value = ''; });
+  window.addEventListener('paste', e => { const item = [...e.clipboardData.items].find(i => i.type.startsWith('image/')); if (item) { e.preventDefault(); loadImage(item.getAsFile()); } });
+  stage.addEventListener('dragover', e => e.preventDefault());
+  stage.addEventListener('drop', e => { e.preventDefault(); loadImage([...e.dataTransfer.files].find(f => f.type.startsWith('image/'))); });
+  document.querySelector('#fit-btn').addEventListener('click', fit);
+  window.addEventListener('resize', () => { if (loaded) fit(); });
+
+  function distance(a,b) { return Math.hypot(a.x-b.x, a.y-b.y); }
+  function midpoint(a,b) { return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
+  function startGesture() {
+    const p = [...pointers.values()]; if (p.length < 2) return;
+    const m = midpoint(p[0], p[1]); gesture = { distance:distance(p[0],p[1]), scale, worldX:(m.x-panX)/scale, worldY:(m.y-panY)/scale };
+  }
+  function eventPoint(e) { return {x:e.clientX, y:e.clientY}; }
+  stage.addEventListener('pointerdown', e => {
+    if (!loaded) return; stage.setPointerCapture(e.pointerId); pointers.set(e.pointerId, eventPoint(e));
+    if (pointers.size === 1) press = { x:e.clientX, y:e.clientY, panX, panY, moved:false };
+    if (pointers.size === 2) { press = null; startGesture(); }
+  });
+  stage.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return; pointers.set(e.pointerId, eventPoint(e));
+    if (pointers.size >= 2 && gesture) {
+      const p = [...pointers.values()], m = midpoint(p[0],p[1]); scale = Math.max(.08, Math.min(12, gesture.scale * distance(p[0],p[1]) / gesture.distance));
+      panX = m.x - gesture.worldX * scale; panY = m.y - gesture.worldY * scale; applyView(); return;
+    }
+    if (press) { const dx=e.clientX-press.x, dy=e.clientY-press.y; if (Math.hypot(dx,dy)>6) press.moved=true; if (press.moved) { panX=press.panX+dx; panY=press.panY+dy; applyView(); } }
+  });
+  function finishPointer(e) {
+    const wasTap = press && !press.moved && pointers.size === 1;
+    pointers.delete(e.pointerId);
+    if (pointers.size === 1) { const p=[...pointers.values()][0]; press={x:p.x,y:p.y,panX,panY,moved:true}; gesture=null; }
+    else if (!pointers.size) { gesture=null; if (wasTap) fillAt(e.clientX, e.clientY); press=null; }
+  }
+  stage.addEventListener('pointerup', finishPointer); stage.addEventListener('pointercancel', finishPointer);
+  function rgb(hex) { const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+  function fillAt(clientX, clientY) {
+    const r=canvas.getBoundingClientRect(); if (clientX<r.left || clientX>r.right || clientY<r.top || clientY>r.bottom) return;
+    const x=Math.floor((clientX-r.left)*canvas.width/r.width), y=Math.floor((clientY-r.top)*canvas.height/r.height);
+    const image=ctx.getImageData(0,0,canvas.width,canvas.height), data=image.data, start=(y*canvas.width+x)*4;
+    const target=[data[start],data[start+1],data[start+2],data[start+3]], fill=rgb(selected);
+    if (target[3]===0 || (target[0]===fill[0] && target[1]===fill[1] && target[2]===fill[2])) return;
+    const seen=new Uint8Array(canvas.width*canvas.height), stack=[y*canvas.width+x], tolerance=46;
+    const match = i => { const p=i*4; return !seen[i] && data[p+3]>10 && Math.max(Math.abs(data[p]-target[0]),Math.abs(data[p+1]-target[1]),Math.abs(data[p+2]-target[2])) <= tolerance; };
+    while (stack.length) { const i=stack.pop(); if (!match(i)) continue; seen[i]=1; const p=i*4; data[p]=fill[0]; data[p+1]=fill[1]; data[p+2]=fill[2]; data[p+3]=255; const col=i%canvas.width; if(col) stack.push(i-1); if(col<canvas.width-1) stack.push(i+1); if(i>=canvas.width) stack.push(i-canvas.width); if(i<canvas.width*(canvas.height-1)) stack.push(i+canvas.width); }
+    ctx.putImageData(image,0,0);
+  }
+  document.querySelector('#download-btn').addEventListener('click', () => { if (!loaded) return message('Add an image first.'); const a=document.createElement('a'); a.download='colorfill.png'; a.href=canvas.toDataURL('image/png'); a.click(); });
+  document.querySelector('#fullscreen-btn').addEventListener('click', async () => {
+    app.classList.toggle('fullscreen');
+    try { if (!document.fullscreenElement) await app.requestFullscreen?.(); else await document.exitFullscreen?.(); } catch (_) { /* iPad browser mode still uses the expanded canvas */ }
+    setTimeout(fit, 50);
+  });
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) app.classList.remove('fullscreen'); setTimeout(fit, 50); });
+})();
+</script>
+</body>
+</html>
