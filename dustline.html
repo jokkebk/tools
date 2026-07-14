@@ -406,7 +406,7 @@ const VEHICLES=[
     wheelR:38, mounts:[-58,58], topP:[-6,-64],
     mMount:3.4, mTop:2.4, mWheel:2.1,
     suspRest:58, suspK:2600, suspD:95, diagK:7200, diagD:60,
-    power:1100, topSpeed:1420, brake:2400, drive:'all',
+    power:1230, topSpeed:1420, brake:2400, drive:'all',
     airTorque:8.5, gripMul:1.18, nitroAcc:800,
     stats:{PWR:.8,GRIP:1.0,AIR:.45},
     color:'#3ec6b8', color2:'#f7a541',
@@ -1151,14 +1151,15 @@ function physicsFrame(dt,frozen){
   acc+=dt;
   const inp = (frozen||game.state==='finished'||v.crashed) ? {gas:false,brake:frozen,lean:0} : input;
   v.nitroOn = !frozen && game.state==='racing' && input.nitro && game.nitro>0 && !v.crashed
-              && (v.airT||0)<0.09;   // nitro is traction boost, not a rocket — needs wheels down
+              && (v.airT||0)<0.30;   // nitro is traction boost, not a rocket — cuts on real jumps,
+                                     // but survives suspension chatter on bumpy climbs
   while(acc>DT){
     acc-=DT;
     v.step(game.course,inp);
     if(game.state==='racing') game.time+=DT;
     // nitro economy
-    if(v.nitroOn){game.nitro=Math.max(0,game.nitro-0.5*DT); if(game.nitro<=0)v.nitroOn=false;}
-    else game.nitro=Math.min(1,game.nitro+0.055*DT);
+    if(v.nitroOn){game.nitro=Math.max(0,game.nitro-0.45*DT); if(game.nitro<=0)v.nitroOn=false;}
+    else game.nitro=Math.min(1,game.nitro+0.08*DT);
     if(!v.grounded && !v.crashed && game.state==='racing'){
       game.nitro=Math.min(1,game.nitro+0.30*DT);
       game.stats.airTotal+=DT;
