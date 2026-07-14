@@ -42,6 +42,13 @@
         "message": "Add CRT display simulator with phosphor grain rendering\n\nSimulates classic CRT displays with authentic RGB shadow mask pattern,\nscanlines, and luminance noise. Supports three resolution modes\n(SPECTRUM, CGA, VGA) with auto-selection based on viewport size.\n\n\ud83e\udd16 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
       }
     },
+    "dustline.html": {
+      "last_commit": {
+        "hash": "93dcc8038c6d40321306060880ecc417036c58f1",
+        "date": "2026-07-14T15:24:41+03:00",
+        "message": "Add Dustline physics rally game\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+      }
+    },
     "find_fraction.html": {
       "last_commit": {
         "hash": "a7af8d2895c54886b5efa5ebfd0cf9a6ca8dcadf",
