@@ -44,9 +44,9 @@
     },
     "dustline.html": {
       "last_commit": {
-        "hash": "538fa166ae276abec8f8a268479780104f9eb60b",
-        "date": "2026-07-14T22:14:57+03:00",
-        "message": "Dustline: mute toggle + pause/restart controls, fix water-checkpoint soft-lock\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+        "hash": "eec80d8abbb00d2ba0724423bef5363abb6ed2c3",
+        "date": "2026-07-14T22:41:56+03:00",
+        "message": "Dustline: fix nitro cutting out on bumpy ground, buff truck climbing\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
       }
     },
     "find_fraction.html": {

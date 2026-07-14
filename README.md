@@ -31,12 +31,12 @@
 
 Dustline is a sideways-scrolling physics racing game with procedurally generated courses, three distinct vehicles (motocross bike, monster truck, rally car) and realistic spring-damper suspension simulated on a Verlet particle chassis. Regenerate or share seeded courses from the start screen, then race the clock against your best ghost or pass the keyboard in 2–4 player party mode. Surfaces (asphalt, dirt, gravel) change grip, water hazards can be jumped or hydroplaned at speed, and nitro recharges through airtime — land clean to keep your momentum.
 
-> last updated: 2026-07-14 22:14:57
-> Dustline: mute toggle + pause/restart controls, fix water-checkpoint soft-lock
+> last updated: 2026-07-14 22:41:56
+> Dustline: fix nitro cutting out on bumpy ground, buff truck climbing
 > 
 > Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 >
-> [view commit](https://github.com/jokkebk/tools/commit/538fa166ae276abec8f8a268479780104f9eb60b)
+> [view commit](https://github.com/jokkebk/tools/commit/eec80d8abbb00d2ba0724423bef5363abb6ed2c3)
 
 ### [colorfill](colorfill.html)
 
