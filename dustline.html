@@ -291,7 +291,8 @@ body.touch #touch{display:block}
       <kbd>↑</kbd>/<kbd>W</kbd> gas &nbsp; <kbd>↓</kbd>/<kbd>S</kbd> brake &nbsp;
       <kbd>←</kbd><kbd>→</kbd>/<kbd>A</kbd><kbd>D</kbd> lean &nbsp;
       <kbd>SHIFT</kbd>/<kbd>SPACE</kbd> nitro &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>ESC</kbd> menu<br>
-      Nitro recharges in the air — send it off jumps. Land flat with the slope or eat dirt.
+      Nitro recharges in the air but only fires with wheels down — send it off jumps, boost on landing.<br>
+      Land flat with the slope or eat dirt. Blue on the minimap means water: jump it fast or sink.
     </div>
   </div>
 </div>
@@ -466,12 +467,18 @@ function makeCourse(seed){
     const s=rng()<0.6?SURF.DIRT:SURF.ASPHALT;
     push(kick,(t)=> -Math.min(up,kick*0.62)/(kick/STEP),s); // ramp up (screen-y negative = up)
     push(60,()=>0,s);                                       // lip
-    const drop=up+20+rng()*60, dl=260+rng()*220;
+    const drop=up+10+rng()*40, dl=260+rng()*220;
     push(dl,(t)=> drop/(dl/STEP)*(0.6+0.8*t),SURF.DIRT);   // landing slope down
   }
   function descent(){
-    const d=140+rng()*180, L=700+rng()*500, amp=25+rng()*35, wl=300+rng()*250, ph=rng()*TAU;
+    const d=120+rng()*150, L=700+rng()*500, amp=25+rng()*35, wl=300+rng()*250, ph=rng()*TAU;
     push(L,(t,xl)=> d/(L/STEP) + wob(amp,wl,ph)(t,xl), rng()<0.5?SURF.GRAVEL:SURF.DIRT);
+  }
+  function climb(){
+    const L=800+rng()*500;
+    const d=Math.min(110+rng()*160, L*0.3);              // grade ≤ ~17°
+    const amp=15+rng()*20, wl=400+rng()*300, ph=rng()*TAU;
+    push(L,(t,xl)=> -d/(L/STEP)+wob(amp,wl,ph)(t,xl), rng()<0.5?SURF.ASPHALT:SURF.DIRT);
   }
   function waterGap(){
     const s=SURF.DIRT;
@@ -504,7 +511,7 @@ function makeCourse(seed){
   // --- compose ---
   flat(1500,SURF.ASPHALT);                                  // start pad (camera can see behind start)
   (rng()<0.5?sprint:rollers)();                             // always open with something flowing
-  const menu=[rollers,whoops,sprint,ramp,descent,hill,waterGap,rollers,ramp,sprint];
+  const menu=[rollers,whoops,sprint,ramp,descent,hill,waterGap,rollers,ramp,climb,sprint];
   let waterCount=0;
   while(hs.length*STEP < targetLen){
     const pick=menu[Math.floor(rng()*menu.length)];
@@ -580,10 +587,10 @@ function makeCourse(seed){
   }
 
   // hilliness metric for stats
-  let climb=0; for(let i=1;i<hs.length;i++){const d=hs[i-1]-hs[i]; if(d>0)climb+=d;}
+  let climbTotal=0; for(let i=1;i<hs.length;i++){const d=hs[i-1]-hs[i]; if(d>0)climbTotal+=d;}
 
   return {seed,hs,surf,waters,decor,cps,length,finishX,startX:900,
-          stats:{lenM:Math.round(length/PXM),climbM:Math.round(climb/PXM),waters:waterCount,cps:cps.length}};
+          stats:{lenM:Math.round(length/PXM),climbM:Math.round(climbTotal/PXM),waters:waterCount,cps:cps.length}};
 }
 
 // course queries
@@ -935,6 +942,69 @@ function onCrash(v,impact,drowned){
 // =====================================================================
 // RUN LIFECYCLE
 // =====================================================================
+// ---------- minimap (prerendered per run) ----------
+let minimap=null;
+function buildMinimap(){
+  const c=game.course;
+  const w=520,h=40;
+  const cv=document.createElement('canvas');
+  cv.width=w*DPR;cv.height=h*DPR;
+  const p=cv.getContext('2d');p.setTransform(DPR,0,0,DPR,0,0);
+  let min=1e9,max=-1e9;
+  for(const y of c.hs){if(y<min)min=y;if(y>max)max=y}
+  const span=Math.max(200,max-min);
+  const X=x=>x/c.length*(w-6)+3, Y=y=>5+(y-min)/span*(h-10);
+  // water spans first (bright, readable)
+  for(const wt of c.waters){
+    p.fillStyle='#56c8f0';
+    p.fillRect(X(wt.x0),Y(wt.y)-1,Math.max(4,X(wt.x1)-X(wt.x0)),h-Y(wt.y)-1);
+  }
+  // profile colored by surface
+  p.lineWidth=2.2;p.lineCap='round';
+  for(let i=2;i<c.hs.length;i+=2){
+    const s=SURFS[c.surf[i]];
+    p.strokeStyle=s===SURF.ASPHALT?'#93a2bb':s===SURF.DIRT?'#cf9159':'#b3a795';
+    p.beginPath();p.moveTo(X((i-2)*STEP),Y(c.hs[i-2]));p.lineTo(X(i*STEP),Y(c.hs[i]));p.stroke();
+  }
+  // checkpoints + finish
+  for(const cp of c.cps){p.fillStyle='#f2d09a';p.fillRect(X(cp)-1,Y(groundY(c,cp))-7,2,7)}
+  p.fillStyle='#ff5d3a';p.fillRect(X(c.finishX)-1.5,Y(groundY(c,c.finishX))-9,3,9);
+  minimap={cv,len:c.length};
+}
+function drawMinimap(){
+  if(!minimap||!game.vehicle||game.state==='menu')return;
+  const w=Math.min(W*0.5,520), h=40*(w/520), x=(W-w)/2, y=10;
+  ctx.save();
+  ctx.fillStyle='rgba(11,6,32,0.55)';
+  ctx.beginPath();ctx.roundRect(x-7,y-5,w+14,h+10,9);ctx.fill();
+  ctx.strokeStyle='rgba(242,208,154,0.4)';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.drawImage(minimap.cv,x,y,w,h);
+  const map=v=>x+clamp(v/minimap.len,0,1)*w;
+  // ghost marker
+  if(game.ghost&&game.state==='racing'){
+    const fr=game.ghost.frames, idx=Math.min(fr.length-1,Math.floor(game.time*60));
+    if(idx>=0&&fr.length){
+      ctx.fillStyle='#9ec2ff';
+      ctx.beginPath();ctx.arc(map(fr[idx][0]),y+h+8,3,0,TAU);ctx.fill();
+    }
+  }
+  // player marker
+  const cx2=game.vehicle.com().x, px=map(cx2);
+  ctx.fillStyle='#ff5d3a';
+  ctx.beginPath();ctx.moveTo(px,y+h+4);ctx.lineTo(px-5,y+h+12);ctx.lineTo(px+5,y+h+12);ctx.closePath();ctx.fill();
+  // water-ahead warning
+  for(const wt of game.course.waters){
+    if(wt.x0>cx2 && wt.x0-cx2<280*PXM){
+      ctx.globalAlpha=0.55+0.45*Math.sin(performance.now()/110);
+      ctx.fillStyle='#56c8f0';
+      ctx.font='700 14px "Barlow Condensed", sans-serif';ctx.textAlign='center';
+      ctx.fillText('~ WATER AHEAD ~',W/2,y+h+27);
+      break;
+    }
+  }
+  ctx.restore();
+}
+
 function startRun(){
   const c=game.course;
   const def=VEHICLES[game.vehIdx];
@@ -949,6 +1019,7 @@ function startRun(){
   game.ghostRec=[];
   game.state='countdown'; game.countdown=2.6;
   game.cam.x=sx;game.cam.y=sy;game.cam.zoom=1;
+  buildMinimap();
   // ghost to race against
   game.ghost = game.mode==='solo' ? game.bestGhost : bestPartyGhost();
   hud.classList.remove('hidden');
@@ -1070,7 +1141,8 @@ function physicsFrame(dt,frozen){
   const v=game.vehicle; if(!v)return;
   acc+=dt;
   const inp = (frozen||game.state==='finished'||v.crashed) ? {gas:false,brake:frozen,lean:0} : input;
-  v.nitroOn = !frozen && game.state==='racing' && input.nitro && game.nitro>0 && !v.crashed;
+  v.nitroOn = !frozen && game.state==='racing' && input.nitro && game.nitro>0 && !v.crashed
+              && (v.airT||0)<0.09;   // nitro is traction boost, not a rocket — needs wheels down
   while(acc>DT){
     acc-=DT;
     v.step(game.course,inp);
@@ -1185,8 +1257,83 @@ function render(dt){
   drawParticlesFront();
   ctx.restore();
 
+  drawForeground(cam);
+  drawSpeedLines();
+  drawMinimap();
   drawPopups();
   if(game.state==='countdown') drawCountdown();
+}
+
+// near-field silhouettes scrolling faster than the track — 80s road-movie depth
+function drawForeground(cam){
+  ctx.save();
+  // far dark dune band
+  const bands=[[1.18,'rgba(18,10,38,0.85)',H*0.955],[1.5,'#0b0620',H*0.975]];
+  for(const [par,col,base] of bands){
+    const scroll=cam.x*par;
+    ctx.fillStyle=col;
+    ctx.beginPath();ctx.moveTo(0,H);
+    for(let x=0;x<=W;x+=26){
+      const wx=x+scroll;
+      ctx.lineTo(x, base+Math.sin(wx/260)*9+Math.sin(wx/71)*4);
+    }
+    ctx.lineTo(W,H);ctx.closePath();ctx.fill();
+    if(par>1.3){ // rim light on the near band
+      ctx.strokeStyle='rgba(255,150,100,0.16)';ctx.lineWidth=2;
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=26){
+        const wx=x+scroll;
+        const y=base+Math.sin(wx/260)*9+Math.sin(wx/71)*4;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }
+  // silhouette props riding the near band
+  const par=1.5, scroll=cam.x*par, step=170;
+  ctx.fillStyle='#0b0620';
+  for(let sx=Math.floor((scroll-140)/step)*step; sx<scroll+W+140; sx+=step){
+    const h1=hash1((sx/step)|0);
+    if(h1>0.72)continue;
+    const x=sx-scroll;
+    const y=H*0.975+Math.sin(sx/260)*9+Math.sin(sx/71)*4;
+    const s=0.8+h1*0.9;
+    ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+    if(h1<0.3){       // grass tuft
+      ctx.beginPath();
+      for(let k=0;k<5;k++){const a=-0.5+k*0.25+h1;
+        ctx.moveTo(0,4);ctx.quadraticCurveTo(a*14,-14,a*22,-26-k*3);ctx.lineTo(a*14+3,4);}
+      ctx.fill();
+    }else if(h1<0.45){ // rock
+      ctx.beginPath();ctx.moveTo(-20,4);ctx.lineTo(-10,-14);ctx.lineTo(6,-18);ctx.lineTo(20,-4);ctx.lineTo(16,5);ctx.closePath();ctx.fill();
+    }else if(h1<0.58){ // cactus
+      ctx.fillRect(-4,-44,8,50);
+      ctx.fillRect(-16,-30,12,7);ctx.fillRect(-16,-44,7,20);   // left arm
+      ctx.fillRect(4,-22,12,7);ctx.fillRect(9,-37,7,20);       // right arm
+    }else{             // fence post
+      ctx.fillRect(-3,-34,6,40);ctx.fillRect(-26,-28,52,5);ctx.fillRect(-26,-14,52,4);
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawSpeedLines(){
+  const v=game.vehicle;
+  if(!v||game.state==='menu')return;
+  const spd=v.speed();
+  if(spd<1150)return;
+  const k=Math.min(1,(spd-1150)/700);
+  const t=performance.now()/1000;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,243,221,'+(0.14*k)+')';ctx.lineWidth=2;
+  for(let i=0;i<9;i++){
+    const yy=hash1(i*31+2)*H*0.8+H*0.05;
+    const len=(70+hash1(i*7)*160)*k;
+    const xx=W-((t*spd*0.65+i*907)%(W+len));
+    ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx+len,yy);ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawSky(fullscreen){
@@ -1212,26 +1359,47 @@ function drawSky(fullscreen){
   ctx.fillStyle='rgba(224,116,63,0.75)';
   for(let i=0;i<4;i++)ctx.fillRect(sunX-H*0.12, sunY+H*0.02+i*H*0.026, H*0.24, H*0.012+i*2);
   ctx.restore();
+  // horizon glow band
+  const hg=ctx.createLinearGradient(0,sunY-H*0.06,0,sunY+H*0.06);
+  hg.addColorStop(0,'rgba(255,120,90,0)');hg.addColorStop(0.5,'rgba(255,150,90,0.22)');hg.addColorStop(1,'rgba(255,120,90,0)');
+  ctx.fillStyle=hg;ctx.fillRect(0,sunY-H*0.06,W,H*0.12);
+  // occasional shooting star
+  const t=performance.now()/1000, cyc=Math.floor(t/9), ph=t%9;
+  if(ph<0.7){
+    const p=ph/0.7;
+    const sx0=hash1(cyc*13+3)*W*0.8+W*0.1, sy0=hash1(cyc*29+5)*H*0.22+14;
+    const x2=sx0+p*300, y2=sy0+p*100;
+    ctx.strokeStyle='rgba(255,240,220,'+((1-p)*0.8)+')';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x2-46,y2-15);ctx.lineTo(x2,y2);ctx.stroke();
+  }
 }
 
 function drawBackdrop(l,r,cam){
   // parallax ridges — deterministic from course seed
   const seed=game.seed;
-  const layers=[[0.14,'#2a1a4c',520],[0.3,'#3d2057',380],[0.52,'#57285b',250]];
-  for(const [par,col,base] of layers){
-    ctx.fillStyle=col;
-    ctx.beginPath();
+  const layers=[[0.14,'#2a1a4c',520,'rgba(255,140,150,0.10)'],
+                [0.3,'#3d2057',380,'rgba(255,140,120,0.16)'],
+                [0.52,'#57285b',250,'rgba(255,150,100,0.28)']];
+  for(const [par,col,base,rim] of layers){
+    const pts=[];
     const y0=cam.y+base;
-    ctx.moveTo(l,y0+4000);
     for(let x=l;x<=r;x+=46){
       const wx=x*par+seed%977;
-      const y=y0 - (Math.sin(wx/420)*90+Math.sin(wx/147+2)*38+Math.sin(wx/1130)*160)*(par+0.5);
-      ctx.lineTo(x,y);
+      pts.push([x, y0-(Math.sin(wx/420)*90+Math.sin(wx/147+2)*38+Math.sin(wx/1130)*160)*(par+0.5)]);
     }
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(l,y0+4000);
+    for(const [x,y] of pts)ctx.lineTo(x,y);
     ctx.lineTo(r,y0+4000);ctx.closePath();ctx.fill();
+    // sun-side rim light on the ridge crest
+    ctx.strokeStyle=rim;ctx.lineWidth=3;
+    ctx.beginPath();
+    pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));
+    ctx.stroke();
   }
   // clouds
-  ctx.fillStyle='rgba(255,220,190,0.13)';
+  ctx.fillStyle='rgba(255,185,205,0.12)';
   for(let i=0;i<6;i++){
     const cx=((hash1(i*7+seed%100)*9000+ (cam.x*0.1))% (r-l+1600))+l-800;
     const cy=cam.y-360-hash1(i*13)*380;
@@ -1249,8 +1417,8 @@ function drawTerrain(l,r,cam){
   ctx.moveTo(i0*STEP,c.hs[i0]);
   for(let j=i0+1;j<=i1;j++)ctx.lineTo(j*STEP,c.hs[j]);
   ctx.lineTo(i1*STEP,bottom);ctx.lineTo(i0*STEP,bottom);ctx.closePath();
-  const g=ctx.createLinearGradient(0,cam.y-260,0,cam.y+700);
-  g.addColorStop(0,'#54405a');g.addColorStop(1,'#201430');
+  const g=ctx.createLinearGradient(0,cam.y-260,0,cam.y+1100);
+  g.addColorStop(0,'#5c4260');g.addColorStop(0.3,'#3a2848');g.addColorStop(1,'#120b24');
   ctx.fillStyle=g;ctx.fill();
   // surface band per run (thick colored top edge)
   let runStart=i0;
@@ -1284,6 +1452,32 @@ function drawTerrain(l,r,cam){
       ctx.fillRect(x+h*9,y+4+h*26,2.5,2.5);ctx.fillRect(x+h*4,y+16+h*40,2,2);}}
     else { if(h<0.3){ctx.strokeStyle='rgba(90,160,80,0.7)';ctx.lineWidth=1.6;
       ctx.beginPath();ctx.moveTo(x,y+2);ctx.lineTo(x-2,y-6);ctx.moveTo(x+2,y+2);ctx.lineTo(x+4,y-5);ctx.stroke();}}
+  }
+  // underground: sediment strata following a smoothed baseline, plus buried boulders
+  for(let s2=0;s2<3;s2++){
+    const depth=75+s2*100;
+    ctx.strokeStyle='rgba(8,4,20,'+(0.30-s2*0.07)+')';
+    ctx.lineWidth=4+s2*3;
+    ctx.beginPath();
+    for(let i=i0;i<=i1;i+=2){
+      const x=i*STEP;
+      const gx0=Math.floor(x/300)*300;
+      const yb=lerp(groundY(c,gx0),groundY(c,gx0+300),(x-gx0)/300);
+      const y=Math.max(yb+depth+Math.sin(i*0.22+s2*2.1)*5, c.hs[i]+34+depth*0.4);
+      i===i0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+  for(let i=i0;i<=i1;i++){
+    const h1=hash1(i*11+7);
+    if(h1<0.055){
+      const x=i*STEP, y=c.hs[i]+90+hash1(i*5+1)*420;
+      const r=5+h1*180;
+      ctx.fillStyle='rgba(22,13,42,0.65)';
+      ctx.beginPath();ctx.ellipse(x,y,r*1.5,r,hash1(i)*3,0,TAU);ctx.fill();
+      ctx.fillStyle='rgba(60,40,90,0.25)';
+      ctx.beginPath();ctx.ellipse(x-r*0.4,y-r*0.35,r*0.6,r*0.35,hash1(i)*3,0,TAU);ctx.fill();
+    }
   }
 }
 
