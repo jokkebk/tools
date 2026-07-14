@@ -44,9 +44,9 @@
     },
     "dustline.html": {
       "last_commit": {
-        "hash": "93dcc8038c6d40321306060880ecc417036c58f1",
-        "date": "2026-07-14T15:24:41+03:00",
-        "message": "Add Dustline physics rally game\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+        "hash": "4c65b2ad3341dcf81bde4f4122a3888111b0e9d4",
+        "date": "2026-07-14T21:52:26+03:00",
+        "message": "Dustline: minimap, grounded nitro, balanced elevation, underground strata, 80s visual pass\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
       }
     },
     "find_fraction.html": {
