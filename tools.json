@@ -44,9 +44,9 @@
     },
     "dustline.html": {
       "last_commit": {
-        "hash": "4c65b2ad3341dcf81bde4f4122a3888111b0e9d4",
-        "date": "2026-07-14T21:52:26+03:00",
-        "message": "Dustline: minimap, grounded nitro, balanced elevation, underground strata, 80s visual pass\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+        "hash": "538fa166ae276abec8f8a268479780104f9eb60b",
+        "date": "2026-07-14T22:14:57+03:00",
+        "message": "Dustline: mute toggle + pause/restart controls, fix water-checkpoint soft-lock\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
       }
     },
     "find_fraction.html": {
