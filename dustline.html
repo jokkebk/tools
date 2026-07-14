@@ -182,6 +182,13 @@ kbd{
   font-weight:700;font-size:13px;letter-spacing:.28em;color:var(--ink);
   padding:3px 10px;border-radius:4px;background:var(--sand);
 }
+#btnPause{
+  position:absolute;top:calc(12px + clamp(22px,3.6vw,34px) + 42px);right:18px;pointer-events:auto;
+  width:42px;height:42px;border-radius:10px;border:2px solid rgba(242,208,154,.35);
+  background:rgba(11,6,32,.55);color:var(--sand);font-size:19px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+#btnPause:hover{background:rgba(255,93,58,.25);border-color:var(--coral)}
 .hud-nitro{position:absolute;left:18px;bottom:18px;width:min(240px,34vw)}
 .hud-nitro .lbl{font-weight:700;font-size:12px;letter-spacing:.3em;color:var(--sand);margin-bottom:4px;text-shadow:0 2px 0 rgba(11,6,32,.7)}
 .hud-nitro .track{height:14px;background:rgba(11,6,32,.65);border:2px solid rgba(242,208,154,.4);border-radius:7px;overflow:hidden}
@@ -196,7 +203,7 @@ kbd{
 .hud-progress .lbl{text-align:right;font-weight:700;font-size:12px;letter-spacing:.24em;color:var(--sand);margin-top:5px;text-shadow:0 2px 0 rgba(11,6,32,.7)}
 
 /* touch controls */
-#touch{position:fixed;inset:0;z-index:6;display:none}
+#touch{position:fixed;inset:0;z-index:6;display:none;pointer-events:none}
 body.touch #touch{display:block}
 .tbtn{position:absolute;pointer-events:auto;border-radius:14px;border:2px solid rgba(255,243,221,.3);
   background:rgba(11,6,32,.35);color:rgba(255,243,221,.8);font-family:var(--font-display);font-size:16px;
@@ -285,12 +292,13 @@ body.touch #touch{display:block}
 
     <div class="start-row">
       <button class="btn primary" id="btnStart">▶ START ENGINE</button>
+      <button class="btn ghostbtn" id="btnMute">🔊 SOUND</button>
     </div>
 
     <div class="controls-hint">
       <kbd>↑</kbd>/<kbd>W</kbd> gas &nbsp; <kbd>↓</kbd>/<kbd>S</kbd> brake &nbsp;
       <kbd>←</kbd><kbd>→</kbd>/<kbd>A</kbd><kbd>D</kbd> lean &nbsp;
-      <kbd>SHIFT</kbd>/<kbd>SPACE</kbd> nitro &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>ESC</kbd> menu<br>
+      <kbd>SHIFT</kbd>/<kbd>SPACE</kbd> nitro &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>M</kbd> mute &nbsp; <kbd>ESC</kbd> menu<br>
       Nitro recharges in the air but only fires with wheels down — send it off jumps, boost on landing.<br>
       Land flat with the slope or eat dirt. Blue on the minimap means water: jump it fast or sink.
     </div>
@@ -303,6 +311,7 @@ body.touch #touch{display:block}
   <div class="hud-ghostdelta" id="hudDelta"></div>
   <div class="hud-speed"><span id="hudSpeed">0</span> <small>KM/H</small></div>
   <div class="hud-surface" id="hudSurface">ASPHALT</div>
+  <button id="btnPause" title="Pause (Esc) — restart track or back to menu">⏸</button>
   <div class="hud-nitro">
     <div class="lbl">NITRO</div>
     <div class="track"><div class="fill" id="nitroFill"></div></div>
@@ -342,8 +351,8 @@ body.touch #touch{display:block}
   <div class="modal">
     <h2>PAUSED</h2>
     <div class="btnrow">
-      <button class="btn primary" id="btnResume">RESUME</button>
-      <button class="btn" id="btnPRestart">RESTART RUN</button>
+      <button class="btn primary" id="btnResume">RESUME (ESC)</button>
+      <button class="btn" id="btnPRestart">↻ RESTART TRACK (R)</button>
       <button class="btn ghostbtn" id="btnPMenu">MENU</button>
     </div>
   </div>
@@ -563,7 +572,7 @@ function makeCourse(seed){
     for(let dx=-800;dx<=800;dx+=STEP){
       const i=Math.round((cx+dx)/STEP); if(i<2||i>hs.length-3)continue;
       const xx=(cx+dx); let inW=false;
-      for(const w of waters) if(xx>w.x0-800&&xx<w.x1+250) inW=true;   // leave runway before water
+      for(const w of waters) if(xx>w.x0-1600&&xx<w.x1+250) inW=true;  // real runway before water — respawns must be able to jump it
       if(inW) continue;
       const sl=Math.abs(hs[i+1]-hs[i-1]);
       if(sl<bs){bs=sl;best=cx+dx}
@@ -1037,7 +1046,7 @@ function respawnVehicle(){
   const def=game.vehicle.def;
   const x=game.respawn.x, y=groundY(game.course,x)-def.suspRest-def.wheelR-6;
   game.vehicle=new Vehicle(def,x,y);
-  game.nitro=Math.max(game.nitro,0.4);
+  game.nitro=1;   // full tank on respawn — escape velocity from short runways must always be possible
 }
 function finishRun(){
   game.state='finished';
@@ -1994,9 +2003,25 @@ seedInput.addEventListener('keydown',e=>{
 seedInput.addEventListener('blur',()=>{const s=strToSeed(seedInput.value);
   if(s!=null&&s!==game.seed)regen(s);else seedInput.value=seedToStr(game.seed);});
 document.getElementById('btnStart').onclick=()=>startRun();
-document.getElementById('btnResume').onclick=()=>{pauseEl.classList.add('hidden');game.state='racing';};
+const btnMute=document.getElementById('btnMute');
+function refreshMuteBtn(){btnMute.textContent=sfx.isMuted()?'🔇 MUTED':'🔊 SOUND';}
+function toggleMute(){sfx.setMuted(!sfx.isMuted());refreshMuteBtn();}
+btnMute.onclick=toggleMute;   // initial label set in BOOT (sfx is defined below)
+// pause freezes racing AND the countdown (state is parked in prePause until resume)
+function pauseGame(){
+  if(game.state!=='racing'&&game.state!=='countdown')return;
+  game.prePause=game.state;game.state='paused';
+  pauseEl.classList.remove('hidden');
+}
+function resumeGame(){
+  if(game.state!=='paused')return;
+  game.state=game.prePause||'racing';
+  pauseEl.classList.add('hidden');
+}
+document.getElementById('btnResume').onclick=resumeGame;
 document.getElementById('btnPRestart').onclick=()=>{pauseEl.classList.add('hidden');startRun();};
 document.getElementById('btnPMenu').onclick=()=>toMenu();
+document.getElementById('btnPause').onclick=()=>{game.state==='paused'?resumeGame():pauseGame();};
 
 // =====================================================================
 // INPUT
@@ -2005,6 +2030,7 @@ addEventListener('keydown',e=>{
   if(e.repeat)return;
   keys[e.code]=true;
   syncInput();
+  if(e.code==='KeyM'){toggleMute();return;}
   if(game.state==='menu'){
     if(e.code==='KeyR')regen();
     if(e.code==='Enter')startRun();
@@ -2013,12 +2039,10 @@ addEventListener('keydown',e=>{
     if(e.code==='Digit3'){game.vehIdx=2;buildVehicleCards()}
   }else if(game.state==='racing'||game.state==='countdown'){
     if(e.code==='KeyR')startRun();
-    if(e.code==='Escape'||e.code==='KeyP'){
-      if(pauseEl.classList.contains('hidden')){pauseEl.classList.remove('hidden');game.state=game.state==='racing'?'paused':game.state;}
-      else{pauseEl.classList.add('hidden');if(game.state==='paused')game.state='racing';}
-    }
+    if(e.code==='Escape'||e.code==='KeyP')pauseGame();
   }else if(game.state==='paused'){
-    if(e.code==='Escape'||e.code==='KeyP'){pauseEl.classList.add('hidden');game.state='racing';}
+    if(e.code==='Escape'||e.code==='KeyP')resumeGame();
+    if(e.code==='KeyR'){pauseEl.classList.add('hidden');startRun();}
   }else if(game.state==='finished'&&!endEl.classList.contains('hidden')){
     if(game.mode==='solo'){
       if(e.code==='KeyR')startRun();
@@ -2072,22 +2096,29 @@ bindTouch('tNitro',()=>input.nitro=true,()=>input.nitro=false);
 // SOUND (tiny synth)
 // =====================================================================
 const sfx=(()=>{
-  let ac=null,eng=null,engGain=null,nzGain=null;
+  let ac=null,eng=null,engGain=null,nzGain=null,master=null;
+  // muted via ?mute / ?mute=1 URL param (testing) or persisted toggle (M key / menu button)
+  let muted=(()=>{try{
+    const q=new URLSearchParams(location.search);
+    if(q.has('mute'))return q.get('mute')!=='0';
+    return localStorage.getItem('dustline_muted')==='1';
+  }catch(e){return false}})();
   function ensure(){
     if(ac)return;
     try{
       ac=new (window.AudioContext||window.webkitAudioContext)();
+      master=ac.createGain();master.gain.value=muted?0:1;master.connect(ac.destination);
       eng=ac.createOscillator();eng.type='sawtooth';eng.frequency.value=50;
       const flt=ac.createBiquadFilter();flt.type='lowpass';flt.frequency.value=420;
       engGain=ac.createGain();engGain.gain.value=0;
-      eng.connect(flt).connect(engGain).connect(ac.destination);eng.start();
+      eng.connect(flt).connect(engGain).connect(master);eng.start();
       // nitro noise
       const buf=ac.createBuffer(1,ac.sampleRate,ac.sampleRate);
       const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
       const nz=ac.createBufferSource();nz.buffer=buf;nz.loop=true;
       const nf=ac.createBiquadFilter();nf.type='bandpass';nf.frequency.value=900;
       nzGain=ac.createGain();nzGain.gain.value=0;
-      nz.connect(nf).connect(nzGain).connect(ac.destination);nz.start();
+      nz.connect(nf).connect(nzGain).connect(master);nz.start();
     }catch(e){}
   }
   function engine(spd,gas,nitro){
@@ -2102,10 +2133,15 @@ const sfx=(()=>{
     const o=ac.createOscillator(),g=ac.createGain();
     o.type=type||'square';o.frequency.value=f;
     g.gain.value=vol||0.08;g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);
-    o.connect(g).connect(ac.destination);o.start();o.stop(ac.currentTime+dur);
+    o.connect(g).connect(master);o.start();o.stop(ac.currentTime+dur);
+  }
+  function setMuted(m){
+    muted=m;
+    try{localStorage.setItem('dustline_muted',m?'1':'0')}catch(e){}
+    if(master)master.gain.value=m?0:1;
   }
   return {
-    ensure,engine,
+    ensure,engine,setMuted,isMuted:()=>muted,
     click:()=>blip(600,0.06,'square',0.03),
     cp:()=>{blip(700,0.12);setTimeout(()=>blip(1050,0.18),90)},
     go:()=>{blip(880,0.25,'square',0.1)},
@@ -2123,6 +2159,7 @@ addEventListener('keydown',()=>sfx.ensure(),{once:true});
 // =====================================================================
 regen();
 buildVehicleCards();
+refreshMuteBtn();
 requestAnimationFrame(t=>{lastT=t;requestAnimationFrame(frame)});
 addEventListener('resize',()=>{if(game.state==='menu')drawPreview()});
 </script>
