@@ -1262,7 +1262,7 @@
       const path = parentPath ? `${parentPath}/${entry.name}` : entry.name;
 
       if (entry.isFile) {
-        if (!ZIP_RE.test(entry.name)) return;
+        if (!ZIP_RE.test(entry.name) || isSkippableMacJunk(path)) return;
         try {
           const file = await fileFromEntry(entry);
           archives.push({ name: entry.name, path, file });
@@ -1306,7 +1306,7 @@
       const path = parentPath ? `${parentPath}/${handle.name}` : handle.name;
 
       if (handle.kind === "file") {
-        if (!ZIP_RE.test(handle.name)) return;
+        if (!ZIP_RE.test(handle.name) || isSkippableMacJunk(path)) return;
         try {
           const file = await handle.getFile();
           archives.push({ name: handle.name, path, file });
@@ -1325,7 +1325,7 @@
 
     function filesToArchives(files) {
       return files
-        .filter((file) => ZIP_RE.test(file.name))
+        .filter((file) => ZIP_RE.test(file.name) && !isSkippableMacJunk(file.webkitRelativePath || file.name))
         .map((file) => ({
           name: file.name,
           path: file.webkitRelativePath || file.name,
@@ -1345,10 +1345,15 @@
       return out;
     }
 
+    function isSkippableMacJunk(name) {
+      if (!name) return true;
+      if (name.startsWith("__MACOSX/") || name.includes("/__MACOSX/")) return true;
+      return baseName(name).startsWith("._");
+    }
+
     function isSupportedImageName(name) {
       if (!name || name.endsWith("/") || !IMAGE_RE.test(name)) return false;
-      if (name.startsWith("__MACOSX/") || name.includes("/__MACOSX/")) return false;
-      return !baseName(name).startsWith("._");
+      return !isSkippableMacJunk(name);
     }
 
     function createTaskQueue(concurrency) {
