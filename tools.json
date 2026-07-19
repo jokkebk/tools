@@ -149,9 +149,9 @@
     },
     "zipview.html": {
       "last_commit": {
-        "hash": "ab44e8f2674534c85d21085971dbf09cd3f0a834",
-        "date": "2026-06-30T13:30:35+03:00",
-        "message": "Fix zipview 1:1 zoom centering"
+        "hash": "8427d44e89ee5d3d8403ab8b0b8ad69d822b4d9c",
+        "date": "2026-07-19T23:21:00+03:00",
+        "message": "Zipview: skip macOS ._ AppleDouble zips in folder scan"
       }
     }
   }

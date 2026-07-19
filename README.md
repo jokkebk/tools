@@ -27,6 +27,15 @@
 
 ## Tools
 
+### [zipview](zipview.html)
+
+Drop one or more ZIP files, or open a folder, and this browser-only ZIP Image Viewer indexes archives locally without uploading anything. It lazily decompresses the active archive with fflate, builds responsive thumbnail previews only as they scroll into view, and keeps full-size image blobs limited to the current viewer image. The fullscreen viewer supports fit and clicked-position 1:1 zoom, pointer-lock panning, wheel or keyboard image navigation, and explicit archive switching for folders with multiple ZIPs.
+
+> last updated: 2026-07-19 23:21:00
+> Zipview: skip macOS ._ AppleDouble zips in folder scan
+>
+> [view commit](https://github.com/jokkebk/tools/commit/8427d44e89ee5d3d8403ab8b0b8ad69d822b4d9c)
+
 ### [dustline](dustline.html)
 
 Dustline is a sideways-scrolling physics racing game with procedurally generated courses, three distinct vehicles (motocross bike, monster truck, rally car) and realistic spring-damper suspension simulated on a Verlet particle chassis. Regenerate or share seeded courses from the start screen, then race the clock against your best ghost or pass the keyboard in 2–4 player party mode. Surfaces (asphalt, dirt, gravel) change grip, water hazards can be jumped or hydroplaned at speed, and nitro recharges through airtime — land clean to keep your momentum.
@@ -64,15 +73,6 @@ A photorealistic underwater kelp forest screensaver rendered entirely with proce
 > Seabed test, dictation improvement
 >
 > [view commit](https://github.com/jokkebk/tools/commit/af31d292acf77dee67df13f91596971f3f115fc3)
-
-### [zipview](zipview.html)
-
-Drop one or more ZIP files, or open a folder, and this browser-only ZIP Image Viewer indexes archives locally without uploading anything. It lazily decompresses the active archive with fflate, builds responsive thumbnail previews only as they scroll into view, and keeps full-size image blobs limited to the current viewer image. The fullscreen viewer supports fit and clicked-position 1:1 zoom, pointer-lock panning, wheel or keyboard image navigation, and explicit archive switching for folders with multiple ZIPs.
-
-> last updated: 2026-06-30 13:30:35
-> Fix zipview 1:1 zoom centering
->
-> [view commit](https://github.com/jokkebk/tools/commit/ab44e8f2674534c85d21085971dbf09cd3f0a834)
 
 ### [aquarium](aquarium.html)
 
