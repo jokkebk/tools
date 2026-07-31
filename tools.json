@@ -149,9 +149,9 @@
     },
     "zipview.html": {
       "last_commit": {
-        "hash": "8427d44e89ee5d3d8403ab8b0b8ad69d822b4d9c",
-        "date": "2026-07-19T23:21:00+03:00",
-        "message": "Zipview: skip macOS ._ AppleDouble zips in folder scan"
+        "hash": "f328d1960103111ecf0f74b994beb9df33636a12",
+        "date": "2026-08-01T00:25:53+03:00",
+        "message": "Improve zipview zoom for small images"
       }
     }
   }

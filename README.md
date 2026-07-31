@@ -31,10 +31,10 @@
 
 Drop one or more ZIP files, or open a folder, and this browser-only ZIP Image Viewer indexes archives locally without uploading anything. It lazily decompresses the active archive with fflate, builds responsive thumbnail previews only as they scroll into view, and keeps full-size image blobs limited to the current viewer image. The fullscreen viewer supports fit and clicked-position 1:1 zoom, pointer-lock panning, wheel or keyboard image navigation, and explicit archive switching for folders with multiple ZIPs.
 
-> last updated: 2026-07-19 23:21:00
-> Zipview: skip macOS ._ AppleDouble zips in folder scan
+> last updated: 2026-08-01 00:25:53
+> Improve zipview zoom for small images
 >
-> [view commit](https://github.com/jokkebk/tools/commit/8427d44e89ee5d3d8403ab8b0b8ad69d822b4d9c)
+> [view commit](https://github.com/jokkebk/tools/commit/f328d1960103111ecf0f74b994beb9df33636a12)
 
 ### [dustline](dustline.html)
 
