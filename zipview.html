@@ -471,7 +471,7 @@
     </div>
     <div class="hud">
       <div id="viewerInfo" class="viewer-info"></div>
-      <div class="viewer-hints">L-click: 1:1 | R-click: back | Esc: reset</div>
+      <div class="viewer-hints">L-click: zoom | R-click: back | Esc: reset</div>
     </div>
   </div>
 
@@ -658,6 +658,12 @@
       if (!state.pointerLocked || state.viewerMode !== "one") return;
       elViewerScroll.scrollLeft += e.movementX;
       elViewerScroll.scrollTop += e.movementY;
+    });
+
+    window.addEventListener("resize", () => {
+      if (state.viewerMode === "one") {
+        scheduleOneToOneLayout(() => centerOneToOneView());
+      }
     });
 
     warmFflate();
@@ -927,6 +933,8 @@
 
       if (mode !== "one") safeExitPointerLock();
       if (mode !== "one") {
+        elViewerImg.style.width = "";
+        elViewerImg.style.height = "";
         elViewerImg.style.marginLeft = "";
         elViewerImg.style.marginRight = "";
         elViewerImg.style.marginTop = "";
@@ -985,19 +993,28 @@
       const paddingBottom = parseFloat(style.paddingBottom) || 0;
       const imgW = elViewerImg.naturalWidth || elViewerImg.width;
       const imgH = elViewerImg.naturalHeight || elViewerImg.height;
-      const freeX = Math.max(0, elViewerScroll.clientWidth - paddingLeft - paddingRight - imgW);
-      const freeY = Math.max(0, elViewerScroll.clientHeight - paddingTop - paddingBottom - imgH);
+      const availableW = Math.max(0, elViewerScroll.clientWidth - paddingLeft - paddingRight);
+      const availableH = Math.max(0, elViewerScroll.clientHeight - paddingTop - paddingBottom);
+      const fitScale = imgW <= availableW && imgH <= availableH
+        ? Math.min(availableW / imgW, availableH / imgH)
+        : 1;
+      const displayW = imgW * fitScale;
+      const displayH = imgH * fitScale;
+      const freeX = Math.max(0, availableW - displayW);
+      const freeY = Math.max(0, availableH - displayH);
       const marginX = freeX / 2;
       const marginY = freeY / 2;
 
+      elViewerImg.style.width = `${displayW}px`;
+      elViewerImg.style.height = `${displayH}px`;
       elViewerImg.style.marginLeft = `${marginX}px`;
       elViewerImg.style.marginRight = `${marginX}px`;
       elViewerImg.style.marginTop = `${marginY}px`;
       elViewerImg.style.marginBottom = `${marginY}px`;
 
       return {
-        imgW,
-        imgH,
+        imgW: displayW,
+        imgH: displayH,
         offsetX: paddingLeft + marginX,
         offsetY: paddingTop + marginY,
         maxScrollLeft: Math.max(0, elViewerScroll.scrollWidth - elViewerScroll.clientWidth),
@@ -1030,7 +1047,7 @@
       }
       const archive = state.archives[state.archiveIndex];
       const info = state.images[state.viewerIndex];
-      const mode = state.viewerMode === "fit" ? "fit" : "1:1";
+      const mode = state.viewerMode === "fit" ? "fit" : "zoom";
       const archivePart = archive ? `${archive.path} | ` : "";
       elViewerInfo.textContent = `${state.viewerIndex + 1}/${state.images.length} | ${archivePart}${info.name} | ${mode}`;
     }
