@@ -18,7 +18,6 @@
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
 * [samefile](samefile.html)
-* [scribe_dictation](scribe_dictation.html)
 * [seabed](seabed.html)
 * [triangles](triangles.html)
 * [wordle](wordle.html)
@@ -55,15 +54,6 @@ Colorfill is a small, touch-friendly image coloring app. Upload or paste a color
 > Fix Colorfill iPad layout
 >
 > [view commit](https://github.com/jokkebk/tools/commit/45317c08a8e430f8f9e8b5afecbe6a0825af8cf7)
-
-### [scribe_dictation](scribe_dictation.html)
-
-Scribe Dictation is a browser-only dictation pad for realtime Finnish, English, or automatic speech-to-text through ElevenLabs Scribe, with the UI switching between Finnish and English. It stores the ElevenLabs API key and saved transcripts in localStorage, with each transcript keeping its timestamp, language mode, word count, text, and returned word timing data for future processing.
-
-> last updated: 2026-07-06 22:31:53
-> Fix Scribe service worker HTML caching
->
-> [view commit](https://github.com/jokkebk/tools/commit/6f2a14f791c36c7396ae597f26283c72773cafa0)
 
 ### [seabed](seabed.html)
 
