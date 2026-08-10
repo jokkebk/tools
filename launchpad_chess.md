@@ -1,0 +1,1 @@
+Play full chess on a Novation Launchpad Mini MK3 over Web MIDI: each pad is a square, white pieces glow green and black pieces purple, and tapping a piece then a destination makes the move with orange valid-move and red capture highlights. The on-screen board mirrors the grid with move-history navigation, captured-piece tallies, and PGN saving or drag-and-drop loading.

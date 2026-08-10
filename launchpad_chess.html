@@ -1,0 +1,719 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Launchpad Chess</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <style>
+    :root {
+      --bg-a: #0b1520;
+      --bg-b: #182838;
+      --panel: #f7f1e7;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --accent: #e4572e;
+      --accent-2: #1c9a8e;
+      --shadow: rgba(9, 16, 26, 0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 80% -10%, #355070 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-a), var(--bg-b));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .app {
+      width: min(1000px, 100%);
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 22px 60px var(--shadow);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: 0.02em; }
+    .sub { color: var(--muted); margin-bottom: 16px; }
+    .panel { display: grid; gap: 12px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button {
+      border: 1px solid #d7cdbf;
+      background: #fff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, border 120ms ease;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+    button:active { transform: translateY(0); }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.nav { font-size: 1.2rem; padding: 8px 16px; }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f0e9dd;
+      color: #5b5b5b;
+      font-size: 0.85rem;
+    }
+    .turn-white { background: #e8f5e9; color: #2e7d32; }
+    .turn-black { background: #ede7f6; color: #5e35b1; }
+    .game-over { background: #ffebee; color: #c62828; }
+    .captured {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .captured-side { font-size: 1.4rem; letter-spacing: 2px; }
+    .captured-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .board-container {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .chess-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border: 2px solid #8b7355;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .square {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    .square.light { background: #f0d9b5; }
+    .square.dark { background: #b58863; }
+    .square.selected { background: #7fc97f !important; }
+    .square.valid-move::after {
+      content: "";
+      position: absolute;
+      width: 30%;
+      height: 30%;
+      background: rgba(0, 150, 136, 0.5);
+      border-radius: 50%;
+    }
+    .square.capture-move { background: #ef9a9a !important; }
+    .square.last-move { box-shadow: inset 0 0 0 3px rgba(255, 235, 59, 0.6); }
+    .piece-white { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+    .piece-black { color: #1a1a1a; text-shadow: 0 1px 2px rgba(255,255,255,0.3); }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .hint {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .drag-over {
+      outline: 4px dashed var(--accent);
+      outline-offset: -4px;
+    }
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="panel">
+      <div>
+        <h1>Launchpad Chess</h1>
+        <div class="sub">Play chess on your Launchpad Mini</div>
+      </div>
+      <div class="row">
+        <button id="connect" class="primary">Connect Launchpad</button>
+        <span id="status" class="badge">Not connected</span>
+      </div>
+      <div class="status-bar">
+        <span id="turn" class="badge turn-white">White to move</span>
+        <button id="newGame">New Game</button>
+        <button id="savePGN">Save PGN</button>
+      </div>
+      <div class="row">
+        <button id="back" class="nav">◀</button>
+        <span id="moveNum" class="badge">Move 0</span>
+        <button id="forward" class="nav">▶</button>
+      </div>
+      <div class="captured">
+        <div>
+          <div class="captured-label">Captured by White</div>
+          <div id="capturedWhite" class="captured-side"></div>
+        </div>
+        <div>
+          <div class="captured-label">Captured by Black</div>
+          <div id="capturedBlack" class="captured-side"></div>
+        </div>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="showGrid"> Board grid</label>
+        <label><input type="checkbox" id="multiColor" checked> Multi-color pieces</label>
+      </div>
+      <div id="hint" class="hint">Tap a piece to select, then tap destination. Arrow keys navigate history. Drag .pgn file to load.</div>
+    </section>
+    <section class="board-container">
+      <div id="board" class="chess-board"></div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  // --- Launchpad MIDI Constants ---
+  const PROGRAMMER_MODE = [0xF0, 0x00, 0x20, 0x29, 0x02, 0x0D, 0x0E, 0x01, 0xF7];
+  const W = 8, H = 8;
+
+  // --- Launchpad Color Palette ---
+  const COLORS = {
+    // Board squares (empty)
+    LIGHT_SQUARE: 1,    // dim white
+    DARK_SQUARE: 0,     // off/dark
+    // White pieces (greens)
+    WHITE_PAWN: 16,
+    WHITE_KNIGHT: 18,
+    WHITE_BISHOP: 19,
+    WHITE_ROOK: 20,
+    WHITE_QUEEN: 22,
+    WHITE_KING: 23,
+    // Black pieces (purples)
+    BLACK_PAWN: 48,
+    BLACK_KNIGHT: 50,
+    BLACK_BISHOP: 51,
+    BLACK_ROOK: 52,
+    BLACK_QUEEN: 54,
+    BLACK_KING: 55,
+    // Highlights
+    SELECTED: 45,       // bright cyan
+    VALID_MOVE: 9,      // orange
+    CAPTURE_MOVE: 5,    // red
+    // Single color mode
+    WHITE_SINGLE: 21,   // bright green
+    BLACK_SINGLE: 53,   // bright purple
+  };
+
+  const PIECE_COLORS = {
+    'P': COLORS.WHITE_PAWN, 'N': COLORS.WHITE_KNIGHT, 'B': COLORS.WHITE_BISHOP,
+    'R': COLORS.WHITE_ROOK, 'Q': COLORS.WHITE_QUEEN, 'K': COLORS.WHITE_KING,
+    'p': COLORS.BLACK_PAWN, 'n': COLORS.BLACK_KNIGHT, 'b': COLORS.BLACK_BISHOP,
+    'r': COLORS.BLACK_ROOK, 'q': COLORS.BLACK_QUEEN, 'k': COLORS.BLACK_KING,
+  };
+
+  const PIECE_SYMBOLS = {
+    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟',
+  };
+
+  // --- DOM Elements ---
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $("status");
+  const connectBtn = $("connect");
+  const turnEl = $("turn");
+  const moveNumEl = $("moveNum");
+  const hintEl = $("hint");
+  const boardEl = $("board");
+  const capturedWhiteEl = $("capturedWhite");
+  const capturedBlackEl = $("capturedBlack");
+  const newGameBtn = $("newGame");
+  const savePGNBtn = $("savePGN");
+  const backBtn = $("back");
+  const forwardBtn = $("forward");
+  const showGridCheckbox = $("showGrid");
+  const multiColorCheckbox = $("multiColor");
+
+  // --- State ---
+  let midiOut = null;
+  let midiIn = null;
+  let chess = new Chess();
+  let history = [chess.fen()];  // FEN history for navigation
+  let historyIndex = 0;
+  let selectedSquare = null;    // e.g., "e2"
+  let lastMove = null;          // { from, to } for highlighting
+
+  // --- MIDI Helpers ---
+  function findPorts(access) {
+    const outs = [...access.outputs.values()];
+    const ins = [...access.inputs.values()];
+    const out = outs.find(p => p.name.includes("LPMiniMK3 MIDI")) ||
+                outs.find(p => p.name.includes("Launchpad Mini MK3") && p.name.includes("MIDI") && !p.name.includes("DAW"));
+    const inp = ins.find(p => p.name.includes("LPMiniMK3 MIDI")) ||
+                ins.find(p => p.name.includes("Launchpad Mini MK3") && p.name.includes("MIDI") && !p.name.includes("DAW"));
+    return { out, inp };
+  }
+
+  function sendLED(note, velocity) {
+    if (!midiOut) return;
+    midiOut.send([0x90, note, velocity]);
+  }
+
+  function clearGrid() {
+    for (let y = 1; y <= 8; y++) {
+      for (let x = 1; x <= 8; x++) sendLED(y * 10 + x, 0);
+    }
+  }
+
+  // Convert x,y (0-7, 0-7 where 0,0 is a8) to MIDI note
+  function xyToNote(x, y) {
+    return (8 - y) * 10 + (x + 1);
+  }
+
+  // Convert MIDI note to x,y
+  function noteToXY(note) {
+    const row = Math.floor(note / 10);
+    const col = note % 10;
+    return { x: col - 1, y: 8 - row };
+  }
+
+  // Convert x,y to algebraic notation (a8 is 0,0)
+  function xyToAlg(x, y) {
+    const file = String.fromCharCode(97 + x); // a-h
+    const rank = 8 - y;                        // 8-1
+    return file + rank;
+  }
+
+  // Convert algebraic to x,y
+  function algToXY(alg) {
+    const x = alg.charCodeAt(0) - 97;
+    const y = 8 - parseInt(alg[1]);
+    return { x, y };
+  }
+
+  // --- Chess Helpers ---
+  function getPieceAt(square) {
+    const piece = chess.get(square);
+    return piece ? piece.type.toUpperCase() + (piece.color === 'w' ? '' : piece.color) : null;
+  }
+
+  function getValidMoves(fromSquare) {
+    const moves = chess.moves({ square: fromSquare, verbose: true });
+    return moves.map(m => ({ to: m.to, captured: m.captured }));
+  }
+
+  function getCapturedPieces() {
+    // Calculate from starting position vs current
+    const start = { P: 8, N: 2, B: 2, R: 2, Q: 1, K: 1, p: 8, n: 2, b: 2, r: 2, q: 1, k: 1 };
+    const current = { P: 0, N: 0, B: 0, R: 0, Q: 0, K: 0, p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 };
+
+    const board = chess.board();
+    for (const row of board) {
+      for (const sq of row) {
+        if (sq) {
+          const key = sq.color === 'w' ? sq.type.toUpperCase() : sq.type.toLowerCase();
+          current[key]++;
+        }
+      }
+    }
+
+    const capturedByWhite = []; // black pieces captured
+    const capturedByBlack = []; // white pieces captured
+
+    for (const [piece, count] of Object.entries(start)) {
+      const diff = count - current[piece];
+      for (let i = 0; i < diff; i++) {
+        if (piece === piece.toLowerCase()) {
+          capturedByWhite.push(piece);
+        } else {
+          capturedByBlack.push(piece);
+        }
+      }
+    }
+
+    return { capturedByWhite, capturedByBlack };
+  }
+
+  // --- Rendering ---
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    const board = chess.board();
+    const validMoves = selectedSquare ? getValidMoves(selectedSquare) : [];
+    const validMoveSquares = new Set(validMoves.map(m => m.to));
+    const captureSquares = new Set(validMoves.filter(m => m.captured).map(m => m.to));
+
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const sq = document.createElement('div');
+        const alg = xyToAlg(x, y);
+        const isLight = (x + y) % 2 === 0;
+
+        sq.className = 'square ' + (isLight ? 'light' : 'dark');
+        sq.dataset.square = alg;
+
+        // Highlights
+        if (selectedSquare === alg) {
+          sq.classList.add('selected');
+        } else if (captureSquares.has(alg)) {
+          sq.classList.add('capture-move');
+        } else if (validMoveSquares.has(alg)) {
+          sq.classList.add('valid-move');
+        }
+
+        if (lastMove && (lastMove.from === alg || lastMove.to === alg)) {
+          sq.classList.add('last-move');
+        }
+
+        // Piece
+        const piece = board[y][x];
+        if (piece) {
+          const sym = PIECE_SYMBOLS[piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()];
+          sq.textContent = sym;
+          sq.classList.add(piece.color === 'w' ? 'piece-white' : 'piece-black');
+        }
+
+        sq.onclick = () => handleSquareClick(alg);
+        boardEl.appendChild(sq);
+      }
+    }
+  }
+
+  function renderLaunchpad() {
+    if (!midiOut) return;
+
+    const board = chess.board();
+    const validMoves = selectedSquare ? getValidMoves(selectedSquare) : [];
+    const validMoveSquares = new Set(validMoves.map(m => m.to));
+    const captureSquares = new Set(validMoves.filter(m => m.captured).map(m => m.to));
+    const showGrid = showGridCheckbox.checked;
+    const multiColor = multiColorCheckbox.checked;
+
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const alg = xyToAlg(x, y);
+        const piece = board[y][x];
+        const isLight = (x + y) % 2 === 0;
+
+        let color;
+
+        if (selectedSquare === alg) {
+          color = COLORS.SELECTED;
+        } else if (captureSquares.has(alg)) {
+          color = COLORS.CAPTURE_MOVE;
+        } else if (validMoveSquares.has(alg)) {
+          color = COLORS.VALID_MOVE;
+        } else if (piece) {
+          if (multiColor) {
+            const key = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
+            color = PIECE_COLORS[key];
+          } else {
+            color = piece.color === 'w' ? COLORS.WHITE_SINGLE : COLORS.BLACK_SINGLE;
+          }
+        } else {
+          // Empty square
+          if (showGrid) {
+            color = isLight ? COLORS.LIGHT_SQUARE : COLORS.DARK_SQUARE;
+          } else {
+            color = 0; // All off
+          }
+        }
+
+        sendLED(xyToNote(x, y), color);
+      }
+    }
+  }
+
+  function renderCaptured() {
+    const { capturedByWhite, capturedByBlack } = getCapturedPieces();
+    capturedWhiteEl.textContent = capturedByWhite.map(p => PIECE_SYMBOLS[p]).join('');
+    capturedBlackEl.textContent = capturedByBlack.map(p => PIECE_SYMBOLS[p]).join('');
+  }
+
+  function renderStatus() {
+    const turn = chess.turn();
+    const inCheck = chess.in_check();
+    const gameOver = chess.game_over();
+
+    if (gameOver) {
+      if (chess.in_checkmate()) {
+        turnEl.textContent = (turn === 'w' ? 'Black' : 'White') + ' wins!';
+      } else if (chess.in_stalemate()) {
+        turnEl.textContent = 'Stalemate';
+      } else if (chess.in_draw()) {
+        turnEl.textContent = 'Draw';
+      }
+      turnEl.className = 'badge game-over';
+    } else {
+      turnEl.textContent = (turn === 'w' ? 'White' : 'Black') + ' to move' + (inCheck ? ' (Check!)' : '');
+      turnEl.className = 'badge ' + (turn === 'w' ? 'turn-white' : 'turn-black');
+    }
+
+    moveNumEl.textContent = `Move ${historyIndex}/${history.length - 1}`;
+  }
+
+  function render() {
+    renderBoard();
+    renderLaunchpad();
+    renderCaptured();
+    renderStatus();
+  }
+
+  // --- Move Handling ---
+  function handleSquareClick(alg) {
+    const piece = chess.get(alg);
+    const turn = chess.turn();
+
+    if (selectedSquare) {
+      // Second click - try to make move
+      if (selectedSquare === alg) {
+        // Deselect
+        selectedSquare = null;
+      } else {
+        // Try the move
+        const move = chess.move({
+          from: selectedSquare,
+          to: alg,
+          promotion: 'q'  // Auto-queen
+        });
+
+        if (move) {
+          lastMove = { from: move.from, to: move.to };
+          // Truncate future history if we branched
+          history = history.slice(0, historyIndex + 1);
+          history.push(chess.fen());
+          historyIndex = history.length - 1;
+          hintEl.textContent = `${move.san}`;
+        } else {
+          // Invalid move - check if clicking own piece to reselect
+          if (piece && piece.color === turn) {
+            selectedSquare = alg;
+            hintEl.textContent = `Selected ${PIECE_SYMBOLS[piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()]} at ${alg}`;
+            render();
+            return;
+          }
+          hintEl.textContent = "Invalid move";
+        }
+        selectedSquare = null;
+      }
+    } else {
+      // First click - select piece
+      if (piece && piece.color === turn) {
+        selectedSquare = alg;
+        hintEl.textContent = `Selected ${PIECE_SYMBOLS[piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase()]} at ${alg}`;
+      } else if (piece) {
+        hintEl.textContent = "Not your turn";
+      } else {
+        hintEl.textContent = "Select a piece first";
+      }
+    }
+
+    render();
+  }
+
+  function handlePadPress(x, y) {
+    if (x < 0 || x >= 8 || y < 0 || y >= 8) return;
+    const alg = xyToAlg(x, y);
+    handleSquareClick(alg);
+  }
+
+  // --- History Navigation ---
+  function goBack() {
+    if (historyIndex > 0) {
+      historyIndex--;
+      chess.load(history[historyIndex]);
+      selectedSquare = null;
+      // Reconstruct lastMove from history if possible
+      lastMove = null;
+      hintEl.textContent = `Viewing move ${historyIndex}`;
+      render();
+    }
+  }
+
+  function goForward() {
+    if (historyIndex < history.length - 1) {
+      historyIndex++;
+      chess.load(history[historyIndex]);
+      selectedSquare = null;
+      lastMove = null;
+      hintEl.textContent = `Viewing move ${historyIndex}`;
+      render();
+    }
+  }
+
+  function newGame() {
+    chess = new Chess();
+    history = [chess.fen()];
+    historyIndex = 0;
+    selectedSquare = null;
+    lastMove = null;
+    hintEl.textContent = "New game started";
+    render();
+  }
+
+  function savePGN() {
+    // Rebuild game from history to get proper PGN
+    const tempChess = new Chess();
+    for (let i = 1; i < history.length; i++) {
+      // Find the move that transitions from history[i-1] to history[i]
+      tempChess.load(history[i - 1]);
+      const moves = tempChess.moves({ verbose: true });
+      for (const move of moves) {
+        tempChess.move(move);
+        if (tempChess.fen() === history[i]) {
+          break;
+        }
+        tempChess.undo();
+      }
+    }
+
+    const pgn = tempChess.pgn();
+    const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chess_${new Date().toISOString().slice(0, 10)}.pgn`;
+    a.click();
+    URL.revokeObjectURL(url);
+    hintEl.textContent = "PGN saved";
+  }
+
+  // --- MIDI Handling ---
+  function handleMidi(e) {
+    const [status, data1, data2] = e.data;
+
+    // Note on (pad press)
+    if ((status & 0xF0) === 0x90 && data2 > 0) {
+      const { x, y } = noteToXY(data1);
+      handlePadPress(x, y);
+    }
+
+    // CC (arrow buttons)
+    if ((status & 0xF0) === 0xB0 && data2 === 127) {
+      if (data1 === 93) goBack();      // Left arrow
+      if (data1 === 94) goForward();   // Right arrow
+      if (data1 === 91) newGame();     // Up arrow = new game
+    }
+  }
+
+  // --- Keyboard ---
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') goBack();
+    if (e.key === 'ArrowRight') goForward();
+    if (e.key === 'ArrowUp') newGame();
+  });
+
+  // --- Connection ---
+  connectBtn.onclick = async () => {
+    try {
+      const access = await navigator.requestMIDIAccess({ sysex: true });
+      const { out, inp } = findPorts(access);
+      if (!out || !inp) {
+        statusEl.textContent = "Launchpad not found";
+        return;
+      }
+      midiOut = out;
+      midiIn = inp;
+      midiIn.onmidimessage = handleMidi;
+      midiOut.send(PROGRAMMER_MODE);
+      statusEl.textContent = "Connected";
+      render();
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "MIDI access denied";
+    }
+  };
+
+  // --- Button handlers ---
+  newGameBtn.onclick = newGame;
+  savePGNBtn.onclick = savePGN;
+  backBtn.onclick = goBack;
+  forwardBtn.onclick = goForward;
+  showGridCheckbox.onchange = render;
+  multiColorCheckbox.onchange = render;
+
+  // --- PGN Loading ---
+  function loadPGN(pgn) {
+    const tempChess = new Chess();
+    if (!tempChess.load_pgn(pgn)) {
+      hintEl.textContent = "Failed to parse PGN";
+      return false;
+    }
+
+    // Build history by replaying the game
+    const moves = tempChess.history();
+    chess = new Chess();
+    history = [chess.fen()];
+
+    for (const move of moves) {
+      chess.move(move);
+      history.push(chess.fen());
+    }
+
+    historyIndex = 0;
+    chess.load(history[0]);
+    selectedSquare = null;
+    lastMove = null;
+    hintEl.textContent = `Loaded PGN with ${moves.length} moves. Use arrows to navigate.`;
+    render();
+    return true;
+  }
+
+  // --- Drag and Drop ---
+  const appEl = document.querySelector('.app');
+
+  appEl.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    appEl.classList.add('drag-over');
+  });
+
+  appEl.addEventListener('dragleave', (e) => {
+    appEl.classList.remove('drag-over');
+  });
+
+  appEl.addEventListener('drop', (e) => {
+    e.preventDefault();
+    appEl.classList.remove('drag-over');
+
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pgn')) {
+      hintEl.textContent = "Please drop a .pgn file";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      loadPGN(evt.target.result);
+    };
+    reader.readAsText(file);
+  });
+
+  // --- Init ---
+  render();
+})();
+</script>
+</body>
+</html>
