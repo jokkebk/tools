@@ -2,10 +2,7 @@
 
 ## Alphabetical Index
 
-* [aquarium](aquarium.html)
-* [aquarium_gpt55](aquarium_gpt55.html)
 * [blackjack_trainer](blackjack_trainer.html)
-* [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
 * [colorfill](colorfill.html)
 * [crt_simulator](crt_simulator.html)
 * [dustline](dustline.html)
@@ -18,7 +15,6 @@
 * [pianotrainer](pianotrainer.html)
 * [rushhour](rushhour.html)
 * [samefile](samefile.html)
-* [seabed](seabed.html)
 * [triangles](triangles.html)
 * [wordle](wordle.html)
 * [wordle-ocr](wordle-ocr.html)
@@ -54,33 +50,6 @@ Colorfill is a small, touch-friendly image coloring app. Upload or paste a color
 > Fix Colorfill iPad layout
 >
 > [view commit](https://github.com/jokkebk/tools/commit/45317c08a8e430f8f9e8b5afecbe6a0825af8cf7)
-
-### [seabed](seabed.html)
-
-A photorealistic underwater kelp forest screensaver rendered entirely with procedural WebGL shaders — no textures or assets. Undulating sand with animated caustics, kelp blades swaying in a coherent current, crepuscular light shafts, marine snow, haze and a few fish drifting through the scene. Every window resize (or click) regenerates a brand new seabed.
-
-> last updated: 2026-07-05 09:17:27
-> Seabed test, dictation improvement
->
-> [view commit](https://github.com/jokkebk/tools/commit/af31d292acf77dee67df13f91596971f3f115fc3)
-
-### [aquarium](aquarium.html)
-
-A photorealistic kelp-forest aquarium rendered in real time with Three.js (WebGL). Volumetric god rays fan down from the surface, animated caustics ripple across a sculpted seafloor, and dozens of fish across five species school with boid flocking while kelp sways in the current. A collapsible control panel adjusts fish count, water quality, lighting model, kelp density, and bubbles, with a live FPS readout; drag to orbit, scroll to dive, and the scene fills any window size.
-
-> last updated: 2026-06-14 10:52:07
-> Aquarium updates
->
-> [view commit](https://github.com/jokkebk/tools/commit/bb81f677c52f82b3cc3d2972af1e76299c59fcbb)
-
-### [aquarium_gpt55](aquarium_gpt55.html)
-
-Photorealistic aquarium simulator inspired by a sunlit kelp-tank view, with procedural Three.js fish schools, patterned fish materials, leafy moving kelp, bubbles, caustics, textured sand, rocks, depth haze, and animated light shafts. A collapsible control panel adjusts fish population, water clarity, kelp density, current speed, sunlight, bubbles, shadow depth, depth of field, and display info while the scene automatically fits the browser window.
-
-> last updated: 2026-06-14 10:52:07
-> Aquarium updates
->
-> [view commit](https://github.com/jokkebk/tools/commit/bb81f677c52f82b3cc3d2972af1e76299c59fcbb)
 
 ### [wordle-ocr](wordle-ocr.html)
 
@@ -233,13 +202,4 @@ Firefighter: Gingerbread Defense is a canvas-based action game where you aim a c
 > Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 >
 > [view commit](https://github.com/jokkebk/tools/commit/14bccc1cf23eba2bef3a41e92d23e1031a87507a)
-
-### [christmas-screensaver-opus45](christmas-screensaver-opus45.html)
-
-Nordic Christmas Night layers WebGL aurora ribbons, a scene canvas, and a snow canvas to render a calm holiday screensaver entirely in the browser.  The aurora shader demos simplex noise, fbm, and color blending to create flowing bands, while other layers add the silhouette scene, snow effects, and faint help hints for interaction.  Everything is fullscreen, cursor-free, and tuned for atmosphere so you get a looping northern lights display without any manual input.
-
-> last updated: 2025-12-18 09:03:18
-> Claude Opus 4.5 Christmas screensaver two-prompt test
->
-> [view commit](https://github.com/jokkebk/tools/commit/1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c)
 

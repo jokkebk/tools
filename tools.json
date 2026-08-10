@@ -1,31 +1,10 @@
 {
   "pages": {
-    "aquarium.html": {
-      "last_commit": {
-        "hash": "bb81f677c52f82b3cc3d2972af1e76299c59fcbb",
-        "date": "2026-06-14T10:52:07+03:00",
-        "message": "Aquarium updates"
-      }
-    },
-    "aquarium_gpt55.html": {
-      "last_commit": {
-        "hash": "bb81f677c52f82b3cc3d2972af1e76299c59fcbb",
-        "date": "2026-06-14T10:52:07+03:00",
-        "message": "Aquarium updates"
-      }
-    },
     "blackjack_trainer.html": {
       "last_commit": {
         "hash": "868a96d54419da1a8e6a440f382b27c3714c87ab",
         "date": "2025-12-28T13:20:23+02:00",
         "message": "Blackjack trainer for basic strategy"
-      }
-    },
-    "christmas-screensaver-opus45.html": {
-      "last_commit": {
-        "hash": "1a2f530d2f4d4ee228f74bfa4f8678b86e0ef96c",
-        "date": "2025-12-18T09:03:18+02:00",
-        "message": "Claude Opus 4.5 Christmas screensaver two-prompt test"
       }
     },
     "colorfill.html": {
@@ -110,13 +89,6 @@
         "hash": "2b6a16d11e95da254dc2d5d0993f0cec56e06634",
         "date": "2026-01-27T13:30:01+02:00",
         "message": "Add filters and docs for samefile tool"
-      }
-    },
-    "seabed.html": {
-      "last_commit": {
-        "hash": "af31d292acf77dee67df13f91596971f3f115fc3",
-        "date": "2026-07-05T09:17:27+03:00",
-        "message": "Seabed test, dictation improvement"
       }
     },
     "triangles.html": {
