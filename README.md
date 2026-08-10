@@ -10,6 +10,7 @@
 * [firefighter](firefighter.html)
 * [jokeripokeri_advisor](jokeripokeri_advisor.html)
 * [jokeripokeri_trainer](jokeripokeri_trainer.html)
+* [launchpad_chess](launchpad_chess.html)
 * [launchpad_test](launchpad_test.html)
 * [monsterbrush](monsterbrush.html)
 * [pianotrainer](pianotrainer.html)
@@ -21,6 +22,15 @@
 * [zipview](zipview.html)
 
 ## Tools
+
+### [launchpad_chess](launchpad_chess.html)
+
+Play full chess on a Novation Launchpad Mini MK3 over Web MIDI: each pad is a square, white pieces glow green and black pieces purple, and tapping a piece then a destination makes the move with orange valid-move and red capture highlights. The on-screen board mirrors the grid with move-history navigation, captured-piece tallies, and PGN saving or drag-and-drop loading.
+
+> last updated: 2026-08-10 12:21:43
+> Add Launchpad Chess tool
+>
+> [view commit](https://github.com/jokkebk/tools/commit/bb6aa6af09e6e9ae658dc88956d128e22b82e25a)
 
 ### [zipview](zipview.html)
 
