@@ -2,6 +2,7 @@
 
 ## Alphabetical Index
 
+* [aquarium](aquarium.html)
 * [blackjack_trainer](blackjack_trainer.html)
 * [colorfill](colorfill.html)
 * [crt_simulator](crt_simulator.html)
@@ -22,6 +23,28 @@
 * [zipview](zipview.html)
 
 ## Tools
+
+### [aquarium](aquarium.html)
+
+A WebGL2 planted aquarium that runs as a real simulation rather than a loop: the caustics on the sand are computed by refracting a dense grid of light through the same wave field that shapes the visible surface and splatting it onto the substrate, so the dancing net is physically tied to the ripples overhead and is energy-conserving by measurement. Five species of procedurally modelled fish swim as boids with per-species schooling, depth preference and body-wave animation, casting shadow-mapped silhouettes that cut through volumetric light shafts, while plants sway in a shared current field and an air stone sends refractive bubbles to the surface. Tap or click the water to drop food and watch the shoal converge; twenty sliders control fish, planting, lamp colour and angle, water clarity, caustics, shafts, surface ripple, current, camera and render scale, and everything is remembered between visits.
+
+> last updated: 2026-08-23 16:07:58
+> Add WebGL2 aquarium simulation
+> 
+> Photoreal planted tank rendered in eight passes. Caustics are a forward
+> photon splat: a grid of surface samples is refracted onto the substrate
+> with additive blending, so overlapping ray branches build the bright
+> filaments an inverse Jacobian cannot see. The map's mean is read back and
+> inverted each time the ripple slider moves, keeping it energy-conserving.
+> 
+> The visible surface, caustic map and volumetric shafts all evaluate one
+> shared wave field, tileable by construction. Adds a shadow-mapped light
+> volume, a mirrored render for total internal reflection with Snell's
+> window, per-channel water extinction, and boids-driven procedural fish.
+> 
+> Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+>
+> [view commit](https://github.com/jokkebk/tools/commit/ad8ac83c31f8e4b92884f9bc483168ca372b96ea)
 
 ### [launchpad_chess](launchpad_chess.html)
 

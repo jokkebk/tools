@@ -1,5 +1,12 @@
 {
   "pages": {
+    "aquarium.html": {
+      "last_commit": {
+        "hash": "ad8ac83c31f8e4b92884f9bc483168ca372b96ea",
+        "date": "2026-08-23T16:07:58+03:00",
+        "message": "Add WebGL2 aquarium simulation\n\nPhotoreal planted tank rendered in eight passes. Caustics are a forward\nphoton splat: a grid of surface samples is refracted onto the substrate\nwith additive blending, so overlapping ray branches build the bright\nfilaments an inverse Jacobian cannot see. The map's mean is read back and\ninverted each time the ripple slider moves, keeping it energy-conserving.\n\nThe visible surface, caustic map and volumetric shafts all evaluate one\nshared wave field, tileable by construction. Adds a shadow-mapped light\nvolume, a mirrored render for total internal reflection with Snell's\nwindow, per-channel water extinction, and boids-driven procedural fish.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
+      }
+    },
     "blackjack_trainer.html": {
       "last_commit": {
         "hash": "868a96d54419da1a8e6a440f382b27c3714c87ab",
