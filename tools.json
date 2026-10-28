@@ -79,9 +79,9 @@
     },
     "monsterbrush.html": {
       "last_commit": {
-        "hash": "743edcf8099731f2a83fa897a39b68715f0931ef",
-        "date": "2026-10-28T23:22:08+02:00",
-        "message": "Add Halloween monster and improve Monsterbrush bedtime play"
+        "hash": "b6786f2936d091673b300397e8244fe4c6c6f699",
+        "date": "2026-10-28T23:27:29+02:00",
+        "message": "Simplify Monsterbrush progress to full-image differences"
       }
     },
     "pianotrainer.html": {

@@ -28,10 +28,10 @@
 
 Brush four friendly monsters' teeth, including Pumpkin, a cuddly Halloween friend. Thirty-second sessions celebrate when 99% of the tooth dirt is removed, with a closer view on phones and clean smiles remembered on this device for six hours. Tap the moon for a gentle good-night view where every monster has clean teeth and tapping a friend makes it wave.
 
-> last updated: 2026-10-28 23:22:08
-> Add Halloween monster and improve Monsterbrush bedtime play
+> last updated: 2026-10-28 23:27:29
+> Simplify Monsterbrush progress to full-image differences
 >
-> [view commit](https://github.com/jokkebk/tools/commit/743edcf8099731f2a83fa897a39b68715f0931ef)
+> [view commit](https://github.com/jokkebk/tools/commit/b6786f2936d091673b300397e8244fe4c6c6f699)
 
 ### [aquarium](aquarium.html)
 
