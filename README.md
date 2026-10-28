@@ -24,6 +24,15 @@
 
 ## Tools
 
+### [monsterbrush](monsterbrush.html)
+
+Brush four friendly monsters' teeth, including Pumpkin, a cuddly Halloween friend. Thirty-second sessions celebrate when 99% of the tooth dirt is removed, with a closer view on phones and clean smiles remembered on this device for six hours. Tap the moon for a gentle good-night view where every monster has clean teeth and tapping a friend makes it wave.
+
+> last updated: 2026-10-28 23:22:08
+> Add Halloween monster and improve Monsterbrush bedtime play
+>
+> [view commit](https://github.com/jokkebk/tools/commit/743edcf8099731f2a83fa897a39b68715f0931ef)
+
 ### [aquarium](aquarium.html)
 
 A WebGL2 planted aquarium that runs as a real simulation rather than a loop: the caustics on the sand are computed by refracting a dense grid of light through the same wave field that shapes the visible surface and splatting it onto the substrate, so the dancing net is physically tied to the ripples overhead and is energy-conserving by measurement. Five species of procedurally modelled fish swim as boids with per-species schooling, depth preference and body-wave animation, casting shadow-mapped silhouettes that cut through volumetric light shafts, while plants sway in a shared current field and an air stone sends refractive bubbles to the surface. Tap or click the water to drop food and watch the shoal converge; twenty sliders control fish, planting, lamp colour and angle, water clarity, caustics, shafts, surface ripple, current, camera and render scale, and everything is remembered between visits.
@@ -92,13 +101,6 @@ Wordle Screenshot OCR reads a pasted or uploaded Wordle screenshot with Tesserac
 > Add OCR debug viewer and row-level recognition
 >
 > [view commit](https://github.com/jokkebk/tools/commit/05d632efc000767d000f1080bd0f656aa631f552)
-
-### [monsterbrush](monsterbrush.html)
-
-> last updated: 2026-02-22 21:11:26
-> Remove teeth progress bar
->
-> [view commit](https://github.com/jokkebk/tools/commit/306686633875301c4b7cfdc5af23e81b9e2b3d5f)
 
 ### [samefile](samefile.html)
 

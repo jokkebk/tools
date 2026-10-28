@@ -79,9 +79,9 @@
     },
     "monsterbrush.html": {
       "last_commit": {
-        "hash": "306686633875301c4b7cfdc5af23e81b9e2b3d5f",
-        "date": "2026-02-22T21:11:26+02:00",
-        "message": "Remove teeth progress bar"
+        "hash": "743edcf8099731f2a83fa897a39b68715f0931ef",
+        "date": "2026-10-28T23:22:08+02:00",
+        "message": "Add Halloween monster and improve Monsterbrush bedtime play"
       }
     },
     "pianotrainer.html": {
