@@ -33,14 +33,15 @@
     transition: opacity 0.35s ease, transform 0.35s ease;
   }
   .screen.hidden {
-    opacity: 0; pointer-events: none; transform: scale(0.97);
+    opacity: 0; visibility: hidden; pointer-events: none; transform: scale(0.97);
   }
 
   /* ── SELECT SCREEN ── */
   #select-screen {
     background: linear-gradient(160deg, #f0d9ff 0%, #d0f5e8 100%);
-    padding: 24px 16px;
-    gap: 24px;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    gap: 16px;
+    overflow-y: auto;
   }
 
   .select-title {
@@ -51,19 +52,19 @@
   }
 
   .monster-cards {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
     width: 100%;
-    max-width: 900px;
+    max-width: 1100px;
   }
 
   .monster-card {
     background: white;
     border-radius: 28px;
-    padding: 16px;
-    width: clamp(160px, 28vw, 260px);
+    padding: 10px;
+    width: 100%;
+    font-family: inherit;
     display: flex; flex-direction: column;
     align-items: center; gap: 12px;
     box-shadow: var(--shadow);
@@ -75,6 +76,8 @@
   }
   .monster-card:nth-child(2) { animation-delay: 0.4s; }
   .monster-card:nth-child(3) { animation-delay: 0.8s; }
+  .monster-card:nth-child(4) { animation-delay: 1.2s; }
+  .monster-card:focus-visible, button:focus-visible { outline: 4px solid #7B5EA7; outline-offset: 4px; }
 
   .monster-card:active { transform: scale(0.93) !important; }
   .monster-card:hover  { transform: scale(1.04); box-shadow: 0 10px 32px rgba(0,0,0,0.2); }
@@ -85,7 +88,7 @@
   }
 
   .monster-card img {
-    width: 100%; aspect-ratio: 1;
+    width: 100%; aspect-ratio: 2/3;
     object-fit: cover;
     border-radius: 18px;
     display: block;
@@ -96,18 +99,12 @@
     color: #555;
   }
 
-  .monster-card.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-  .coming-soon-badge {
-    background: #FFB3DE;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-  }
+  .bedtime-btn { border: 0; border-radius: 50%; background: #ffffffb3; width: 52px; height: 52px; font-size: 28px; cursor: pointer; flex-shrink: 0; }
+  #select-screen.bedtime { background: linear-gradient(160deg, #353458, #555b7d); }
+  .bedtime .select-title { color: #fff4cf; text-shadow: none; }
+  .bedtime .monster-card { animation: none; box-shadow: 0 0 22px #fff4cf33; }
+  .monster-card.waving { animation: goodnight-wave 0.9s ease-in-out; }
+  @keyframes goodnight-wave { 0%, 100% { transform: rotate(0); } 25%, 75% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 
   /* ── BRUSH SCREEN ── */
   #brush-screen {
@@ -121,7 +118,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px 8px;
+    padding: max(12px, env(safe-area-inset-top)) 16px 8px;
     flex-shrink: 0;
   }
 
@@ -179,18 +176,19 @@
 
   .monster-viewport {
     position: relative;
-    display: inline-block;
-    max-height: calc(100vh - 200px);
-    max-width: min(90vw, calc((100vh - 200px) * 2 / 3));
+    width: min(94vw, calc((100dvh - 190px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) * 2 / 3));
     aspect-ratio: 2/3;
+    overflow: hidden;
+    border-radius: 24px;
     cursor: none;
   }
+
+  .monster-art { position: absolute; inset: 0; }
 
   .clean-layer {
     display: block;
     width: 100%; height: 100%;
     object-fit: contain;
-    border-radius: 24px;
     user-select: none;
     -webkit-user-drag: none;
     pointer-events: none;
@@ -200,14 +198,13 @@
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    border-radius: 24px;
     touch-action: none;
   }
 
   /* Bottom bar */
   .bottom-bar {
     width: 100%;
-    padding: 10px 16px 16px;
+    padding: 10px 16px max(16px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -236,6 +233,8 @@
 
   .btn-restart { background: var(--yellow); color: #8D6E00; }
   .btn-done    { background: #A5D6A7; color: #2E7D32; }
+  .clean-progress { width: min(240px, 65vw); height: 10px; border-radius: 8px; background: #ffffffb3; overflow: hidden; }
+  .clean-progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #b6dedc, #8bcd9c); border-radius: inherit; transition: width .2s; }
 
   /* ── CUSTOM CURSOR ── */
   #cursor {
@@ -317,7 +316,7 @@
   .confetti-piece {
     position: fixed;
     pointer-events: none;
-    z-index: 99;
+    z-index: 101;
     border-radius: 3px;
     animation: confetti-fall var(--dur) ease-in var(--delay) forwards;
     will-change: transform, opacity;
@@ -329,15 +328,34 @@
 
   /* ── RESPONSIVE ── */
   @media (max-height: 600px) {
-    .monster-viewport { max-width: min(70vw, calc(100vh - 180px)); }
     .top-bar { padding: 6px 12px 4px; }
     .bottom-bar { padding: 6px 12px 10px; gap: 6px; }
     .btn { padding: 10px 24px; font-size: 18px; min-height: 50px; }
   }
 
-  @media (max-width: 400px) {
-    .monster-cards { gap: 12px; }
-    .monster-card  { width: clamp(130px, 42vw, 200px); padding: 12px; }
+  @media (max-width: 700px) {
+    .monster-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: min(500px, calc((100dvh - 168px) * .93)); }
+    .monster-card { padding: 6px; border-radius: 20px; gap: 5px; }
+    .monster-card img { aspect-ratio: 1; object-position: center 43%; border-radius: 13px; }
+    .monster-card .card-name { font-size: 18px; }
+    .select-title { font-size: 28px; }
+  }
+  @media (max-width: 600px), (max-height: 500px) {
+    .monster-viewport { width: min(calc(100vw - 24px), calc((100dvh - 184px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.1)); aspect-ratio: 1/1.1; }
+    .monster-art { inset: auto; width: 145%; aspect-ratio: 2/3; left: 50%; top: 50%; transform: translate(-50%, calc(-1 * var(--face-y, 50%))); }
+    .center-label { font-size: 18px; }
+    .btn { padding: 12px 20px; min-height: 52px; font-size: 18px; }
+  }
+  @media (max-height: 500px) and (min-width: 601px) {
+    #select-screen { gap: 10px; }
+    .monster-cards { max-width: calc((100dvh - 150px) * 3); }
+    .select-title { font-size: 24px; }
+    .monster-card { padding: 5px; gap: 5px; }
+    .monster-card img { aspect-ratio: 1; object-position: center 43%; }
+    .monster-card .card-name { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
@@ -347,8 +365,9 @@
      SCREEN 1: CHARACTER SELECT
 ════════════════════════════════════════════ -->
 <div id="select-screen" class="screen">
-  <h1 class="select-title">Who needs a brushing? 🦷</h1>
+  <h1 class="select-title" id="select-title">Who needs a brushing? 🦷</h1>
   <div class="monster-cards" id="monster-cards"></div>
+  <button class="bedtime-btn" id="bedtime-btn" aria-label="Wave good night" aria-pressed="false">🌙</button>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -363,18 +382,21 @@
         <circle class="timer-track" cx="24" cy="24" r="22"/>
         <circle class="timer-ring"  cx="24" cy="24" r="22" id="timer-ring"/>
       </svg>
-      <div class="timer-text" id="timer-text">2:00</div>
+      <div class="timer-text" id="timer-text">0:30</div>
     </div>
   </div>
 
   <div class="viewport-wrap">
     <div class="monster-viewport" id="monster-viewport">
-      <img class="clean-layer" id="clean-img" src="" alt="clean monster">
-      <canvas id="brush-canvas"></canvas>
+      <div class="monster-art" id="monster-art">
+        <img class="clean-layer" id="clean-img" alt="clean monster" draggable="false">
+        <canvas id="brush-canvas" aria-label="Brush the monster's teeth"></canvas>
+      </div>
     </div>
   </div>
 
   <div class="bottom-bar">
+    <div class="clean-progress" role="progressbar" aria-label="Teeth cleaned" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="clean-progress"><div class="clean-progress-fill" id="clean-progress-fill"></div></div>
     <div class="btn-row">
       <button class="btn btn-restart" id="restart-btn">↺ Restart</button>
       <button class="btn btn-done"    id="done-btn">✓ All Done!</button>
@@ -385,8 +407,8 @@
 <!-- ══════════════════════════════════════════
      SCREEN 3: CELEBRATION OVERLAY
 ════════════════════════════════════════════ -->
-<div id="celebration" class="hidden">
-  <img id="celeb-img" src="" alt="clean monster" class="celeb-img">
+<div id="celebration" class="hidden" role="dialog" aria-modal="true" aria-label="Squeaky clean" inert>
+  <img id="celeb-img" alt="clean monster" class="celeb-img">
   <div class="celeb-title">Squeaky Clean! ⭐</div>
   <div class="celeb-btns">
     <button class="btn btn-play-again"   id="play-again-btn">Play Again</button>
@@ -417,17 +439,20 @@
    DATA
 ════════════════════════════════════════════ */
 const MONSTERS = [
-  { id: 1, name: 'Fluffy',  color: '#FFB3DE', clean: 'monsterbrush/monster1_clean.avif', dirty: 'monsterbrush/monster1_dirty.avif' },
-  { id: 2, name: 'Pajamas', color: '#B3E5FC', clean: 'monsterbrush/monster2_clean.avif', dirty: 'monsterbrush/monster2_dirty.avif' },
-  { id: 3, name: 'Zapper',  color: '#C8E6C9', clean: 'monsterbrush/monster3_clean.avif', dirty: 'monsterbrush/monster3_dirty.avif' },
+  { id: 1, name: 'Fluffy', mouth: [.34, .425, .32, .105], faceY: 46, color: '#FFB3DE', clean: 'monsterbrush/monster1_clean.avif', dirty: 'monsterbrush/monster1_dirty.avif' },
+  { id: 2, name: 'Pajamas', mouth: [.27, .49, .46, .14], faceY: 53, color: '#B3E5FC', clean: 'monsterbrush/monster2_clean.avif', dirty: 'monsterbrush/monster2_dirty.avif' },
+  { id: 3, name: 'Zapper', mouth: [.16, .45, .68, .26], faceY: 53, color: '#C8E6C9', clean: 'monsterbrush/monster3_clean.avif', dirty: 'monsterbrush/monster3_dirty.avif' },
+  { id: 4, name: 'Pumpkin', mouth: [.34, .405, .32, .11], faceY: 46, color: '#FFD8B1', clean: 'monsterbrush/monster4_clean.avif', dirty: 'monsterbrush/monster4_dirty.avif' },
 ];
 
-const BRUSH_RADIUS   = 44;   // canvas px
+const BRUSH_RADIUS   = 36;   // screen px; consistent on phones and tablets
 const BRUSH_CENTER_ALPHA = 0.6;
 const BRUSH_MID_ALPHA = 0.28;
-const CELEBRATE_AT   = 0.75; // 75% revealed
+const CELEBRATE_AT   = 0.99; // 99% of the original tooth dirt removed
 const SAMPLE_INTERVAL = 200; // ms
-const TIMER_SECS     = 120;
+const TIMER_SECS     = 30;
+const CLEAN_FOR_MS   = 6 * 60 * 60 * 1000;
+const STORAGE_KEY    = 'monsterbrush-clean-until-v1';
 const SPARKLE_CHARS  = ['✦', '✧', '★', '⭐', '💧', '·', '•'];
 const PASTEL_COLORS  = ['#FFB3DE','#B3E5FC','#C8E6C9','#FFF9C4','#E1BEE7','#FFD8B1'];
 
@@ -435,8 +460,7 @@ const PASTEL_COLORS  = ['#FFB3DE','#B3E5FC','#C8E6C9','#FFF9C4','#E1BEE7','#FFD8
    STATE
 ════════════════════════════════════════════ */
 let currentMonster  = null;
-let dirtyImageCache = {};   // id → Image
-let cleanImageCache = {};
+const imageCache = new Map();
 let isDrawing       = false;
 let celebrated      = false;
 let timerInterval   = null;
@@ -444,6 +468,15 @@ let timerRemaining  = TIMER_SECS;
 let sampleTimeout   = null;
 let rafPending      = false;
 let cursorX = 0, cursorY = 0;
+let ready = false;
+let sessionToken = 0;
+let lastBrushPos = null;
+let activePointer = null;
+let toothSamples = [];
+let originalDirt = 0;
+let mouthRect = null;
+let bedtime = false;
+let cleanUntil = readCleanUntil();
 
 /* ══════════════════════════════════════════
    DOM REFS
@@ -466,58 +499,86 @@ const timerRing     = document.getElementById('timer-ring');
 const cursorEl      = document.getElementById('cursor');
 const celebImg      = document.getElementById('celeb-img');
 const viewport      = document.getElementById('monster-viewport');
+const monsterArt    = document.getElementById('monster-art');
+const selectTitle   = document.getElementById('select-title');
+const bedtimeBtn    = document.getElementById('bedtime-btn');
+const cleanProgress = document.getElementById('clean-progress');
+const progressFill  = document.getElementById('clean-progress-fill');
 
 const RING_C = 2 * Math.PI * 22; // circumference ≈ 138
 
 /* ══════════════════════════════════════════
    BUILD SELECT SCREEN
 ════════════════════════════════════════════ */
-function buildSelectScreen() {
-  monsterCards.innerHTML = '';
+function readCleanUntil() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const now = Date.now();
+    return Object.fromEntries(MONSTERS.map(m => [m.id, saved?.[m.id]])
+      .filter(([, until]) => Number.isFinite(until) && until > now && until <= now + CLEAN_FOR_MS));
+  } catch { return {}; }
+}
+
+function rememberClean(monster) {
+  cleanUntil[monster.id] = Date.now() + CLEAN_FOR_MS;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanUntil)); } catch { /* Memory still works without storage. */ }
+  updateSelectScreen();
+}
+
+function updateSelectScreen() {
+  const now = Date.now();
+  const allClean = MONSTERS.every(m => cleanUntil[m.id] > now);
+  selectTitle.textContent = bedtime ? 'Good night, little monsters 🌙' : allClean ? 'Happy, shiny smiles! ✨' : 'Who needs a brushing? 🦷';
   MONSTERS.forEach(m => {
-    const card = document.createElement('div');
-    card.className = 'monster-card';
-    card.dataset.id = m.id;
-
-    const img = document.createElement('img');
-    img.alt = m.name;
-
-    // Test if dirty image exists
-    const testDirty = dirtyImageCache[m.id] || new Image();
-    if (!dirtyImageCache[m.id]) {
-      testDirty.src = m.dirty;
-      dirtyImageCache[m.id] = testDirty;
-    }
-
-    if (testDirty.complete && testDirty.naturalWidth === 0) {
-      // failed
-      disableCard(card, img, m);
-    } else {
-      testDirty.onload  = () => { img.src = m.dirty; };
-      testDirty.onerror = () => { disableCard(card, img, m); };
-      if (testDirty.complete && testDirty.naturalWidth > 0) img.src = m.dirty;
-    }
-
-    const name = document.createElement('div');
-    name.className = 'card-name';
-    name.textContent = m.name;
-
-    card.appendChild(img);
-    card.appendChild(name);
-    card.addEventListener('click', () => startBrush(m));
-    card.style.setProperty('border', `3px solid ${m.color}`);
-
-    monsterCards.appendChild(card);
+    const card = monsterCards.querySelector(`[data-id="${m.id}"]`);
+    if (!card) return;
+    const isClean = cleanUntil[m.id] > now;
+    card.querySelector('img').src = bedtime || isClean ? m.clean : m.dirty;
+    card.setAttribute('aria-label', bedtime ? `Wave good night to ${m.name}` : `${m.name}${isClean ? ', freshly brushed' : ', time to brush'}`);
   });
 }
 
-function disableCard(card, img, m) {
-  img.src = m.clean;
-  card.classList.add('disabled');
-  const badge = document.createElement('div');
-  badge.className = 'coming-soon-badge';
-  badge.textContent = 'Coming soon!';
-  card.appendChild(badge);
+function buildSelectScreen() {
+  MONSTERS.forEach(m => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'monster-card';
+    card.dataset.id = m.id;
+    const img = document.createElement('img');
+    img.alt = m.name;
+    img.draggable = false;
+    const name = document.createElement('div');
+    name.className = 'card-name';
+    name.textContent = m.name;
+    card.append(img, name);
+    card.style.border = `3px solid ${m.color}`;
+    card.addEventListener('click', () => {
+      if (bedtime) {
+        card.classList.remove('waving');
+        void card.offsetWidth;
+        card.classList.add('waving');
+      } else {
+        startBrush(m);
+      }
+    });
+    card.addEventListener('animationend', () => card.classList.remove('waving'));
+    monsterCards.appendChild(card);
+  });
+  updateSelectScreen();
+}
+
+function loadImage(src) {
+  if (!imageCache.has(src)) {
+    const promise = new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Unable to load ${src}`));
+      img.src = src;
+    });
+    imageCache.set(src, promise);
+    promise.catch(() => imageCache.delete(src));
+  }
+  return imageCache.get(src);
 }
 
 /* ══════════════════════════════════════════
@@ -526,101 +587,148 @@ function disableCard(card, img, m) {
 function showScreen(el) {
   [selectScreen, brushScreen].forEach(s => s.classList.add('hidden'));
   el.classList.remove('hidden');
+  [selectScreen, brushScreen].forEach(s => { s.inert = s !== el; });
+  if (el === selectScreen) updateSelectScreen();
 }
 
 /* ══════════════════════════════════════════
    BRUSH SCREEN
 ════════════════════════════════════════════ */
-function startBrush(monster) {
+async function startBrush(monster) {
+  stopSession();
+  hideCelebration();
+  const token = sessionToken;
   currentMonster = monster;
   celebrated = false;
-
-  brushLabel.textContent = `${monster.name} — Time to brush! 🪥`;
+  setProgress(0);
+  timerRemaining = TIMER_SECS;
+  updateTimerDisplay();
+  brushLabel.textContent = `${monster.name} 🪥`;
+  monsterArt.style.setProperty('--face-y', `${monster.faceY}%`);
   cleanImg.src = monster.clean;
+  cleanImg.alt = `${monster.name} with clean teeth`;
   celebImg.src = monster.clean;
-
-  // Ensure dirty image loaded
-  const dirty = dirtyImageCache[monster.id] || new Image();
-  if (!dirty.src) { dirty.src = monster.dirty; dirtyImageCache[monster.id] = dirty; }
-
-  // Ensure clean image cached
-  const clean = cleanImageCache[monster.id] || new Image();
-  if (!clean.src) { clean.src = monster.clean; cleanImageCache[monster.id] = clean; }
-
-  resetTimer();
+  celebImg.alt = `${monster.name} with clean teeth`;
+  restartBtn.disabled = doneBtn.disabled = true;
   showScreen(brushScreen);
-
-  // rAF ensures browser has finished layout before we read getBoundingClientRect
-  const doSize = () => requestAnimationFrame(() => { sizeCanvas(); drawDirty(); });
-  cleanImg.onload = doSize;
-  if (cleanImg.complete) doSize();
-}
-
-function sizeCanvas() {
-  // Use offsetWidth/Height (not affected by CSS transforms like the
-  // screen-transition scale(0.97)).  Let CSS width:100%/height:100%
-  // handle display sizing so the canvas always matches the clean image.
-  brushCanvas.width  = cleanImg.offsetWidth;
-  brushCanvas.height = cleanImg.offsetHeight;
-}
-
-function drawDirty() {
-  const dirty = dirtyImageCache[currentMonster.id];
-  const doRender = () => {
-    ctx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+  backBtn.focus({ preventScroll: true });
+  try {
+    const [dirty, clean] = await Promise.all([loadImage(monster.dirty), loadImage(monster.clean)]);
+    if (token !== sessionToken) return;
+    // Keep the backing canvas independent of the display crop. Rotating a phone
+    // or resizing a window must never put the dirt back.
+    brushCanvas.width = clean.naturalWidth;
+    brushCanvas.height = clean.naturalHeight;
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(dirty, 0, 0, brushCanvas.width, brushCanvas.height);
-    celebrated = false;
-  };
-  if (dirty.complete && dirty.naturalWidth > 0) {
-    doRender();
-  } else {
-    dirty.onload = doRender;
+    buildToothSamples(monster, clean);
+    ready = true;
+    restartBtn.disabled = doneBtn.disabled = false;
+    resetTimer();
+  } catch {
+    if (token !== sessionToken) return;
+    brushLabel.textContent = 'Picture is taking a nap. Try again!';
+    restartBtn.disabled = false;
   }
 }
 
-/* ══════════════════════════════════════════
-   BRUSHING
-════════════════════════════════════════════ */
+function buildToothSamples(monster, clean) {
+  const [x, y, w, h] = monster.mouth;
+  mouthRect = {
+    x: Math.floor(x * brushCanvas.width), y: Math.floor(y * brushCanvas.height),
+    w: Math.ceil(w * brushCanvas.width), h: Math.ceil(h * brushCanvas.height),
+  };
+  const reference = document.createElement('canvas');
+  reference.width = brushCanvas.width;
+  reference.height = brushCanvas.height;
+  const referenceCtx = reference.getContext('2d');
+  referenceCtx.drawImage(clean, 0, 0, reference.width, reference.height);
+  const cleanData = referenceCtx.getImageData(mouthRect.x, mouthRect.y, mouthRect.w, mouthRect.h).data;
+  const dirtyData = ctx.getImageData(mouthRect.x, mouthRect.y, mouthRect.w, mouthRect.h).data;
+  toothSamples = [];
+  originalDirt = 0;
+  for (let i = 0; i < cleanData.length; i += 16) {
+    const r = cleanData[i], g = cleanData[i + 1], b = cleanData[i + 2];
+    // White tooth surfaces only, inside this monster's mouth. Ignore the
+    // background, gums and minor compression differences between the pair.
+    if (Math.min(r, g, b) < 135 || Math.max(r, g, b) - Math.min(r, g, b) > 75) continue;
+    const delta = Math.abs(r - dirtyData[i]) + Math.abs(g - dirtyData[i + 1]) + Math.abs(b - dirtyData[i + 2]);
+    const weight = Math.max(0, delta - 30);
+    if (!weight) continue;
+    toothSamples.push([i + 3, weight]);
+    originalDirt += weight;
+  }
+}
+
 function getCanvasPos(clientX, clientY) {
   const rect = brushCanvas.getBoundingClientRect();
   return {
-    x: (clientX - rect.left) * (brushCanvas.width  / rect.width),
-    y: (clientY - rect.top)  * (brushCanvas.height / rect.height),
+    x: (clientX - rect.left) * brushCanvas.width / rect.width,
+    y: (clientY - rect.top) * brushCanvas.height / rect.height,
+    radius: BRUSH_RADIUS * brushCanvas.width / rect.width,
   };
 }
 
 function brush(clientX, clientY) {
-  const { x, y } = getCanvasPos(clientX, clientY);
+  const pos = getCanvasPos(clientX, clientY);
+  const from = lastBrushPos || pos;
+  const steps = Math.max(1, Math.ceil(Math.hypot(pos.x - from.x, pos.y - from.y) / (pos.radius * 0.25)));
   ctx.globalCompositeOperation = 'destination-out';
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, BRUSH_RADIUS);
-  gradient.addColorStop(0, `rgba(0, 0, 0, ${BRUSH_CENTER_ALPHA})`);
-  gradient.addColorStop(0.55, `rgba(0, 0, 0, ${BRUSH_MID_ALPHA})`);
-  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(x, y, BRUSH_RADIUS, 0, Math.PI * 2);
-  ctx.fill();
+  for (let step = 1; step <= steps; step++) {
+    const x = from.x + (pos.x - from.x) * step / steps;
+    const y = from.y + (pos.y - from.y) * step / steps;
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, pos.radius);
+    gradient.addColorStop(0, `rgba(0,0,0,${BRUSH_CENTER_ALPHA})`);
+    gradient.addColorStop(0.55, `rgba(0,0,0,${BRUSH_MID_ALPHA})`);
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, pos.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  lastBrushPos = pos;
 }
 
 function scheduleSample() {
   if (sampleTimeout) return;
   sampleTimeout = setTimeout(() => {
     sampleTimeout = null;
-    if (!celebrated) checkProgress();
+    if (ready && !celebrated) checkProgress();
   }, SAMPLE_INTERVAL);
 }
 
+function setProgress(ratio) {
+  const percent = Math.round(Math.max(0, Math.min(1, ratio)) * 100);
+  progressFill.style.width = `${percent}%`;
+  cleanProgress.setAttribute('aria-valuenow', percent);
+}
+
 function checkProgress() {
-  const data   = ctx.getImageData(0, 0, brushCanvas.width, brushCanvas.height).data;
-  let transparent = 0;
-  // Sample every 4th pixel for speed
-  for (let i = 3; i < data.length; i += 16) {
-    if (data[i] < 64) transparent++;
-  }
-  const total   = data.length / 16;
-  const ratio   = transparent / total;
+  if (!originalDirt || !ready || celebrated) return;
+  const data = ctx.getImageData(mouthRect.x, mouthRect.y, mouthRect.w, mouthRect.h).data;
+  let remainingDirt = 0;
+  for (const [alphaIndex, weight] of toothSamples) remainingDirt += weight * data[alphaIndex] / 255;
+  const ratio = 1 - remainingDirt / originalDirt;
+  setProgress(ratio);
   if (ratio >= CELEBRATE_AT) celebrate();
+}
+
+function endStroke() {
+  isDrawing = false;
+  lastBrushPos = null;
+  if (activePointer !== null && brushCanvas.hasPointerCapture(activePointer)) brushCanvas.releasePointerCapture(activePointer);
+  activePointer = null;
+  cursorEl.classList.remove('brushing');
+  hideCursorEl();
+}
+
+function stopSession() {
+  ready = false;
+  ++sessionToken;
+  clearInterval(timerInterval);
+  clearTimeout(sampleTimeout);
+  sampleTimeout = null;
+  endStroke();
 }
 
 /* ══════════════════════════════════════════
@@ -634,9 +742,12 @@ function resetTimer() {
 }
 
 function tickTimer() {
-  timerRemaining--;
+  timerRemaining = Math.max(0, timerRemaining - 1);
   updateTimerDisplay();
-  if (timerRemaining <= 0) clearInterval(timerInterval);
+  if (timerRemaining <= 0) {
+    clearInterval(timerInterval);
+    brushLabel.textContent = 'Keep making sparkly smiles! ✨';
+  }
 }
 
 function updateTimerDisplay() {
@@ -644,7 +755,7 @@ function updateTimerDisplay() {
   const s = timerRemaining % 60;
   timerText.textContent = `${m}:${s.toString().padStart(2,'0')}`;
   const progress = 1 - (timerRemaining / TIMER_SECS);
-  timerRing.style.strokeDashoffset = RING_C * (1 - progress);
+  timerRing.style.strokeDashoffset = RING_C * progress;
   // color shift: pink → green
   const hue = Math.round(progress * 120);
   timerRing.style.stroke = `hsl(${hue}, 70%, 65%)`;
@@ -654,19 +765,27 @@ function updateTimerDisplay() {
    CELEBRATION
 ════════════════════════════════════════════ */
 function celebrate() {
-  if (celebrated) return;
+  if (celebrated || !ready) return;
   celebrated = true;
-  clearInterval(timerInterval);
+  stopSession();
+  ctx.clearRect(0, 0, brushCanvas.width, brushCanvas.height);
+  setProgress(1);
+  rememberClean(currentMonster);
   celebration.classList.remove('hidden');
+  celebration.inert = false;
+  brushScreen.inert = true;
+  chooseOtherBtn.focus({ preventScroll: true });
   spawnConfetti();
 }
 
 function hideCelebration() {
   celebration.classList.add('hidden');
+  celebration.inert = true;
   clearConfetti();
 }
 
 function spawnConfetti() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const colors = ['#FFB3DE','#B3E5FC','#C8E6C9','#FFF9C4','#E1BEE7','#FF8A65','#80CBC4'];
   for (let i = 0; i < 70; i++) {
     const el = document.createElement('div');
@@ -697,6 +816,7 @@ function clearConfetti() {
    SPARKLES
 ════════════════════════════════════════════ */
 function spawnSparkles(clientX, clientY) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const count = 2 + Math.floor(Math.random() * 2);
   for (let i = 0; i < count; i++) {
     const el = document.createElement('div');
@@ -728,7 +848,7 @@ function moveCursor(x, y) {
   if (!rafPending) {
     rafPending = true;
     requestAnimationFrame(() => {
-      showCursor(cursorX, cursorY);
+      if (ready && !celebrated && !brushScreen.classList.contains('hidden')) showCursor(cursorX, cursorY);
       rafPending = false;
     });
   }
@@ -740,10 +860,9 @@ function moveCursor(x, y) {
 let lastSparkle = 0;
 
 function handleBrush(clientX, clientY) {
-  if (!isDrawing) return;
+  if (!isDrawing || !ready || celebrated) return;
   brush(clientX, clientY);
   moveCursor(clientX, clientY);
-
   const now = Date.now();
   if (now - lastSparkle > 60) {
     spawnSparkles(clientX, clientY);
@@ -752,111 +871,68 @@ function handleBrush(clientX, clientY) {
   scheduleSample();
 }
 
-// Touch
-brushCanvas.addEventListener('touchstart', e => {
+// Pointer capture keeps swipes working even when a little finger slips outside
+// the picture. A tap cleans too, and a second finger cannot interrupt a stroke.
+brushCanvas.addEventListener('pointerdown', e => {
+  if (!ready || celebrated || activePointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
   e.preventDefault();
+  activePointer = e.pointerId;
+  brushCanvas.setPointerCapture(e.pointerId);
   isDrawing = true;
+  lastBrushPos = null;
   cursorEl.classList.add('brushing');
-  const t = e.touches[0];
-  moveCursor(t.clientX, t.clientY);
-}, { passive: false });
-
-brushCanvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  const t = e.touches[0];
-  handleBrush(t.clientX, t.clientY);
-}, { passive: false });
-
-brushCanvas.addEventListener('touchend', e => {
-  e.preventDefault();
-  isDrawing = false;
-  cursorEl.classList.remove('brushing');
-}, { passive: false });
-
-// Mouse
-brushCanvas.addEventListener('mousedown', e => {
-  isDrawing = true;
-  cursorEl.classList.add('brushing');
-  moveCursor(e.clientX, e.clientY);
-});
-
-brushCanvas.addEventListener('mousemove', e => {
-  moveCursor(e.clientX, e.clientY);
   handleBrush(e.clientX, e.clientY);
 });
+brushCanvas.addEventListener('pointermove', e => {
+  if (e.pointerId === activePointer) handleBrush(e.clientX, e.clientY);
+  else if (activePointer === null && e.pointerType === 'mouse') moveCursor(e.clientX, e.clientY);
+});
+brushCanvas.addEventListener('pointerup', e => {
+  if (e.pointerId !== activePointer) return;
+  endStroke();
+  if (ready) checkProgress();
+});
+brushCanvas.addEventListener('pointercancel', e => { if (e.pointerId === activePointer) endStroke(); });
+brushCanvas.addEventListener('lostpointercapture', e => { if (e.pointerId === activePointer) endStroke(); });
+brushCanvas.addEventListener('pointerleave', () => { if (!isDrawing) hideCursorEl(); });
+window.addEventListener('blur', endStroke);
+// Discard the old stroke coordinate when the responsive crop changes.
+window.addEventListener('resize', endStroke);
 
-brushCanvas.addEventListener('mouseup',   () => { isDrawing = false; cursorEl.classList.remove('brushing'); });
-brushCanvas.addEventListener('mouseleave',() => { isDrawing = false; hideCursorEl(); cursorEl.classList.remove('brushing'); });
-brushCanvas.addEventListener('mouseenter',() => { cursorEl.style.display = 'block'; });
-
-/* ══════════════════════════════════════════
-   BUTTON HANDLERS
-════════════════════════════════════════════ */
-backBtn.addEventListener('click', () => {
-  clearInterval(timerInterval);
+function returnToFriends() {
+  stopSession();
   hideCelebration();
   showScreen(selectScreen);
-});
-
-restartBtn.addEventListener('click', () => {
-  hideCelebration();
-  celebrated = false;
-  clearInterval(timerInterval);
-  sizeCanvas();
-  drawDirty();
-  resetTimer();
-});
-
-doneBtn.addEventListener('click', () => celebrate());
-
-playAgainBtn.addEventListener('click', () => {
-  hideCelebration();
-  celebrated = false;
-  sizeCanvas();
-  drawDirty();
-  resetTimer();
-});
-
-chooseOtherBtn.addEventListener('click', () => {
-  hideCelebration();
-  clearInterval(timerInterval);
-  showScreen(selectScreen);
-});
-
-/* ══════════════════════════════════════════
-   RESIZE HANDLER
-════════════════════════════════════════════ */
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    if (!brushScreen.classList.contains('hidden') && currentMonster) {
-      sizeCanvas();
-      drawDirty();
-    }
-  }, 200);
-});
-
-/* ══════════════════════════════════════════
-   PRELOAD IMAGES
-════════════════════════════════════════════ */
-function preloadAll() {
-  MONSTERS.forEach(m => {
-    const d = new Image();
-    d.src = m.dirty;
-    dirtyImageCache[m.id] = d;
-
-    const c = new Image();
-    c.src = m.clean;
-    cleanImageCache[m.id] = c;
-  });
+  monsterCards.querySelector(`[data-id="${currentMonster?.id}"]`)?.focus({ preventScroll: true });
 }
+backBtn.addEventListener('click', returnToFriends);
+restartBtn.addEventListener('click', () => startBrush(currentMonster));
+doneBtn.addEventListener('click', celebrate);
+playAgainBtn.addEventListener('click', () => startBrush(currentMonster));
+chooseOtherBtn.addEventListener('click', returnToFriends);
+bedtimeBtn.addEventListener('click', () => {
+  bedtime = !bedtime;
+  selectScreen.classList.toggle('bedtime', bedtime);
+  bedtimeBtn.setAttribute('aria-pressed', bedtime);
+  bedtimeBtn.setAttribute('aria-label', bedtime ? 'Back to brushing' : 'Wave good night');
+  bedtimeBtn.textContent = bedtime ? '🪥' : '🌙';
+  updateSelectScreen();
+});
+window.addEventListener('storage', e => {
+  if (e.key === STORAGE_KEY || e.key === null) { cleanUntil = readCleanUntil(); updateSelectScreen(); }
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) endStroke();
+  else updateSelectScreen();
+});
+setInterval(updateSelectScreen, 60 * 1000);
 
-/* ══════════════════════════════════════════
-   INIT
-════════════════════════════════════════════ */
-preloadAll();
+MONSTERS.forEach(m => {
+  loadImage(m.dirty).catch(() => {});
+  loadImage(m.clean).catch(() => {});
+});
 buildSelectScreen();
+showScreen(selectScreen);
 </script>
 </body>
 </html>

@@ -1,0 +1,1 @@
+Brush four friendly monsters' teeth, including Pumpkin, a cuddly Halloween friend. Thirty-second sessions celebrate when 99% of the tooth dirt is removed, with a closer view on phones and clean smiles remembered on this device for six hours. Tap the moon for a gentle good-night view where every monster has clean teeth and tapping a friend makes it wave.
