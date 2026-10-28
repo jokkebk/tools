@@ -79,9 +79,9 @@
     },
     "monsterbrush.html": {
       "last_commit": {
-        "hash": "2ab1d749600f39aa31a24abad20da6ac96cc0bb1",
-        "date": "2026-10-28T23:40:06+02:00",
-        "message": "Add Pip the bat and Boo the ghost to Monsterbrush"
+        "hash": "f33cd0f60583008002dfa9716bf5dd90e9b21e78",
+        "date": "2026-10-28T23:44:51+02:00",
+        "message": "Allow opening Monsterbrush friends in night mode"
       }
     },
     "pianotrainer.html": {
