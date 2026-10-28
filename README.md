@@ -26,12 +26,12 @@
 
 ### [monsterbrush](monsterbrush.html)
 
-Brush four friendly monsters' teeth, including Pumpkin, a cuddly Halloween friend. Thirty-second sessions celebrate when 99% of the tooth dirt is removed, with a closer view on phones and clean smiles remembered on this device for six hours. Tap the moon for a gentle good-night view where every monster has clean teeth and tapping a friend makes it wave.
+Brush six friendly monsters' teeth, including Pumpkin, Pip the big-eared bat, and Boo the floating mint ghost. Thirty-second sessions celebrate when 99% of the tooth dirt is removed, with a closer view on phones and clean smiles remembered on this device for six hours. Tap the moon for a gentle good-night view where every monster has clean teeth and tapping a friend makes it wave.
 
-> last updated: 2026-10-28 23:27:29
-> Simplify Monsterbrush progress to full-image differences
+> last updated: 2026-10-28 23:40:06
+> Add Pip the bat and Boo the ghost to Monsterbrush
 >
-> [view commit](https://github.com/jokkebk/tools/commit/b6786f2936d091673b300397e8244fe4c6c6f699)
+> [view commit](https://github.com/jokkebk/tools/commit/2ab1d749600f39aa31a24abad20da6ac96cc0bb1)
 
 ### [aquarium](aquarium.html)
 

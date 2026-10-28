@@ -79,9 +79,9 @@
     },
     "monsterbrush.html": {
       "last_commit": {
-        "hash": "b6786f2936d091673b300397e8244fe4c6c6f699",
-        "date": "2026-10-28T23:27:29+02:00",
-        "message": "Simplify Monsterbrush progress to full-image differences"
+        "hash": "2ab1d749600f39aa31a24abad20da6ac96cc0bb1",
+        "date": "2026-10-28T23:40:06+02:00",
+        "message": "Add Pip the bat and Boo the ghost to Monsterbrush"
       }
     },
     "pianotrainer.html": {
