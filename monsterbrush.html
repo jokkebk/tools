@@ -439,10 +439,10 @@
    DATA
 ════════════════════════════════════════════ */
 const MONSTERS = [
-  { id: 1, name: 'Fluffy', mouth: [.34, .425, .32, .105], faceY: 46, color: '#FFB3DE', clean: 'monsterbrush/monster1_clean.avif', dirty: 'monsterbrush/monster1_dirty.avif' },
-  { id: 2, name: 'Pajamas', mouth: [.27, .49, .46, .14], faceY: 53, color: '#B3E5FC', clean: 'monsterbrush/monster2_clean.avif', dirty: 'monsterbrush/monster2_dirty.avif' },
-  { id: 3, name: 'Zapper', mouth: [.16, .45, .68, .26], faceY: 53, color: '#C8E6C9', clean: 'monsterbrush/monster3_clean.avif', dirty: 'monsterbrush/monster3_dirty.avif' },
-  { id: 4, name: 'Pumpkin', mouth: [.34, .405, .32, .11], faceY: 46, color: '#FFD8B1', clean: 'monsterbrush/monster4_clean.avif', dirty: 'monsterbrush/monster4_dirty.avif' },
+  { id: 1, name: 'Fluffy', faceY: 46, color: '#FFB3DE', clean: 'monsterbrush/monster1_clean.avif', dirty: 'monsterbrush/monster1_dirty.avif' },
+  { id: 2, name: 'Pajamas', faceY: 53, color: '#B3E5FC', clean: 'monsterbrush/monster2_clean.avif', dirty: 'monsterbrush/monster2_dirty.avif' },
+  { id: 3, name: 'Zapper', faceY: 53, color: '#C8E6C9', clean: 'monsterbrush/monster3_clean.avif', dirty: 'monsterbrush/monster3_dirty.avif' },
+  { id: 4, name: 'Pumpkin', faceY: 46, color: '#FFD8B1', clean: 'monsterbrush/monster4_clean.avif', dirty: 'monsterbrush/monster4_dirty.avif' },
 ];
 
 const BRUSH_RADIUS   = 36;   // screen px; consistent on phones and tablets
@@ -450,6 +450,7 @@ const BRUSH_CENTER_ALPHA = 0.6;
 const BRUSH_MID_ALPHA = 0.28;
 const CELEBRATE_AT   = 0.99; // 99% of the original tooth dirt removed
 const SAMPLE_INTERVAL = 200; // ms
+const DIFF_NOISE_FLOOR = 180; // summed RGB difference; ignore faint image/compression changes
 const TIMER_SECS     = 30;
 const CLEAN_FOR_MS   = 6 * 60 * 60 * 1000;
 const STORAGE_KEY    = 'monsterbrush-clean-until-v1';
@@ -472,9 +473,8 @@ let ready = false;
 let sessionToken = 0;
 let lastBrushPos = null;
 let activePointer = null;
-let toothSamples = [];
+let differenceSamples = [];
 let originalDirt = 0;
-let mouthRect = null;
 let bedtime = false;
 let cleanUntil = readCleanUntil();
 
@@ -621,7 +621,7 @@ async function startBrush(monster) {
     brushCanvas.height = clean.naturalHeight;
     ctx.globalCompositeOperation = 'source-over';
     ctx.drawImage(dirty, 0, 0, brushCanvas.width, brushCanvas.height);
-    buildToothSamples(monster, clean);
+    buildDifferenceSamples(clean);
     ready = true;
     restartBtn.disabled = doneBtn.disabled = false;
     resetTimer();
@@ -632,30 +632,25 @@ async function startBrush(monster) {
   }
 }
 
-function buildToothSamples(monster, clean) {
-  const [x, y, w, h] = monster.mouth;
-  mouthRect = {
-    x: Math.floor(x * brushCanvas.width), y: Math.floor(y * brushCanvas.height),
-    w: Math.ceil(w * brushCanvas.width), h: Math.ceil(h * brushCanvas.height),
-  };
+function buildDifferenceSamples(clean) {
   const reference = document.createElement('canvas');
   reference.width = brushCanvas.width;
   reference.height = brushCanvas.height;
   const referenceCtx = reference.getContext('2d');
   referenceCtx.drawImage(clean, 0, 0, reference.width, reference.height);
-  const cleanData = referenceCtx.getImageData(mouthRect.x, mouthRect.y, mouthRect.w, mouthRect.h).data;
-  const dirtyData = ctx.getImageData(mouthRect.x, mouthRect.y, mouthRect.w, mouthRect.h).data;
-  toothSamples = [];
+  const cleanData = referenceCtx.getImageData(0, 0, reference.width, reference.height).data;
+  const dirtyData = ctx.getImageData(0, 0, brushCanvas.width, brushCanvas.height).data;
+  differenceSamples = [];
   originalDirt = 0;
+  // Compare the entire pair. Significant differences are the dirt, without
+  // hand-authored mouth bounds or assumptions about the color of the teeth.
   for (let i = 0; i < cleanData.length; i += 16) {
-    const r = cleanData[i], g = cleanData[i + 1], b = cleanData[i + 2];
-    // White tooth surfaces only, inside this monster's mouth. Ignore the
-    // background, gums and minor compression differences between the pair.
-    if (Math.min(r, g, b) < 135 || Math.max(r, g, b) - Math.min(r, g, b) > 75) continue;
-    const delta = Math.abs(r - dirtyData[i]) + Math.abs(g - dirtyData[i + 1]) + Math.abs(b - dirtyData[i + 2]);
-    const weight = Math.max(0, delta - 30);
+    const delta = Math.abs(cleanData[i] - dirtyData[i])
+      + Math.abs(cleanData[i + 1] - dirtyData[i + 1])
+      + Math.abs(cleanData[i + 2] - dirtyData[i + 2]);
+    const weight = Math.max(0, delta - DIFF_NOISE_FLOOR);
     if (!weight) continue;
-    toothSamples.push([i + 3, weight]);
+    differenceSamples.push([i + 3, weight]);
     originalDirt += weight;
   }
 }
@@ -705,9 +700,11 @@ function setProgress(ratio) {
 
 function checkProgress() {
   if (!originalDirt || !ready || celebrated) return;
-  const data = ctx.getImageData(mouthRect.x, mouthRect.y, mouthRect.w, mouthRect.h).data;
+  const data = ctx.getImageData(0, 0, brushCanvas.width, brushCanvas.height).data;
   let remainingDirt = 0;
-  for (const [alphaIndex, weight] of toothSamples) remainingDirt += weight * data[alphaIndex] / 255;
+  // With the clean image underneath, visible - clean = alpha * (dirty - clean).
+  // Reusing the initial difference avoids compositing another image each check.
+  for (const [alphaIndex, weight] of differenceSamples) remainingDirt += weight * data[alphaIndex] / 255;
   const ratio = 1 - remainingDirt / originalDirt;
   setProgress(ratio);
   if (ratio >= CELEBRATE_AT) celebrate();
